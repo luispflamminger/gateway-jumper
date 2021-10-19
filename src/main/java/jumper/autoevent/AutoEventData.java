@@ -1,0 +1,23 @@
+package jumper.autoevent;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.Data;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@Data
+public class AutoEventData
+{
+    String consumer; // <consumer-app-id-1>
+    String provider; // <provider-app-id-1>
+    String issue; // <apiBasePath> | <eventType>
+    String kind; // event | request | response
+    String method; // GET | POST | PUT | DELETE
+    Map<String, String> header = new HashMap<>();
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    Map<String, String> parameters = new HashMap<>();
+    String payload;
+    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+    int status;
+}

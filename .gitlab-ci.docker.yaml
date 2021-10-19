@@ -1,0 +1,118 @@
+################################
+# Generic Docker/MTR pipeline jobs
+# Maintainer: @georg.teichert-matuschek
+################################
+#
+# pipeline variables:
+#   MTR_DST_IMAGE: ...     - mandatory for all jobs
+#   MTR_DST_TAGS: ...      - optional (default "$CI_COMMIT_REF_SLUG")
+#
+# job variables:
+#   DOCKER_BUILD_ARGS: ... - optional for docker:build (default "")
+#   DOCKER_CONTEXT: ...    - optional for docker:build (default ".")
+#   DOCKER_PUSH_ARGS: ...  - optional for docker:publish (default "")
+#   COMMAND: ...           - mandatory for docker:verify
+#   TEST_RUN_ARGS: ...     - optional for docker:verify (e.g. "-e X=Y -w /usr/shared -v $(PWD)/testfiles:/testfiles")
+#
+# jobs:
+#   extends: .docker:mtr               - for MTR login and logout
+#   extends: .docker:build             - for building docker images
+#   extends: .docker:verify            - for running/testing docker images
+#   extends: .docker:publish           - for pushing docker images to MTR
+#   extends: .docker:build-and-publish - build and publish in one step
+
+variables:
+  IMAGE_DOCKER:     "docker:latest"
+  MTR_TIF_REGISTRY: "mtr.external.otc.telekomcloud.com"
+  MTR_TIF_GROUP:    "tif-public"
+  MTR_DST_TAGS:     "$CI_COMMIT_REF_NAME"
+  DOCKER_CONTEXT:    "."
+  DOCKER_BUILD_ARGS: ""
+  DOCKER_PUSH_ARGS:  ""
+
+.docker:aliases:
+  script:
+  -  &master-is-latest
+     |
+     [[ "$MTR_DST_TAG" == "master" ]] && export MTR_DST_TAGS="latest"
+
+  -  &feature-branch-used
+     |
+     sed -e "s/\$MTR_DST_TAGS/$MTR_DST_TAGS/g" && echo $MTR_DST_TAGS
+
+  -  &docker_login
+     |
+     [[ -z "$MTR_TIF_USER" ]] && echo "[ERR] environment variable MTR_TIF_USER not set" && exit 1
+     [[ -z "$MTR_TIF_TOKEN" ]] && echo "[ERR] environment variable MTR_TIF_TOKEN not set" && exit 1
+     docker login -u="$MTR_TIF_USER" -p="$MTR_TIF_TOKEN" $MTR_TIF_REGISTRY
+
+  -  &docker_logout
+     |
+     docker logout $MTR_TIF_REGISTRY || true
+
+  -  &docker_build
+     |
+     [[ -z "$DOCKER_BUILD_ARGS" ]] && echo "[WARN] variable DOCKER_BUILD_ARGS not set"
+     [[ -z "$MTR_DST_IMAGE" ]] && echo "[ERR] variable MTR_DST_IMAGE not set" && exit 1
+     docker build $DOCKER_BUILD_ARGS -t temp${CI_JOB_ID} ${DOCKER_CONTEXT}
+     for tag in $MTR_DST_TAGS; do
+       docker tag temp${CI_JOB_ID} ${MTR_TIF_REGISTRY}/${MTR_TIF_GROUP}/${MTR_DST_IMAGE}:$tag
+     done
+
+  -  &docker_publish
+     |
+     [[ -z "$MTR_DST_IMAGE" ]] && echo "[ERR] variable MTR_DST_IMAGE not set" && exit 1
+     for tag in $MTR_DST_TAGS; do
+       docker push ${DOCKER_PUSH_ARGS} ${MTR_TIF_REGISTRY}/${MTR_TIF_GROUP}/${MTR_DST_IMAGE}:$tag
+     done
+     
+  -  &docker_run
+     |
+     [[ -z "$MTR_DST_IMAGE" ]] && echo "[ERR] variable MTR_DST_IMAGE not set" && exit 1
+     [[ -z "$TEST_RUN_ARGS" ]] && echo "[WARN] variable TEST_RUN_ARGS not set"
+     [[ -z "$COMMAND" ]] && echo "[ERR] variable COMMAND not set" && exit 1
+     export FIRST_TAG=$(set -- $MTR_DST_TAGS; echo $1)
+     docker run --name test$CI_CONCURRENT_PROJECT_ID ${TEST_RUN_ARGS} ${MTR_TIF_REGISTRY}/${MTR_TIF_GROUP}/${MTR_DST_IMAGE}:${FIRST_TAG} -- ${COMMAND}
+     
+# run docker commands
+.docker:basics:
+  image: $IMAGE_DOCKER
+
+# run docker commands with MTR login
+.docker:mtr:
+  image: $IMAGE_DOCKER
+  before_script:
+    - *docker_login
+  after_script:
+    - *docker_logout
+
+.docker:build:
+  extends: .docker:basics
+  script:
+    - *master-is-latest
+    - *docker_build
+
+.docker:verify:
+  extends: .docker:basics
+  script:
+    - *master-is-latest
+    - *docker_run
+
+.docker:publish:
+  extends: .docker:mtr
+  script:
+    - *master-is-latest
+    - *docker_publish
+
+.docker:build-and-publish:
+  extends: .docker:mtr
+  script:
+    - *master-is-latest
+    - *docker_build
+    - *docker_publish
+
+.docker:feature:
+  extends: .docker:mtr
+  script:
+    - *feature-branch-used
+    

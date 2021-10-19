@@ -1,0 +1,35 @@
+include:
+  - local: '.gitlab-ci.maven.yaml'
+  - local: '.gitlab-ci.docker.yaml'
+
+stages:
+  - build
+  - unit-test
+  - package
+
+default:
+  tags: [ "run01_docker" ]
+
+workflow:
+  rules:
+    - if: $CI_COMMIT_MESSAGE =~ /(minor change)/
+      when: never
+    - when: always
+
+build software:
+  extends: .maven:package-for-docker
+  variables:
+    DOCKER_CONTEXT: "./docker"
+  stage: build
+
+#run unit-tests:
+#  extends: .maven:test
+#  when: manual
+#  stage: unit-test
+
+dockerize:
+  extends: .docker:build-and-publish
+  variables:
+    MTR_DST_IMAGE: "jumper-sse"
+    DOCKER_CONTEXT: "./docker"
+  stage: package
