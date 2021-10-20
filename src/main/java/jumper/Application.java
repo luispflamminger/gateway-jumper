@@ -126,10 +126,10 @@ public class Application {
                 .route("auto_event_route_post", p -> p
                         .path("/autoevent/**").and().method(HttpMethod.POST)
                         .filters(f -> f
-                                        .modifyRequestBody(String.class, String.class,
-                                                autoEventBodyRewrite)
-                                        .rewritePath("/autoevent", publishEventUrlPath)
-                                        .removeRequestParameter(listenerQueryParam)
+                                .modifyRequestBody(String.class, String.class,
+                                        autoEventBodyRewrite)
+                                .rewritePath("/autoevent", publishEventUrlPath)
+                                .removeRequestParameter(listenerQueryParam)
                         )
                         .uri(publishEventUrl))
                 .route("auto_event_route_head", p -> p

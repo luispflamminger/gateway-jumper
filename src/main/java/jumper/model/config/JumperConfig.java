@@ -15,13 +15,12 @@ import lombok.Data;
 import org.springframework.web.server.ServerWebExchange;
 
 @Data
-public class JumperConfig
-{
-    
+public class JumperConfig {
+
     private HashMap<String, OauthCredentials> oauth;
     private HashMap<String, RouteListener> routeListener;
     private GatewayClient gatewayClient;
-    
+
     String token_endpoint;
     String tif_remote_issuer;
     String tif_clientID;
@@ -43,7 +42,7 @@ public class JumperConfig
     String remote_api_url;
 
     String debugHeader;
-    
+
     @JsonIgnore
     public static String toBase64(JumperConfig jc) {
         String jsonConfigBase64 = null;
@@ -56,10 +55,10 @@ public class JumperConfig
         {
             e.printStackTrace();
         }
-        
+
         return jsonConfigBase64;
     }
-    
+
     @JsonIgnore
     public static JumperConfig fromBase64(String jsonConfigBase64) {
         String decodedJson = new String(Base64.getDecoder().decode( jsonConfigBase64.getBytes()));
@@ -72,7 +71,7 @@ public class JumperConfig
         {
             e.printStackTrace();
         }
-        
+
         return jc;
     }
 
@@ -94,7 +93,7 @@ public class JumperConfig
         xRequestId = request.getHeaders().getFirst( Constants.HEADER_X_BUSINESS_CONTEXT);
         xCorrelationId = request.getHeaders().getFirst( Constants.HEADER_X_CORRELATION_ID);
 
-        api_resource = request.getPath().value(); 
+        api_resource = request.getPath().value();
         requestPath = api_base_path + api_resource;
         remote_api_url = request.getHeaders().getFirst( Constants.HEADER_REMOTE_API_URL);
 

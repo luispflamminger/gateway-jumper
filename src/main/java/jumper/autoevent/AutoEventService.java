@@ -35,7 +35,7 @@ public class AutoEventService
 {
     @Autowired
     OauthTokenUtil oauthTokenUtil;
-    
+
     @Value( "${jumper.stargate.url}")
     private String stargateUrl;
 
@@ -74,7 +74,7 @@ public class AutoEventService
 
         ServerHttpRequest rq = exchange.getRequest();
         ServerHttpResponse rs = exchange.getResponse();
-        
+
         AutoEvent event = new AutoEvent();
         event.setSpecversion( "1.0");
         event.setSource( stargateUrl);
@@ -107,14 +107,14 @@ public class AutoEventService
         data.setIssue( listener.getIssue());
         data.setProvider( listener.getServiceOwner());
         data.setMethod( rq.getMethod().toString());
-        
+
         event.setData( data);
         return event;
     }
 
     /***
      * publish event (route to local Horizon)
-     * 
+     *
      * @param event
      */
     public void publishEvent( AutoEvent event, String url, JumperConfig jc, ServerWebExchange exchange ) {
@@ -131,7 +131,7 @@ public class AutoEventService
         if(jc != null) {
             // get token with GatewayClient
             String local_issuer = jc.getGatewayClient().getIssuer() + Constants.ISSUER_SUFFIX;
-            gwToken = oauthTokenUtil.getAccessToken(local_issuer, jc.getGatewayClient().getId(), jc.getGatewayClient().getSecret());
+            gwToken = oauthTokenUtil.getAccessToken(local_issuer, jc.getGatewayClient().getId(), jc.getGatewayClient().getSecret(), true);
 
             log.debug("will publish event: {}", eventJson);
             if (gwToken != null) {
