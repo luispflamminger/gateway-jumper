@@ -2,8 +2,10 @@ package jumper.filter;
 
 import static net.logstash.logback.argument.StructuredArguments.value;
 
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.HashMap;
 
 import org.apache.commons.lang3.StringUtils;
@@ -244,6 +246,15 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
             addHeader(exchange, chain, Constants.HEADER_X_ORIGIN_STARGATE, consumerOriginStargate);
             addHeader(exchange, chain, Constants.HEADER_X_ORIGIN_ZONE, consumerOriginZone);
+
+            String hostStargate = "";
+            try {
+                URL url = new URL(consumerOriginStargate);
+                hostStargate = url.getHost();
+            } catch (MalformedURLException e) {
+                log.error(e.getMessage(), e);
+            }
+            addHeader(exchange, chain, Constants.HEADER_X_FORWARDED_HOST, hostStargate);
 
             //rewriteXForwardedHeader(exchange, chain);
 

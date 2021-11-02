@@ -31,11 +31,11 @@ spring:
       x-forwarded:
         for-enabled: true
         for-append: true
-        host-enabled: true
+        host-enabled: false
         host-append: false
-        port-enabled: true
+        port-enabled: false
         port-append: false
-        proto-enabled: true
+        proto-enabled: false
         proto-append: false
         prefix-enabled: false
         prefix-append: false
