@@ -89,6 +89,7 @@ public class AutoEventService
             Map<String,String> httpHeaders = new HashMap<>();
             httpHeaders.putAll(rq.getHeaders().toSingleValueMap());
             httpHeaders.replace(Constants.HEADER_AUTHORIZATION, jc.getConsumerToken());
+            httpHeaders.remove(Constants.HEADER_CONSUMER_TOKEN);
             data.setHeader( httpHeaders);
             data.setKind( AutoEventKind.REQUEST.toString());
             data.setPayload( payload);

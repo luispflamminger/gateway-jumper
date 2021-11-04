@@ -247,14 +247,16 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
             addHeader(exchange, chain, Constants.HEADER_X_ORIGIN_STARGATE, consumerOriginStargate);
             addHeader(exchange, chain, Constants.HEADER_X_ORIGIN_ZONE, consumerOriginZone);
 
-            String hostStargate = "";
-            try {
-                URL url = new URL(consumerOriginStargate);
-                hostStargate = url.getHost();
-            } catch (MalformedURLException e) {
-                log.error(e.getMessage(), e);
+            if (consumerOriginStargate != null) {
+                String hostStargate = "";
+                try {
+                    URL url = new URL(consumerOriginStargate);
+                    hostStargate = url.getHost();
+                } catch (MalformedURLException e) {
+                    log.error(e.getMessage(), e);
+                }
+                addHeader(exchange, chain, Constants.HEADER_X_FORWARDED_HOST, hostStargate);
             }
-            addHeader(exchange, chain, Constants.HEADER_X_FORWARDED_HOST, hostStargate);
 
             //rewriteXForwardedHeader(exchange, chain);
 
@@ -299,7 +301,8 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
                 exchange.getAttributes().put(ServerWebExchangeUtils.GATEWAY_REQUEST_URL_ATTR, new URI(finalApiUrl));
             } catch (URISyntaxException e) {
-                log.error(e.getMessage());
+                //log.error(e.getMessage());
+                throw new RuntimeException("TardisException", e);//todo create proper fallback
             }
             assureGatewayToken(exchange, jc);
             addTracing(request, api_base_path, envName, consumer, consumerOriginStargate);

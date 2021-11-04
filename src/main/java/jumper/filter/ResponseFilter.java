@@ -61,6 +61,9 @@ public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.
 				try (Tracer.SpanInScope ws = this.tracer.withSpanInScope(newSpan.start())) {
 
 					String xTardisTraceId = request.getHeaders().getFirst(Constants.HEADER_X_TARDIS_TRACE_ID);
+					String xCorrelationId = response.getHeaders().getFirst(Constants.HEADER_X_CORRELATION_ID);
+					if (xCorrelationId == null) xCorrelationId =  request.getHeaders().getFirst(Constants.HEADER_X_CORRELATION_ID);
+
 
 					newSpan.tag("http.status_code",
 							jumperInfoResponse.getIncomingResponse().getHttpStatusCode().toString());
@@ -68,6 +71,10 @@ public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.
 					if (xTardisTraceId != null) {
 
 						newSpan.tag("x-tardis-traceid", xTardisTraceId);
+					}
+
+					if (xCorrelationId != null){
+						newSpan.tag("x-correlation-id", xCorrelationId);
 					}
 
 					if (contentLength == null || contentLength.toString().equals("-1")) {

@@ -303,6 +303,7 @@ public class OauthTokenUtil {
 						.body(BodyInserters.fromFormData(cc))
 						.retrieve()
 						.bodyToMono(TokenInfo.class)
+						.retry(3)//todo restrict to particular errors
 						.onErrorMap(e -> new RuntimeException("message",e))
 						.block();
 /*
