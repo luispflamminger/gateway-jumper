@@ -62,7 +62,6 @@ public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.
 
 					String xTardisTraceId = request.getHeaders().getFirst(Constants.HEADER_X_TARDIS_TRACE_ID);
 					String xCorrelationId = response.getHeaders().getFirst(Constants.HEADER_X_CORRELATION_ID);
-					if (xCorrelationId == null) xCorrelationId =  request.getHeaders().getFirst(Constants.HEADER_X_CORRELATION_ID);
 
 
 					newSpan.tag("http.status_code",

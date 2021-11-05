@@ -99,7 +99,10 @@ public class AutoEventService
         if( http instanceof ServerHttpResponse)
         {
             data = new AutoEventData();
-            data.getHeader().putAll(rs.getHeaders().toSingleValueMap());
+            Map<String,String> httpHeaders = new HashMap<>();
+            httpHeaders.putAll(rs.getHeaders().toSingleValueMap());
+            httpHeaders.put(Constants.HEADER_X_TARDIS_TRACE_ID, rq.getHeaders().getFirst(Constants.HEADER_X_TARDIS_TRACE_ID));
+            data.setHeader( httpHeaders);
             data.setKind( AutoEventKind.RESPONSE.toString());
             data.setPayload( payload);
             data.setStatus( rs.getStatusCode().value());
