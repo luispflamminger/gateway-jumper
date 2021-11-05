@@ -27,6 +27,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.InvalidKeyException;
 import io.jsonwebtoken.security.SignatureException;
+import io.netty.channel.ConnectTimeoutException;
 import jumper.JumperCache;
 import jumper.model.TokenInfo;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +42,7 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import reactor.util.retry.Retry;
 
 @Slf4j
 @Service
@@ -303,7 +305,8 @@ public class OauthTokenUtil {
 						.body(BodyInserters.fromFormData(cc))
 						.retrieve()
 						.bodyToMono(TokenInfo.class)
-						.retry(3)//todo restrict to particular errors
+						.retryWhen(Retry.max(3)
+						.filter(throwable -> throwable instanceof ConnectTimeoutException))
 						.onErrorMap(e -> new RuntimeException("message",e))
 						.block();
 /*
