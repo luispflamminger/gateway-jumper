@@ -258,7 +258,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                 addHeader(exchange, chain, Constants.HEADER_X_FORWARDED_HOST, hostStargate);
             }
 
-            //rewriteXForwardedHeader(exchange, chain);
+            rewriteXForwardedHeader(exchange, chain);
 
 
             IncomingRequest incReq = new IncomingRequest();
@@ -423,21 +423,21 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
     private void rewriteXForwardedHeader( ServerWebExchange exchange, GatewayFilterChain chain) {
 
-        String normalizedForwardedHost = "";
+//        String normalizedForwardedHost = "";
 
-        ServerHttpRequest request = exchange.getRequest();
+//        ServerHttpRequest request = exchange.getRequest();
 
-        String forwardedHost = request.getHeaders().getFirst( Constants.HEADER_X_FORWARDED_HOST);
+//        String forwardedHost = request.getHeaders().getFirst( Constants.HEADER_X_FORWARDED_HOST);
+//
+//        /**
+//         * As we have to gateways (kong and spring cloud gateway) in place, the forwarded host is added twice to X-Forwarded-Host header
+//         */
+//        String[] splittedForwardedHost = StringUtils.split(forwardedHost, ",");
+//        if(splittedForwardedHost != null && splittedForwardedHost.length >= 1) {
+//            normalizedForwardedHost = StringUtils.removeEnd(splittedForwardedHost[0], ":");
+//        }
 
-        /**
-         * As we have to gateways (kong and spring cloud gateway) in place, the forwarded host is added twice to X-Forwarded-Host header
-         */
-        String[] splittedForwardedHost = StringUtils.split(forwardedHost, ",");
-        if(splittedForwardedHost != null && splittedForwardedHost.length >= 1) {
-            normalizedForwardedHost = StringUtils.removeEnd(splittedForwardedHost[0], ":");
-        }
-
-        addHeader(exchange, chain, Constants.HEADER_X_FORWARDED_HOST, normalizedForwardedHost);
+//        addHeader(exchange, chain, Constants.HEADER_X_FORWARDED_HOST, normalizedForwardedHost);
         addHeader(exchange, chain, Constants.HEADER_X_FORWARDED_PORT, Constants.HEADER_X_FORWARDED_PORT_PORT);
         addHeader(exchange, chain, Constants.HEADER_X_FORWARDED_PROTO, Constants.HEADER_X_FORWARDED_PROTO_HTTPS);
 

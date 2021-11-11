@@ -29,8 +29,8 @@ spring:
         ssl:
           useInsecureTrustManager: true # routing to a https backend, Gateway will trust all downstream certificates
       x-forwarded:
-        for-enabled: true
-        for-append: true
+        for-enabled: false
+        for-append: false
         host-enabled: false
         host-append: false
         port-enabled: false
