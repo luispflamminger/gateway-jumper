@@ -17,7 +17,7 @@ public class AutoEventData
     Map<String, String> header = new HashMap<>();
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     Map<String, String> parameters = new HashMap<>();
-    String payload;
+    Object payload;
     @JsonInclude(JsonInclude.Include.NON_DEFAULT)
     int status;
 }

@@ -1,6 +1,7 @@
 package jumper.autoevent;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jumper.Constants;
 import jumper.model.TokenInfo;
@@ -92,7 +93,7 @@ public class AutoEventService
             httpHeaders.remove(Constants.HEADER_CONSUMER_TOKEN);
             data.setHeader( httpHeaders);
             data.setKind( AutoEventKind.REQUEST.toString());
-            data.setPayload( payload);
+            data.setPayload(parsePayload(rq.getHeaders().getContentType(), payload));
             data.setParameters(rq.getQueryParams().toSingleValueMap());
         }
 
@@ -104,7 +105,7 @@ public class AutoEventService
             httpHeaders.put(Constants.HEADER_X_TARDIS_TRACE_ID, rq.getHeaders().getFirst(Constants.HEADER_X_TARDIS_TRACE_ID));
             data.setHeader( httpHeaders);
             data.setKind( AutoEventKind.RESPONSE.toString());
-            data.setPayload( payload);
+            data.setPayload(parsePayload(rs.getHeaders().getContentType(), payload));
             data.setStatus( rs.getStatusCode().value());
         }
         data.setConsumer( jc.getConsumer());
@@ -234,5 +235,20 @@ public class AutoEventService
                     .publishOn(Schedulers.elastic())
                     .subscribe(body -> log.debug("Response body: {}", body));
         }
+    }
+
+    private Object parsePayload (MediaType mediaType, String s){
+        if (mediaType != null && mediaType.isCompatibleWith(MediaType.APPLICATION_JSON)){
+            log.debug("json compatible content-type, try to use json payload");
+            try{
+                JsonNode j = new ObjectMapper().readTree(s);
+                return j;
+            }
+            catch (JsonProcessingException e){
+                e.printStackTrace();
+            }
+        }
+
+        return s;
     }
 }
