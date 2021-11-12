@@ -238,6 +238,8 @@ public class AutoEventService
     }
 
     private Object parsePayload (MediaType mediaType, String s){
+        if (s == null) return s;
+
         if (mediaType != null && mediaType.isCompatibleWith(MediaType.APPLICATION_JSON)){
             log.debug("json compatible content-type, try to use json payload");
             try{
