@@ -8,7 +8,7 @@ RUN addgroup --gid 1000 jumper && adduser --uid 1000 -G jumper -D jumper --no-cr
 
 USER 1000:1000
 
-EXPOSE 8080 8080
+EXPOSE 8080 8082
 
 COPY application.jar /usr/share/
 COPY app.pem /usr/share/keypair/
