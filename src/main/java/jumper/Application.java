@@ -1,11 +1,15 @@
 package jumper;
 
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import jumper.autoevent.AutoEventBodyRewrite;
 import jumper.filter.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.gateway.config.HttpClientCustomizer;
 import org.springframework.cloud.gateway.route.RouteLocator;
 import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
 import org.springframework.context.annotation.Bean;
@@ -15,8 +19,10 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 
 import brave.http.HttpRequestParser;
 
+import javax.net.ssl.SSLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.List;
 
 @SpringBootApplication
 public class Application {
@@ -178,6 +184,35 @@ public class Application {
 
         };
     }
+
+    @Bean
+    public HttpClientCustomizer httpClientCustomizer() {
+        try {
+            SslContext s = SslContextBuilder
+                    .forClient()
+                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                    //.ciphers(List.of("TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384"))
+                    .ciphers(List.of("TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384", "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384", "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256", "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384", "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA", "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA", "TLS_RSA_WITH_AES_128_GCM_SHA256", "TLS_RSA_WITH_AES_128_CBC_SHA", "TLS_RSA_WITH_AES_256_CBC_SHA", "TLS_AES_128_GCM_SHA256", "TLS_AES_256_GCM_SHA384"))
+                    .build();
+
+            return httpClient -> {
+                //todo rather get existing and add new, but HttpClientSecure is not public
+                //List l = ((HttpClientSecure) httpClient).sslProvider.sslContext.cipherSuites();
+                return httpClient
+                        .secure(t -> t.sslContext(s));
+            };
+/*
+            return httpClient -> httpClient
+                    .secure(t -> t.sslContext(s));
+*/
+        }
+        catch (SSLException e){
+            e.printStackTrace();
+        }
+
+        return httpClient -> httpClient;
+    }
+
 
     //  Customize sleuth HttpClient span
     /*
