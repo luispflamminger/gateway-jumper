@@ -351,7 +351,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
             if( xTardisTraceId != null){
 
-                newSpan.tag( "x-tardis-traceid", xTardisTraceId);
+                newSpan.tag( Constants.HEADER_X_TARDIS_TRACE_ID, xTardisTraceId);
             }
 
             if( consumerOriginStargate != null)

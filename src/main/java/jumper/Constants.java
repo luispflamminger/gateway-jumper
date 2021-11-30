@@ -20,14 +20,14 @@ public class Constants {
 	public final static String HEADER_DEBUG_RESPONSE_HEADER = "X-Tardis-Debug";
 	public final static String HEADER_X_ORIGIN_STARGATE = "X-Origin-Stargate";
 	public final static String HEADER_X_ORIGIN_ZONE = "X-Origin-Zone";
-	public final static String HEADER_X_B3_TRACE_ID = "X-B3-TraceId";
+	public final static String HEADER_X_B3_TRACE_ID = "x-b3-traceId";
 	public final static String HEADER_X_B3_SPAN_ID = "X-B3-SpanId";
 	public final static String HEADER_X_B3_PARENT_SPAN_ID = "X-B3-ParentSpanId";
 	public final static String HEADER_X_B3_SAMPLED= "X-B3-Sampled";
-	public final static String HEADER_X_TARDIS_TRACE_ID = "X-Tardis-Traceid";
-	public final static String HEADER_X_BUSINESS_CONTEXT = "X-Business-Context";
-	public final static String HEADER_X_REQUEST_ID = "X-Request-ID";
-	public final static String HEADER_X_CORRELATION_ID = "X-Correlation-ID";
+	public final static String HEADER_X_TARDIS_TRACE_ID = "x-tardis-traceid";
+	public final static String HEADER_X_BUSINESS_CONTEXT = "x-business-context";
+	public final static String HEADER_X_REQUEST_ID = "x-request-id";
+	public final static String HEADER_X_CORRELATION_ID = "x-correlation-id";
 
 	public final static String HEADER_X_FORWARDED_HOST = "X-Forwarded-Host";
 	public final static String HEADER_X_FORWARDED_PORT = "X-Forwarded-Port";
