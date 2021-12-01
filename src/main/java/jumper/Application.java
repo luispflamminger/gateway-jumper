@@ -22,6 +22,7 @@ import brave.http.HttpRequestParser;
 import javax.net.ssl.SSLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.LinkedList;
 import java.util.List;
 
 @SpringBootApplication
@@ -30,6 +31,9 @@ public class Application {
     @Value( "${horizon.publishEventUrl}")
     private String publishEventUrl;
     private  String publishEventUrlPath;
+
+    @Value("${CUSTOM_CIPHERS:#{null}}")
+    List<String> custom_ciphers;
 
     public final String listenerQueryParam = "listener";
 
@@ -188,6 +192,40 @@ public class Application {
     @Bean
     public HttpClientCustomizer httpClientCustomizer() {
         try {
+            List dt_ciphers =  List.of("TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"
+                    ,"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+                    ,"TLS_DHE_DSS_WITH_AES_256_GCM_SHA384"
+                    ,"TLS_DHE_RSA_WITH_AES_256_GCM_SHA384"
+                    ,"TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256"
+                    ,"TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256"
+                    ,"TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256"
+                    //,"TLS_ECDHE_ECDSA_WITH_AES_256_CCM"
+                    //,"TLS_DHE_RSA_WITH_AES_256_CCM"
+                    ,"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"
+                    ,"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+                    ,"TLS_DHE_DSS_WITH_AES_128_GCM_SHA256"
+                    ,"TLS_DHE_RSA_WITH_AES_128_GCM_SHA256"
+                    //,"TLS_ECDHE_ECDSA_WITH_AES_128_CCM"
+                    //,"TLS_DHE_RSA_WITH_AES_128_CCM"
+                    ,"TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384"
+                    ,"TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384"
+                    ,"TLS_DHE_DSS_WITH_AES_256_CBC_SHA256"
+                    ,"TLS_DHE_RSA_WITH_AES_256_CBC_SHA256"
+                    ,"TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256"
+                    ,"TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256"
+                    ,"TLS_DHE_DSS_WITH_AES_128_CBC_SHA256"
+                    ,"TLS_DHE_RSA_WITH_AES_128_CBC_SHA256"
+                    ,"TLS_AES_256_GCM_SHA384"
+                    ,"TLS_CHACHA20_POLY1305_SHA256"
+                    ,"TLS_AES_128_GCM_SHA256"
+                    //,"TLS_AES_128_CCM_SHA256"
+            );
+            List<String> ciphers = new LinkedList<>(dt_ciphers);
+            if (custom_ciphers != null){
+                for (String cipher: custom_ciphers){
+                    if (!ciphers.contains(cipher)) ciphers.add(cipher);
+                }
+            }
             SslContext s = SslContextBuilder
                     .forClient()
                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
@@ -195,47 +233,13 @@ public class Application {
                     //.ciphers(List.of("TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384"))
                     //current list + missing
                     //.ciphers(List.of("TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384", "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384", "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256", "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384", "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA", "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA", "TLS_RSA_WITH_AES_128_GCM_SHA256", "TLS_RSA_WITH_AES_128_CBC_SHA", "TLS_RSA_WITH_AES_256_CBC_SHA", "TLS_AES_128_GCM_SHA256", "TLS_AES_256_GCM_SHA384"))
-                    //DT exact list
                     .protocols("TLSv1.2","TLSv1.3")
-                    .ciphers(List.of("TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"
-                            ,"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
-                            ,"TLS_DHE_DSS_WITH_AES_256_GCM_SHA384"
-                            ,"TLS_DHE_RSA_WITH_AES_256_GCM_SHA384"
-                            ,"TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256"
-                            ,"TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256"
-                            ,"TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256"
-                            //,"TLS_ECDHE_ECDSA_WITH_AES_256_CCM"
-                            //,"TLS_DHE_RSA_WITH_AES_256_CCM"
-                            ,"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"
-                            ,"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
-                            ,"TLS_DHE_DSS_WITH_AES_128_GCM_SHA256"
-                            ,"TLS_DHE_RSA_WITH_AES_128_GCM_SHA256"
-                            //,"TLS_ECDHE_ECDSA_WITH_AES_128_CCM"
-                            //,"TLS_DHE_RSA_WITH_AES_128_CCM"
-                            ,"TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384"
-                            ,"TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384"
-                            ,"TLS_DHE_DSS_WITH_AES_256_CBC_SHA256"
-                            ,"TLS_DHE_RSA_WITH_AES_256_CBC_SHA256"
-                            ,"TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256"
-                            ,"TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256"
-                            ,"TLS_DHE_DSS_WITH_AES_128_CBC_SHA256"
-                            ,"TLS_DHE_RSA_WITH_AES_128_CBC_SHA256"
-                            ,"TLS_AES_256_GCM_SHA384"
-                            ,"TLS_CHACHA20_POLY1305_SHA256"
-                            ,"TLS_AES_128_GCM_SHA256"
-                            //,"TLS_AES_128_CCM_SHA256"
-                     ))
+                    .ciphers(ciphers)
                     .build();
 
-            return httpClient -> {
-                //List l = ((HttpClientSecure) httpClient).sslProvider.sslContext.cipherSuites();
-                return httpClient
-                        .secure(t -> t.sslContext(s));
-            };
-/*
             return httpClient -> httpClient
                     .secure(t -> t.sslContext(s));
-*/
+
         }
         catch (SSLException e){
             e.printStackTrace();
