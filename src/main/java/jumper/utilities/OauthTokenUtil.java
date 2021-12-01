@@ -64,11 +64,14 @@ public class OauthTokenUtil {
 	}
 
 	public static String getConsumerFromToken( String consumerToken) {
+		return getClaimFromToken(consumerToken, "clientId");
+	}
 
+	public static String getClaimFromToken(String consumerToken, String claimName){
 		String consumerTokenWithoutSignature = getTokenWithoutSignature( consumerToken);
 		Jwt<Header, Claims> consumerTokenclaims = getAllClaimsFromConsumerToken( consumerTokenWithoutSignature);
-		String consumer = consumerTokenclaims.getBody().get( "clientId", String.class);
-		return consumer;
+		String claimValue = consumerTokenclaims.getBody().get( claimName, String.class);
+		return claimValue;
 	}
 
 	public static Jwt<Header, Claims> getAllClaimsFromConsumerToken( String consumerToken) {
