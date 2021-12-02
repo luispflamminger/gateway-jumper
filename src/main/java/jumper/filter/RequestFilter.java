@@ -344,6 +344,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         String xRequestId = request.getHeaders().getFirst( Constants.HEADER_X_REQUEST_ID);
         String xCorrelationId = request.getHeaders().getFirst( Constants.HEADER_X_CORRELATION_ID);
         Long contentLength = request.getHeaders().getContentLength();
+        String publisherId = request.getHeaders().getFirst(Constants.HEADER_X_PUBLISHER_ID);
 
         Span newSpan = this.tracer.nextSpan().name( "Request Filter");
         try( Tracer.SpanInScope ws = this.tracer.withSpanInScope( newSpan.start()))
@@ -371,11 +372,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                 newSpan.tag( "message.size", contentLength.toString());
             }
 
-            if( api_base_path != null)
-            {
-
-                newSpan.tag( "peer.service", api_base_path.substring( 1).replace( "/", "-"));
-            }
 
             if( envName != null)
             {
@@ -383,11 +379,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                 newSpan.tag( "environment.info", envName);
             }
 
-            if( consumer != null)
-            {
-
-                newSpan.tag( "consumer", consumer);
-            }
 
             if( xB3TraceId != null)
             {
@@ -411,6 +402,29 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
             {
 
                 newSpan.tag( Constants.HEADER_X_CORRELATION_ID, xCorrelationId);
+            }
+
+            //callback
+            if (publisherId != null){
+                newSpan.tag("publisher", publisherId);
+
+                String subscriptionId = request.getHeaders().getFirst(Constants.HEADER_X_SUBSCRIPTION_ID);
+                if (subscriptionId != null){
+                    newSpan.tag("subscription-id", subscriptionId);
+                }
+            }
+            //not callback, assume request-response
+            else {
+
+                if (api_base_path != null) {
+
+                    newSpan.tag("peer.service", api_base_path.substring(1).replace("/", "-"));
+                }
+
+                if (consumer != null) {
+
+                    newSpan.tag("consumer", consumer);
+                }
             }
         }
         finally

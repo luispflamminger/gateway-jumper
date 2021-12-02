@@ -25,6 +25,7 @@ public class ServerParserConfiguration {
             String xCorrelationId = req.header( Constants.HEADER_X_CORRELATION_ID);
             String consumerOriginStargate = req.header(Constants.HEADER_X_ORIGIN_STARGATE);
             String envName = req.header(Constants.HEADER_ENVIRONMENT);
+            String publisherId = req.header(Constants.HEADER_X_PUBLISHER_ID);
             String token;
 
             String spanName = "Provider";
@@ -91,15 +92,28 @@ public class ServerParserConfiguration {
                 span.tag( "environment.info", envName);
             }
 
-            if (token != null){
-                String consumer = OauthTokenUtil.getConsumerFromToken(token);
-                if (consumer != null) {
-                    span.tag("consumer", consumer);
+            //callback
+            if (publisherId != null){
+                span.tag("publisher", publisherId);
+
+                String subscriptionId = req.header(Constants.HEADER_X_SUBSCRIPTION_ID);
+                if (subscriptionId != null){
+                    span.tag("subscription-id", subscriptionId);
                 }
 
-                String apiBasePath = OauthTokenUtil.getClaimFromToken(token, "requestPath");
-                if (apiBasePath != null){
-                    span.tag("peer.service", apiBasePath.substring(1, apiBasePath.length()-1).replace( "/", "-"));
+            }
+            //not callback, assume request-response
+            else {
+                if (token != null) {
+                    String consumer = OauthTokenUtil.getConsumerFromToken(token);
+                    if (consumer != null) {
+                        span.tag("consumer", consumer);
+                    }
+
+                    String apiBasePath = OauthTokenUtil.getClaimFromToken(token, "requestPath");
+                    if (apiBasePath != null) {
+                        span.tag("peer.service", apiBasePath.substring(1, apiBasePath.length() - 1).replace("/", "-"));
+                    }
                 }
             }
 
