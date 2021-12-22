@@ -24,6 +24,7 @@
 variables:
   IMAGE_DOCKER:     "docker:latest"
   MTR_TIF_REGISTRY: "mtr.external.otc.telekomcloud.com"
+  HARBOR_REGISTRY:  "harbor.das-schiff.telekom.de"
   MTR_TIF_GROUP:    "tif-public"
   MTR_DST_TAGS:     "$CI_COMMIT_REF_NAME"
   DOCKER_CONTEXT:    "."

@@ -6,6 +6,7 @@ stages:
   - build
   - unit-test
   - package
+  - mirror
 
 default:
   tags: [ "run01_docker" ]
@@ -33,3 +34,18 @@ dockerize:
     MTR_DST_IMAGE: "jumper-sse"
     DOCKER_CONTEXT: "./docker"
   stage: package
+
+mtr to harbor:
+  image: docker:latest
+  stage: mirror
+  variables:
+    MTR_DST_IMAGE: "jumper-sse"
+  script: 
+    - docker login -u="$MTR_TIF_USER" -p="$MTR_TIF_TOKEN" $MTR_TIF_REGISTRY
+    - docker pull mtr.external.otc.telekomcloud.com/tif-public/$MTR_DST_IMAGE:$MTR_DST_TAGS
+    - docker tag mtr.external.otc.telekomcloud.com/tif-public/$MTR_DST_IMAGE:$MTR_DST_TAGS harbor.das-schiff.telekom.de/tardis/$MTR_DST_IMAGE:$MTR_DST_TAGS
+    - docker logout $MTR_TIF_REGISTRY || true
+    - docker login -u="$HARBOR_USER" -p="$HARBOR_SECRET" $HARBOR_REGISTRY
+    - docker push harbor.das-schiff.telekom.de/tardis/$MTR_DST_IMAGE:$MTR_DST_TAGS
+    - docker logout $HARBOR_REGISTRY || true
+
