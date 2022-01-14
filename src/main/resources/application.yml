@@ -7,7 +7,8 @@ management:
     loggers.enabled: true # having actuators endpoint for setting log level
   endpoints:
     web:
-      exposure.include: gateway, loggers, metrics
+      exposure.include: gateway, loggers, metrics, prometheus
+      path-mapping.prometheus: metrics
 
 spring:
   application:
