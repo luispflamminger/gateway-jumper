@@ -8,7 +8,7 @@ management:
   endpoints:
     web:
       exposure.include: gateway, loggers, metrics, prometheus
-      path-mapping.prometheus: metrics
+      path-mapping.prometheus: prometheus
 
 spring:
   application:
