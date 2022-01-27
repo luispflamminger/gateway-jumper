@@ -62,4 +62,3 @@ jumpercache.cleanCacheInSeconds: 3600
 ##############################
 horizon:
   publishEventUrl: ${PUBLISH_EVENT_URL:http://producer.stage:8080/v1/events}
-  publishEventUrlStargate: ${STARGATE_URL:https://stargate.stage.dhei.telekom.de}/horizon/events/v1

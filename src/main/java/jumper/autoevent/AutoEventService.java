@@ -1,5 +1,7 @@
 package jumper.autoevent;
 
+import brave.Span;
+import brave.Tracer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -37,11 +39,11 @@ public class AutoEventService
     @Autowired
     OauthTokenUtil oauthTokenUtil;
 
+    @Autowired
+    Tracer tracer;
+
     @Value( "${jumper.stargate.url}")
     private String stargateUrl;
-
-    @Value( "${horizon.publishEventUrl}")
-    private String publishEventUrl;
 
     private TokenInfo gwToken;
 
@@ -204,6 +206,13 @@ public class AutoEventService
                     @Override
                     public void accept(HttpHeaders httpHeaders) {
                         httpHeaders.setBearerAuth(gwToken.getAccessToken());
+
+                        //pass traceid from request to autoevent, maybe also new client span should be created
+                        Span currentSpan = tracer.currentSpan();
+                        if (currentSpan != null) {
+                            log.debug("set {} : {} to created event",Constants.HEADER_X_B3_TRACE_ID,  currentSpan.context().traceIdString());
+                            httpHeaders.set(Constants.HEADER_X_B3_TRACE_ID, currentSpan.context().traceIdString());
+                        }
                     }
                 })
                 .contentType(MediaType.APPLICATION_JSON)
