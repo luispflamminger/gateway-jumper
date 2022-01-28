@@ -30,6 +30,7 @@ public class Constants {
 	public final static String HEADER_X_CORRELATION_ID = "x-correlation-id";
 	public final static String HEADER_X_PUBLISHER_ID = "x-pubsub-publisher-id";
 	public final static String HEADER_X_SUBSCRIPTION_ID = "x-subscription-id";
+	public final static String HEADER_B3 = "b3";
 
 	public final static String HEADER_X_FORWARDED_HOST = "X-Forwarded-Host";
 	public final static String HEADER_X_FORWARDED_PORT = "X-Forwarded-Port";

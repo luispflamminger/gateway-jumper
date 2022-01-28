@@ -207,11 +207,15 @@ public class AutoEventService
                     public void accept(HttpHeaders httpHeaders) {
                         httpHeaders.setBearerAuth(gwToken.getAccessToken());
 
-                        //pass traceid from request to autoevent, maybe also new client span should be created
+                        //pass tracing info from request to autoevent, maybe also new client span should be created
                         Span currentSpan = tracer.currentSpan();
                         if (currentSpan != null) {
-                            log.debug("set {} : {} to created event",Constants.HEADER_X_B3_TRACE_ID,  currentSpan.context().traceIdString());
-                            httpHeaders.set(Constants.HEADER_X_B3_TRACE_ID, currentSpan.context().traceIdString());
+                            String b3 = currentSpan.context().traceIdString() + "-" + currentSpan.context().spanIdString();
+                            if (currentSpan.context().sampled()) b3 += "-1";
+                            else b3 += "-0";
+                            if (currentSpan.context().parentIdString() != null) b3 += "-" + currentSpan.context().parentIdString();
+                            log.debug("set b3 : {} to created event", b3);
+                            httpHeaders.set(Constants.HEADER_B3, b3);
                         }
                     }
                 })
