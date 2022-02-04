@@ -61,6 +61,8 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         return new OrderedGatewayFilter((exchange, chain) -> {
 
             ServerHttpRequest request = exchange.getRequest();
+            
+            String client_scope = "";
 
             //String routing_path = request.getURI().toString().replaceFirst(".*?:\\d+", "");
             String token_endpoint = request.getHeaders().getFirst( Constants.HEADER_TOKEN_ENDPOINT);
@@ -88,6 +90,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
             String xSpacegateClientId = request.getHeaders().getFirst( Constants.HEADER_X_SPACEGATE_CLIENT_ID);
             String xSpacegateClientSecret = request.getHeaders().getFirst( Constants.HEADER_X_SPACEGATE_CLIENT_SECRET);
+            String xSpacegateScope = request.getHeaders().getFirst(Constants.HEADER_X_SPACEGATE_SCOPE);
 
             String jumper_config_Base64 = request.getHeaders().getFirst( Constants.HEADER_JUMPER_CONFIG);
 
@@ -177,12 +180,24 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                         {
                             log.debug( "Using default ProviderClientSecret");
                         }
+                        
+                        // set scope
+                        if( xSpacegateScope != null)
+                        {
+                            log.debug( "Using Scope from xSpacegateScope-Header");
+                            client_scope = xSpacegateScope;
+                            removeHeader(exchange, chain, Constants.HEADER_X_SPACEGATE_SCOPE);
+                        }
+                        else
+                        {
+                            log.debug( "Using no scope");
+                        }
 
 
                         log.debug( "Get token for consumer: {} with clientId: {}", consumer, tif_clientID);
                         if( tif_clientID != null && tif_clientSecret != null)
                         {
-                            TokenInfo tokenInfo = oauthTokenUtil.getAccessToken( token_endpoint, tif_clientID, tif_clientSecret);
+                            TokenInfo tokenInfo = oauthTokenUtil.getAccessToken( token_endpoint, tif_clientID, tif_clientSecret, client_scope);
                             addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER+" "+tokenInfo.getAccessToken());
                         }
                         else

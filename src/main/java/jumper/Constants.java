@@ -4,6 +4,7 @@ public class Constants {
 
 	public final static String HEADER_X_SPACEGATE_CLIENT_ID = "X-Spacegate-Client-ID";
     public final static String HEADER_X_SPACEGATE_CLIENT_SECRET = "X-Spacegate-Client-Secret";
+    public final static String HEADER_X_SPACEGATE_SCOPE = "X-Spacegate-Scope";
     public final static String HEADER_JUMPER_CONFIG = "jumper_config";
     public final static String HEADER_ISSUER = "issuer";
     public final static String HEADER_TOKEN_ENDPOINT = "token_endpoint";

@@ -138,7 +138,7 @@ public class AutoEventService
         if(jc != null) {
             // get token with GatewayClient
             String local_issuer = jc.getGatewayClient().getIssuer() + Constants.ISSUER_SUFFIX;
-            gwToken = oauthTokenUtil.getAccessToken(local_issuer, jc.getGatewayClient().getId(), jc.getGatewayClient().getSecret(), true);
+            gwToken = oauthTokenUtil.getAccessToken(local_issuer, jc.getGatewayClient().getId(), jc.getGatewayClient().getSecret(), true, null);
 
             log.debug("will publish event: {}", eventJson);
             if (gwToken != null) {
