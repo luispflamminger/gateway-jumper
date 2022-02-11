@@ -5,9 +5,12 @@ management:
   endpoint:
     gateway.enabled: true # having actuators endpoint for filters e.g. host/actuator/gateway/routefilters
     loggers.enabled: true # having actuators endpoint for setting log level
+    health:
+      enabled: true # healthcheck endpoint
+      probes.enabled: true #healthcheck probes, liveness and readiness
   endpoints:
     web:
-      exposure.include: gateway, loggers, metrics
+      exposure.include: gateway, loggers, metrics, health
 
 spring:
   application:
