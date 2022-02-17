@@ -25,6 +25,7 @@ public class JumperConfig {
     String tif_remote_issuer;
     String tif_clientID;
     String tif_clientSecret;
+    String scopes;
     String consumerToken;
     String api_base_path;
     String access_token_forwarding;
@@ -81,6 +82,7 @@ public class JumperConfig {
         tif_remote_issuer = request.getHeaders().getFirst( Constants.HEADER_ISSUER);
         tif_clientID = request.getHeaders().getFirst( Constants.HEADER_CLIENT_ID);
         tif_clientSecret = request.getHeaders().getFirst( Constants.HEADER_CLIENT_SECRET);
+        scopes = request.getHeaders().getFirst( Constants.HEADER_CLIENT_SCOPES);
         consumerToken = request.getHeaders().getFirst( Constants.HEADER_AUTHORIZATION);
         api_base_path = request.getHeaders().getFirst( Constants.HEADER_API_BASE_PATH);
         access_token_forwarding = request.getHeaders().getFirst( Constants.HEADER_ACCESS_TOKEN_FORWARDING);

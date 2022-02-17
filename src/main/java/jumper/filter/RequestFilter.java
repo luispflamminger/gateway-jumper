@@ -188,9 +188,17 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                             client_scope = xSpacegateScope;
                             removeHeader(exchange, chain, Constants.HEADER_X_SPACEGATE_SCOPE);
                         }
+                        else if( jc.getOauth() != null && jc.getOauth().containsKey( consumer) && jc.getOauth().get( consumer).getScopes() != null && !jc.getOauth().get( consumer).getScopes().isBlank())
+                        {
+                            client_scope = jc.getOauth().get(consumer).getScopes();
+                        }
                         else
                         {
-                            log.debug( "Using no scope");
+                        	log.debug("Using default Provider scope");
+                        	if(jc.getScopes() != null && !jc.getScopes().isEmpty())
+                        	{
+                        		client_scope = jc.getScopes();
+                        	}
                         }
 
 

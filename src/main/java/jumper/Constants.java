@@ -10,6 +10,7 @@ public class Constants {
     public final static String HEADER_TOKEN_ENDPOINT = "token_endpoint";
 	public final static String HEADER_CLIENT_ID = "client_id";
 	public final static String HEADER_CLIENT_SECRET = "client_secret";
+	public final static String HEADER_CLIENT_SCOPES = "scopes";
 	public final static String HEADER_CONSUMER_TOKEN = "consumer-token";
 	public final static String HEADER_GATEWAY_TOKEN = "gateway_token";
 	public final static String HEADER_LASTMILE_SECURITY_TOKEN = "X-Gateway-Token";
