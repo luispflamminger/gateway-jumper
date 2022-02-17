@@ -5,6 +5,8 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import jumper.autoevent.AutoEventBodyRewrite;
 import jumper.filter.*;
+import reactor.netty.http.client.HttpClient;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
@@ -14,8 +16,10 @@ import org.springframework.cloud.gateway.route.RouteLocator;
 import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import brave.http.HttpRequestParser;
 
@@ -248,6 +252,16 @@ public class Application {
         return httpClient -> httpClient;
     }
 
+    
+    @Bean
+    public WebClient createWebClient() throws SSLException {
+        SslContext sslContext = SslContextBuilder
+                .forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .build();
+        HttpClient httpClient = HttpClient.create().secure(t -> t.sslContext(sslContext));
+        return WebClient.builder().clientConnector(new ReactorClientHttpConnector(httpClient)).build();
+    }
 
     //  Customize sleuth HttpClient span
     /*
