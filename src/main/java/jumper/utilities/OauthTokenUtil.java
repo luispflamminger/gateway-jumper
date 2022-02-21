@@ -28,6 +28,9 @@ import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.InvalidKeyException;
 import io.jsonwebtoken.security.SignatureException;
 import io.netty.channel.ConnectTimeoutException;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import jumper.JumperCache;
 import jumper.model.TokenInfo;
 import lombok.extern.slf4j.Slf4j;
@@ -42,18 +45,22 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import reactor.netty.http.client.HttpClient;
 import reactor.util.retry.Retry;
 
 @Slf4j
 @Service
 public class OauthTokenUtil {
-	WebClient webClient = WebClient.create();
+	//WebClient webClient = WebClient.create();
 
+	@Autowired
+	private WebClient webClient;
+	
 	@Autowired
 	JumperCache tokenCache;
 
 	private static String keyId = "74f16025-ff3d-453b-a917-eca975423dea";
-
+	
 	public static String getTokenWithoutSignature( String consumerToken) {
 
 		String[] token = consumerToken.split( " ");
