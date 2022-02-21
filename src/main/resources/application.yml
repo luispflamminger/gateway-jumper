@@ -15,7 +15,7 @@ management:
 
 spring:
   application:
-    name: ${JUMPER_NAME:Stargate}
+    name: ${JUMPER_NAME:Jumper}
   cloud:
     gateway:
       metrics.enabled: true #default ## in order to "push" to prometheus a prometheus dependency is needed in the pom.xml

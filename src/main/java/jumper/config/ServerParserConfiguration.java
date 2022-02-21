@@ -104,6 +104,7 @@ public class ServerParserConfiguration {
             }
             //not callback, assume request-response
             else {
+                /* increase cpu too much
                 if (token != null) {
                     String consumer = OauthTokenUtil.getConsumerFromToken(token);
                     if (consumer != null) {
@@ -115,6 +116,8 @@ public class ServerParserConfiguration {
                         span.tag("peer.service", apiBasePath.substring(1, apiBasePath.length() - 1).replace("/", "-"));
                     }
                 }
+
+                 */
             }
 
         };
