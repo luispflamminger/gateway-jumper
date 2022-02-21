@@ -1,17 +1,20 @@
 server:
-  port: 8080
+  port: ${JUMPER_PORT:8080}
 
 management:
   endpoint:
     gateway.enabled: true # having actuators endpoint for filters e.g. host/actuator/gateway/routefilters
     loggers.enabled: true # having actuators endpoint for setting log level
+    health:
+      enabled: true # healthcheck endpoint
+      probes.enabled: true #healthcheck probes, liveness and readiness
   endpoints:
     web:
-      exposure.include: gateway, loggers, metrics
+      exposure.include: gateway, loggers, metrics, health
 
 spring:
   application:
-    name: Jumper
+    name: ${JUMPER_NAME:Stargate}
   cloud:
     gateway:
       metrics.enabled: true #default ## in order to "push" to prometheus a prometheus dependency is needed in the pom.xml
@@ -26,8 +29,8 @@ spring:
           type: ELASTIC #default
         connect-timeout: 10000
         response-timeout: 61s # ingress 60s
-        ssl:
-          useInsecureTrustManager: true # routing to a https backend, Gateway will trust all downstream certificates
+        #ssl:
+          #useInsecureTrustManager: true # routing to a https backend, Gateway will trust all downstream certificates
       x-forwarded:
         for-enabled: false
         for-append: false
@@ -43,7 +46,6 @@ spring:
         enabled: false
   zipkin:
     baseUrl: ${TRACING_URL:https://collector-zipkin-http-drax-guardians.test.dhei.telekom.de}
-    #baseUrl: https://collector-zipkin-http-drax-guardians.stage.dhei.telekom.de
   sleuth:
     sampler.probability: 1
     propagation:
@@ -51,9 +53,9 @@ spring:
 
 jumper:
   issuer:
-    url: ${STARGATE_URL:https://stargate.stage.dhei.telekom.de}/auth/realms
+    url: ${JUMPER_ISSUER_URL:https://stargate-integration.test.dhei.telekom.de/auth/realms}
   stargate:
-    url: ${STARGATE_URL:https://stargate.stage.dhei.telekom.de}
+    url: ${STARGATE_URL:https://stargate-integration.test.dhei.telekom.de}
 
 jumpercache.ttlOffset: 10
 jumpercache.cleanCacheInSeconds: 3600
@@ -63,4 +65,3 @@ jumpercache.cleanCacheInSeconds: 3600
 ##############################
 horizon:
   publishEventUrl: ${PUBLISH_EVENT_URL:http://producer.stage:8080/v1/events}
-  publishEventUrlStargate: ${STARGATE_URL:https://stargate.stage.dhei.telekom.de}/horizon/events/v1

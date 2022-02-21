@@ -18,8 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class AutoEventRequestFilter extends AbstractGatewayFilterFactory<AutoEventRequestFilter.Config> {
 
-    @Value( "${horizon.publishEventUrlStargate}")
-    private String publishEventUrlStargate;
+    @Value( "${horizon.publishEventUrl}")
+    private String publishEventUrl;
 
     @Autowired
     AutoEventService aes;
@@ -53,7 +53,7 @@ public class AutoEventRequestFilter extends AbstractGatewayFilterFactory<AutoEve
             AutoEvent eventReqMsg = aes.createEvent(jc, exchange, exchange.getRequest(), listener, requestBody);
 
             // publish event (route to local Horizon)
-            aes.publishEvent(eventReqMsg, publishEventUrlStargate, jc, exchange);
+            aes.publishEvent(eventReqMsg, publishEventUrl, jc, exchange);
 
             return chain.filter(exchange);
 

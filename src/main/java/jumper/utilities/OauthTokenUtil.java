@@ -64,11 +64,14 @@ public class OauthTokenUtil {
 	}
 
 	public static String getConsumerFromToken( String consumerToken) {
+		return getClaimFromToken(consumerToken, "clientId");
+	}
 
+	public static String getClaimFromToken(String consumerToken, String claimName){
 		String consumerTokenWithoutSignature = getTokenWithoutSignature( consumerToken);
 		Jwt<Header, Claims> consumerTokenclaims = getAllClaimsFromConsumerToken( consumerTokenWithoutSignature);
-		String consumer = consumerTokenclaims.getBody().get( "clientId", String.class);
-		return consumer;
+		String claimValue = consumerTokenclaims.getBody().get( claimName, String.class);
+		return claimValue;
 	}
 
 	public static Jwt<Header, Claims> getAllClaimsFromConsumerToken( String consumerToken) {
@@ -244,12 +247,16 @@ public class OauthTokenUtil {
 
 		return privKey;
 	}
-
-	public TokenInfo getAccessToken(String token_endpoint2, String tif_clientID2, String tif_clientSecret2) {
-		return getAccessToken(token_endpoint2, tif_clientID2, tif_clientSecret2, false);
+	
+	public TokenInfo getAccessToken(String token_endpoint2, String tif_clientID2, String tif_clientSecret2, String scope) {
+		return getAccessToken(token_endpoint2, tif_clientID2, tif_clientSecret2, false, scope);
 	}
 
-	public TokenInfo getAccessToken(String token_endpoint2, String tif_clientID2, String tif_clientSecret2, boolean autoevent) {
+	public TokenInfo getAccessToken(String token_endpoint2, String tif_clientID2, String tif_clientSecret2) {
+		return getAccessToken(token_endpoint2, tif_clientID2, tif_clientSecret2, false, null);
+	}
+
+	public TokenInfo getAccessToken(String token_endpoint2, String tif_clientID2, String tif_clientSecret2, boolean autoevent, String scope) {
 
 		// (cache) try to grab a valid gateway mesh token from cache
 		if (log.isDebugEnabled()) {
@@ -266,6 +273,9 @@ public class OauthTokenUtil {
 			cc.add("client_id", tif_clientID2);
 			cc.add("client_secret", tif_clientSecret2);
 			cc.add("grant_type", AuthorizationGrantType.CLIENT_CREDENTIALS.getValue());
+			if(scope != null && !scope.isEmpty()) {
+				cc.add("scope", scope);
+			}
 
 			/*
 			Mono blockingWrapper = Mono.fromCallable(() -> {

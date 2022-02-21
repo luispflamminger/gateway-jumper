@@ -19,8 +19,8 @@ import reactor.core.publisher.Mono;
 @Slf4j
 public class AutoEventResponseFilter extends AbstractGatewayFilterFactory<AutoEventResponseFilter.Config> {
 
-    @Value( "${horizon.publishEventUrlStargate}")
-    private String publishEventUrlStargate;
+    @Value( "${horizon.publishEventUrl}")
+    private String publishEventUrl;
 
     @Autowired
     AutoEventService aes;
@@ -60,7 +60,7 @@ public class AutoEventResponseFilter extends AbstractGatewayFilterFactory<AutoEv
                     AutoEvent eventRespMsg = aes.createEvent(jc, exchange, exchange.getResponse(), listener, responseBody);
 
                     // publish event (route to local Horizon)
-                    aes.publishEvent(eventRespMsg, publishEventUrlStargate, jc, exchange);
+                    aes.publishEvent(eventRespMsg, publishEventUrl, jc, exchange);
                 }
 
             }));

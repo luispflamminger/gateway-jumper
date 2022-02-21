@@ -1,5 +1,7 @@
 package jumper.autoevent;
 
+import brave.Span;
+import brave.Tracer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -37,11 +39,11 @@ public class AutoEventService
     @Autowired
     OauthTokenUtil oauthTokenUtil;
 
+    @Autowired
+    Tracer tracer;
+
     @Value( "${jumper.stargate.url}")
     private String stargateUrl;
-
-    @Value( "${horizon.publishEventUrl}")
-    private String publishEventUrl;
 
     private TokenInfo gwToken;
 
@@ -136,7 +138,7 @@ public class AutoEventService
         if(jc != null) {
             // get token with GatewayClient
             String local_issuer = jc.getGatewayClient().getIssuer() + Constants.ISSUER_SUFFIX;
-            gwToken = oauthTokenUtil.getAccessToken(local_issuer, jc.getGatewayClient().getId(), jc.getGatewayClient().getSecret(), true);
+            gwToken = oauthTokenUtil.getAccessToken(local_issuer, jc.getGatewayClient().getId(), jc.getGatewayClient().getSecret(), true, null);
 
             log.debug("will publish event: {}", eventJson);
             if (gwToken != null) {
@@ -204,6 +206,17 @@ public class AutoEventService
                     @Override
                     public void accept(HttpHeaders httpHeaders) {
                         httpHeaders.setBearerAuth(gwToken.getAccessToken());
+
+                        //pass tracing info from request to autoevent, maybe also new client span should be created
+                        Span currentSpan = tracer.currentSpan();
+                        if (currentSpan != null) {
+                            String b3 = currentSpan.context().traceIdString() + "-" + currentSpan.context().spanIdString();
+                            if (currentSpan.context().sampled()) b3 += "-1";
+                            else b3 += "-0";
+                            if (currentSpan.context().parentIdString() != null) b3 += "-" + currentSpan.context().parentIdString();
+                            log.debug("set b3 : {} to created event", b3);
+                            httpHeaders.set(Constants.HEADER_B3, b3);
+                        }
                     }
                 })
                 .contentType(MediaType.APPLICATION_JSON)

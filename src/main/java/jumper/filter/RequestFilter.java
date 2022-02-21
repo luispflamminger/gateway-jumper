@@ -61,6 +61,8 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         return new OrderedGatewayFilter((exchange, chain) -> {
 
             ServerHttpRequest request = exchange.getRequest();
+            
+            String client_scope = "";
 
             //String routing_path = request.getURI().toString().replaceFirst(".*?:\\d+", "");
             String token_endpoint = request.getHeaders().getFirst( Constants.HEADER_TOKEN_ENDPOINT);
@@ -88,6 +90,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
             String xSpacegateClientId = request.getHeaders().getFirst( Constants.HEADER_X_SPACEGATE_CLIENT_ID);
             String xSpacegateClientSecret = request.getHeaders().getFirst( Constants.HEADER_X_SPACEGATE_CLIENT_SECRET);
+            String xSpacegateScope = request.getHeaders().getFirst(Constants.HEADER_X_SPACEGATE_SCOPE);
 
             String jumper_config_Base64 = request.getHeaders().getFirst( Constants.HEADER_JUMPER_CONFIG);
 
@@ -177,12 +180,32 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                         {
                             log.debug( "Using default ProviderClientSecret");
                         }
+                        
+                        // set scope
+                        if( xSpacegateScope != null)
+                        {
+                            log.debug( "Using Scope from xSpacegateScope-Header");
+                            client_scope = xSpacegateScope;
+                            removeHeader(exchange, chain, Constants.HEADER_X_SPACEGATE_SCOPE);
+                        }
+                        else if( jc.getOauth() != null && jc.getOauth().containsKey( consumer) && jc.getOauth().get( consumer).getScopes() != null && !jc.getOauth().get( consumer).getScopes().isBlank())
+                        {
+                            client_scope = jc.getOauth().get(consumer).getScopes();
+                        }
+                        else
+                        {
+                        	log.debug("Using default Provider scope");
+                        	if(jc.getScopes() != null && !jc.getScopes().isEmpty())
+                        	{
+                        		client_scope = jc.getScopes();
+                        	}
+                        }
 
 
                         log.debug( "Get token for consumer: {} with clientId: {}", consumer, tif_clientID);
                         if( tif_clientID != null && tif_clientSecret != null)
                         {
-                            TokenInfo tokenInfo = oauthTokenUtil.getAccessToken( token_endpoint, tif_clientID, tif_clientSecret);
+                            TokenInfo tokenInfo = oauthTokenUtil.getAccessToken( token_endpoint, tif_clientID, tif_clientSecret, client_scope);
                             addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER+" "+tokenInfo.getAccessToken());
                         }
                         else
@@ -344,6 +367,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         String xRequestId = request.getHeaders().getFirst( Constants.HEADER_X_REQUEST_ID);
         String xCorrelationId = request.getHeaders().getFirst( Constants.HEADER_X_CORRELATION_ID);
         Long contentLength = request.getHeaders().getContentLength();
+        String publisherId = request.getHeaders().getFirst(Constants.HEADER_X_PUBLISHER_ID);
 
         Span newSpan = this.tracer.nextSpan().name( "Request Filter");
         try( Tracer.SpanInScope ws = this.tracer.withSpanInScope( newSpan.start()))
@@ -351,7 +375,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
             if( xTardisTraceId != null){
 
-                newSpan.tag( "x-tardis-traceid", xTardisTraceId);
+                newSpan.tag( Constants.HEADER_X_TARDIS_TRACE_ID, xTardisTraceId);
             }
 
             if( consumerOriginStargate != null)
@@ -371,11 +395,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                 newSpan.tag( "message.size", contentLength.toString());
             }
 
-            if( api_base_path != null)
-            {
-
-                newSpan.tag( "peer.service", api_base_path.substring( 1).replace( "/", "-"));
-            }
 
             if( envName != null)
             {
@@ -383,11 +402,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                 newSpan.tag( "environment.info", envName);
             }
 
-            if( consumer != null)
-            {
-
-                newSpan.tag( "consumer", consumer);
-            }
 
             if( xB3TraceId != null)
             {
@@ -411,6 +425,29 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
             {
 
                 newSpan.tag( Constants.HEADER_X_CORRELATION_ID, xCorrelationId);
+            }
+
+            //callback
+            if (publisherId != null){
+                newSpan.tag("publisher", publisherId);
+
+                String subscriptionId = request.getHeaders().getFirst(Constants.HEADER_X_SUBSCRIPTION_ID);
+                if (subscriptionId != null){
+                    newSpan.tag("subscription-id", subscriptionId);
+                }
+            }
+            //not callback, assume request-response
+            else {
+
+                if (api_base_path != null) {
+
+                    newSpan.tag("peer.service", api_base_path.substring(1).replace("/", "-"));
+                }
+
+                if (consumer != null) {
+
+                    newSpan.tag("consumer", consumer);
+                }
             }
         }
         finally
