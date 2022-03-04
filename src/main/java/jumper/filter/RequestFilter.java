@@ -315,7 +315,8 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                 URI _uri = request.getURI();
                 String _query = _uri.getRawQuery();
                 String _fragment = _uri.getFragment();
-                String routing_path = _uri.getPath().replaceFirst("^/$","");
+                //String routing_path = _uri.getPath().replaceFirst("^/$","");
+                String routing_path = _uri.getRawPath().replaceFirst("^/$","");
                 if (_query != null) routing_path = routing_path  + "?" + _query;
                 if (_fragment != null) routing_path = routing_path + "#" + _fragment;
 
