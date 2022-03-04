@@ -89,30 +89,26 @@ public class OauthTokenUtil {
 		}
 		catch( SignatureException e)
 		{
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			log.error("SignatureException", e);
 		}
 		catch( ExpiredJwtException e)
 		{
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			log.error("ExpiredJwtException", e);
 		}
 		catch( UnsupportedJwtException e)
 		{
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			log.error("UnsupportedJwtException", e);
 		}
 		catch( MalformedJwtException e)
 		{
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			log.error("MalformedJwtException", e);
 		}
 		catch( IllegalArgumentException e)
 		{
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			log.error("IllegalArgumentException", e);
 		}
-		return null;
+		throw new IllegalStateException("Was not able to parse consumer token");
+		//return null;
 	}
 
 	public static String generateExtGatewayToken( String envName, String consumerToken, String operation, String requestPath, String issuer) {
