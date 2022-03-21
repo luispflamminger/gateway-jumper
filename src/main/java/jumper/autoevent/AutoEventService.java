@@ -6,7 +6,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jumper.Constants;
-import jumper.model.TokenInfo;
 import jumper.model.config.JumperConfig;
 import jumper.model.config.RouteListener;
 import jumper.utilities.OauthTokenUtil;
@@ -45,7 +44,12 @@ public class AutoEventService
     @Value( "${jumper.stargate.url}")
     private String stargateUrl;
 
-    private TokenInfo gwToken;
+    @Value( "${jumper.issuer.url}")
+    private String localIssuerUrl;
+
+    private String defaultRealmName = Constants.DEFAULT_REALM;
+
+    //private TokenInfo gwToken;
 
     WebClient webClient = WebClient.create();
 
@@ -86,6 +90,7 @@ public class AutoEventService
         event.setType( "de.telekom.ei.listener");
 
         AutoEventData data = null;
+        String spanName = "Spectre request";
         if( http instanceof ServerHttpRequest)
         {
             data = new AutoEventData();
@@ -101,6 +106,8 @@ public class AutoEventService
 
         if( http instanceof ServerHttpResponse)
         {
+            spanName = ("Spectre response");
+
             data = new AutoEventData();
             Map<String,String> httpHeaders = new HashMap<>();
             httpHeaders.putAll(rs.getHeaders().toSingleValueMap());
@@ -116,6 +123,22 @@ public class AutoEventService
         data.setMethod( rq.getMethod().toString());
 
         event.setData( data);
+
+        Span newSpan = this.tracer.nextSpan().name(spanName);
+
+        try (Tracer.SpanInScope ws = this.tracer.withSpanInScope(newSpan.start())) {
+
+            newSpan.tag("spectre.issue",
+                    listener.getIssue());
+            newSpan.tag("spectre.provider",
+                    listener.getServiceOwner());
+            newSpan.tag("spectre.consumer",
+                    jc.getConsumer());
+
+        } finally {
+            newSpan.finish();
+        }
+
         return event;
     }
 
@@ -126,15 +149,15 @@ public class AutoEventService
      */
     public void publishEvent( AutoEvent event, String url, JumperConfig jc, ServerWebExchange exchange ) {
         String eventJson = null;
-        try
-        {
-            eventJson = new ObjectMapper().writeValueAsString( event);
-        }
-        catch( JsonProcessingException e1)
-        {
+        try {
+            eventJson = new ObjectMapper().writeValueAsString(event);
+        } catch (JsonProcessingException e1) {
             e1.printStackTrace();
         }
 
+        publishEventMono(url, eventJson, OauthTokenUtil.generateGatewayTokenForPublisher(localIssuerUrl + "/" + defaultRealmName)).subscribe();
+
+        /*
         if(jc != null) {
             // get token with GatewayClient
             String local_issuer = jc.getGatewayClient().getIssuer() + Constants.ISSUER_SUFFIX;
@@ -142,14 +165,16 @@ public class AutoEventService
 
             log.debug("will publish event: {}", eventJson);
             if (gwToken != null) {
+                lastmileSecurityToken = OauthTokenUtil.generateExtGatewayToken( envName, consumerToken, request.getMethod().toString(), requestPath, lmsIssuer);
                 publishEventMono(url, eventJson).subscribe();
             }
             else{
                 //just log error as we do not want to affect real message processing
                 log.error("did not get token for client: {} from {}, will not publish event", jc.getGatewayClient().getId(), local_issuer);
             }
-        }
 
+             */
+    }
 
 
 /*
@@ -171,7 +196,7 @@ public class AutoEventService
 
         log.info("Horizon Response statusCode: "+horizonResp.statusCode().value());
 */
-    }
+
     /*
     public Mono<String> publishEventMono(String url, String eventJson) {
         final Mono<String> responseMono = webClient.post()
@@ -199,13 +224,13 @@ public class AutoEventService
         });
     }
 */
-    public Mono<Void> publishEventMono(String url, String eventJson) {
+    public Mono<Void> publishEventMono(String url, String eventJson, String token) {
         final Mono<Void> responseMono = webClient.post()
                 .uri(url)
                 .headers(new Consumer<HttpHeaders>() {
                     @Override
                     public void accept(HttpHeaders httpHeaders) {
-                        httpHeaders.setBearerAuth(gwToken.getAccessToken());
+                        httpHeaders.setBearerAuth(token);
 
                         //pass tracing info from request to autoevent, maybe also new client span should be created
                         Span currentSpan = tracer.currentSpan();

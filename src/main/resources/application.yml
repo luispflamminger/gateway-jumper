@@ -10,8 +10,8 @@ management:
       probes.enabled: true #healthcheck probes, liveness and readiness
   endpoints:
     web:
-      exposure.include: gateway, loggers, metrics, prometheus, health
-      path-mapping.prometheus: prometheus
+      exposure.include: gateway, loggers, prometheus, health
+      #path-mapping.prometheus: prometheus
 
 spring:
   application:
