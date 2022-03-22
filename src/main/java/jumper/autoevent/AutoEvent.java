@@ -1,5 +1,6 @@
 package jumper.autoevent;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 
@@ -16,4 +17,6 @@ public class AutoEvent
     private AutoEventData data;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     String time;
+    @JsonIgnore
+    String spanId;
 }

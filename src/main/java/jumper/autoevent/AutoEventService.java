@@ -127,6 +127,8 @@ public class AutoEventService
         Span newSpan = this.tracer.nextSpan().name(spanName);
 
         try (Tracer.SpanInScope ws = this.tracer.withSpanInScope(newSpan.start())) {
+            newSpan.kind(Span.Kind.CLIENT);
+            event.setSpanId(newSpan.context().spanIdString());
 
             newSpan.tag("spectre.issue",
                     listener.getIssue());
@@ -155,7 +157,7 @@ public class AutoEventService
             e1.printStackTrace();
         }
 
-        publishEventMono(url, eventJson, OauthTokenUtil.generateGatewayTokenForPublisher(localIssuerUrl + "/" + defaultRealmName)).subscribe();
+        publishEventMono(url, eventJson, OauthTokenUtil.generateGatewayTokenForPublisher(localIssuerUrl + "/" + defaultRealmName), event.getSpanId()).subscribe();
 
         /*
         if(jc != null) {
@@ -224,7 +226,7 @@ public class AutoEventService
         });
     }
 */
-    public Mono<Void> publishEventMono(String url, String eventJson, String token) {
+    public Mono<Void> publishEventMono(String url, String eventJson, String token, String spanId) {
         final Mono<Void> responseMono = webClient.post()
                 .uri(url)
                 .headers(new Consumer<HttpHeaders>() {
@@ -244,7 +246,7 @@ public class AutoEventService
                             httpHeaders.set(Constants.HEADER_B3, b3);
                              */
                             httpHeaders.set(Constants.HEADER_X_B3_TRACE_ID, currentSpan.context().traceIdString());
-                            httpHeaders.set(Constants.HEADER_X_B3_SPAN_ID, currentSpan.context().spanIdString());
+                            httpHeaders.set(Constants.HEADER_X_B3_SPAN_ID, spanId);
                         }
                     }
                 })
