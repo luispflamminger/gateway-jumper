@@ -235,12 +235,16 @@ public class AutoEventService
                         //pass tracing info from request to autoevent, maybe also new client span should be created
                         Span currentSpan = tracer.currentSpan();
                         if (currentSpan != null) {
+                            /*
                             String b3 = currentSpan.context().traceIdString() + "-" + currentSpan.context().spanIdString();
                             if (currentSpan.context().sampled()) b3 += "-1";
                             else b3 += "-0";
                             if (currentSpan.context().parentIdString() != null) b3 += "-" + currentSpan.context().parentIdString();
                             log.debug("set b3 : {} to created event", b3);
                             httpHeaders.set(Constants.HEADER_B3, b3);
+                             */
+                            httpHeaders.set(Constants.HEADER_X_B3_TRACE_ID, currentSpan.context().traceIdString());
+                            httpHeaders.set(Constants.HEADER_X_B3_SPAN_ID, currentSpan.context().spanIdString());
                         }
                     }
                 })
