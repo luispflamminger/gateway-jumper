@@ -36,9 +36,6 @@ import java.util.function.Consumer;
 public class AutoEventService
 {
     @Autowired
-    OauthTokenUtil oauthTokenUtil;
-
-    @Autowired
     Tracer tracer;
 
     @Value( "${jumper.stargate.url}")
@@ -48,8 +45,6 @@ public class AutoEventService
     private String localIssuerUrl;
 
     private String defaultRealmName = Constants.DEFAULT_REALM;
-
-    //private TokenInfo gwToken;
 
     WebClient webClient = WebClient.create();
 
@@ -273,7 +268,6 @@ public class AutoEventService
 
     private static void logDebugResponse(Logger log, ClientResponse response) {
         if (log.isDebugEnabled()) {
-            //log.debug("Response status: {}", response.statusCode());
             log.debug("Response headers: {}", response.headers().asHttpHeaders());
             response.bodyToMono(String.class)
                     .publishOn(Schedulers.elastic())
@@ -285,7 +279,7 @@ public class AutoEventService
         if (s == null) return s;
 
         if (mediaType != null && mediaType.isCompatibleWith(MediaType.APPLICATION_JSON)){
-            log.debug("json compatible content-type, try to use json payload");
+            log.debug("json compatible content-type, will try to parse as json payload");
             try{
                 JsonNode j = new ObjectMapper().readTree(s);
                 return j;

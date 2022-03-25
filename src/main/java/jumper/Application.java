@@ -61,7 +61,7 @@ public class Application {
     }
 
     @Bean
-    public RouteLocator proxyRoute(RouteLocatorBuilder builder, RequestFilter requestFilter, RemoveHeaderFilter removeHeader, ResponseFilter responseFilter, AutoEventRequestFilter autoEventRequestFilter, AutoEventResponseFilter autoEventResponseFilter, RequestTransformationFilter requestTransformationFilter, ResponseTransformationFilter responseTransformationFilter) {
+    public RouteLocator proxyRoute(RouteLocatorBuilder builder, RequestFilter requestFilter, RemoveHeaderFilter removeHeader, ResponseFilter responseFilter, AutoEventRequestFilter autoEventRequestFilter, AutoEventResponseFilter autoEventResponseFilter, RequestTransformationFilter requestTransformationFilter, ResponseTransformationFilter responseTransformationFilter, SetSpectreAuthHeaderFilter setSpectreAuthHeaderFilter) {
         return builder.routes()
                 .route("jumper_route", p -> p
                         .path("/proxy/**")
@@ -144,6 +144,7 @@ public class Application {
                                         autoEventBodyRewrite)
                                 .rewritePath("/autoevent", publishEventUrlPath)
                                 .removeRequestParameter(listenerQueryParam)
+                                .filter(setSpectreAuthHeaderFilter.apply())
                         )
                         .uri(publishEventUrl))
                 .route("auto_event_route_head", p -> p
@@ -151,6 +152,7 @@ public class Application {
                         .filters(f -> f
                                 .rewritePath("/autoevent", publishEventUrlPath)
                                 .removeRequestParameter(listenerQueryParam)
+                                .filter(setSpectreAuthHeaderFilter.apply())
                         )
                         .uri(publishEventUrl))
                 .build();

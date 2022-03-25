@@ -328,7 +328,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                 //log.error(e.getMessage());
                 throw new RuntimeException("TardisException", e);//todo create proper fallback
             }
-            assureGatewayToken(exchange, jc);
+            //assureGatewayToken(exchange, jc);
             addTracing(request, api_base_path, envName, consumer, consumerOriginStargate);
 
             return chain.filter(exchange)
