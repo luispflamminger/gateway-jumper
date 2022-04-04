@@ -44,8 +44,6 @@ public class AutoEventService
     @Value( "${jumper.issuer.url}")
     private String localIssuerUrl;
 
-    private String defaultRealmName = Constants.DEFAULT_REALM;
-
     WebClient webClient = WebClient.create();
 
     public boolean isAnyListenerPresent( JumperConfig jc) {
@@ -152,7 +150,7 @@ public class AutoEventService
             e1.printStackTrace();
         }
 
-        publishEventMono(url, eventJson, OauthTokenUtil.generateGatewayTokenForPublisher(localIssuerUrl + "/" + defaultRealmName), event.getSpanId()).subscribe();
+        publishEventMono(url, eventJson, OauthTokenUtil.generateGatewayTokenForPublisher(localIssuerUrl + "/" + jc.getRealmName()), event.getSpanId()).subscribe();
 
         /*
         if(jc != null) {
