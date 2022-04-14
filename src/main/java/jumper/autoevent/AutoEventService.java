@@ -150,7 +150,9 @@ public class AutoEventService
             e1.printStackTrace();
         }
 
-        publishEventMono(url, eventJson, OauthTokenUtil.generateGatewayTokenForPublisher(localIssuerUrl + "/" + jc.getRealmName()), event.getSpanId()).subscribe();
+        String envName = jc.getGatewayClient().getIssuer().replaceFirst(".*realms\\/", "");
+
+        publishEventMono(url, eventJson, OauthTokenUtil.generateGatewayTokenForPublisher(localIssuerUrl + "/" + envName), event.getSpanId()).subscribe();
 
         /*
         if(jc != null) {
