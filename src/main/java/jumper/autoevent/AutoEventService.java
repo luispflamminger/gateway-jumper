@@ -44,6 +44,9 @@ public class AutoEventService
     @Value( "${jumper.issuer.url}")
     private String localIssuerUrl;
 
+    @Value( "${horizon.publishEventUrl}")
+    private String publishEventUrl;
+
     WebClient webClient = WebClient.create();
 
     public boolean isAnyListenerPresent( JumperConfig jc) {
@@ -142,7 +145,7 @@ public class AutoEventService
      *
      * @param event
      */
-    public void publishEvent( AutoEvent event, String url, JumperConfig jc, ServerWebExchange exchange ) {
+    public void publishEvent(AutoEvent event, JumperConfig jc, ServerWebExchange exchange) {
         String eventJson = null;
         try {
             eventJson = new ObjectMapper().writeValueAsString(event);
@@ -150,9 +153,23 @@ public class AutoEventService
             e1.printStackTrace();
         }
 
-        String envName = jc.getGatewayClient().getIssuer().replaceFirst(".*realms\\/", "");
+        //determine environment for local issuer and routing path on qa
+        //default fallback value
+        String envName = Constants.DEFAULT_REALM;
 
-        publishEventMono(url, eventJson, OauthTokenUtil.generateGatewayTokenForPublisher(localIssuerUrl + "/" + envName), event.getSpanId()).subscribe();
+        //for real route environment header is set, so also available within jc
+        if (jc.getGatewayClient().getIssuer() != null) {
+            envName = jc.getGatewayClient().getIssuer().replaceFirst(".*realms\\/", "");
+        }
+        //on proxy route we need to use token
+        else {
+            envName = OauthTokenUtil.getClaimFromToken(jc.getConsumerToken(), "iss").replaceFirst(".*realms\\/", "");
+        }
+
+        publishEventMono(publishEventUrl.replaceFirst(Constants.ENVIRONMENT_PLACEHOLDER, envName),
+                eventJson,
+                OauthTokenUtil.generateGatewayTokenForPublisher(localIssuerUrl + "/" + envName), event.getSpanId()
+        ).subscribe();
 
         /*
         if(jc != null) {

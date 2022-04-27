@@ -53,7 +53,7 @@ public class AutoEventRequestFilter extends AbstractGatewayFilterFactory<AutoEve
             AutoEvent eventReqMsg = aes.createEvent(jc, exchange, exchange.getRequest(), listener, requestBody);
 
             // publish event (route to local Horizon)
-            aes.publishEvent(eventReqMsg, publishEventUrl, jc, exchange);
+            aes.publishEvent(eventReqMsg, jc, exchange);
 
             return chain.filter(exchange);
 

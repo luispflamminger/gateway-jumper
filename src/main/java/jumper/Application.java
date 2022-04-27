@@ -34,7 +34,8 @@ public class Application {
 
     @Value( "${horizon.publishEventUrl}")
     private String publishEventUrl;
-    private  String publishEventUrlPath;
+
+//    private  String publishEventUrlPath;
 
     @Value("${CUSTOM_CIPHERS:#{null}}")
     List<String> custom_ciphers;
@@ -47,7 +48,7 @@ public class Application {
     public static void main(String[] args) {
         SpringApplication.run(Application.class, args);
     }
-
+/*
     //todo how to normally?
     @Bean
     public void setPublishEventUrlPath(){
@@ -59,9 +60,9 @@ public class Application {
             ex.printStackTrace();
         }
     }
-
+*/
     @Bean
-    public RouteLocator proxyRoute(RouteLocatorBuilder builder, RequestFilter requestFilter, RemoveHeaderFilter removeHeader, ResponseFilter responseFilter, AutoEventRequestFilter autoEventRequestFilter, AutoEventResponseFilter autoEventResponseFilter, RequestTransformationFilter requestTransformationFilter, ResponseTransformationFilter responseTransformationFilter, SetSpectreAuthHeaderFilter setSpectreAuthHeaderFilter) {
+    public RouteLocator proxyRoute(RouteLocatorBuilder builder, RequestFilter requestFilter, RemoveHeaderFilter removeHeader, ResponseFilter responseFilter, AutoEventRequestFilter autoEventRequestFilter, AutoEventResponseFilter autoEventResponseFilter, RequestTransformationFilter requestTransformationFilter, ResponseTransformationFilter responseTransformationFilter, SetSpectreRoutingFilter setSpectreRoutingFilter) {
         return builder.routes()
                 .route("jumper_route", p -> p
                         .path("/proxy/**")
@@ -142,17 +143,17 @@ public class Application {
                         .filters(f -> f
                                 .modifyRequestBody(String.class, String.class,
                                         autoEventBodyRewrite)
-                                .rewritePath("/autoevent", publishEventUrlPath)
+//                                .rewritePath("/autoevent", publishEventUrlPath)
                                 .removeRequestParameter(listenerQueryParam)
-                                .filter(setSpectreAuthHeaderFilter.apply())
+                                .filter(setSpectreRoutingFilter.apply())
                         )
                         .uri(publishEventUrl))
                 .route("auto_event_route_head", p -> p
                         .path("/autoevent/**").and().method(HttpMethod.HEAD)
                         .filters(f -> f
-                                .rewritePath("/autoevent", publishEventUrlPath)
+//                                .rewritePath("/autoevent", publishEventUrlPath)
                                 .removeRequestParameter(listenerQueryParam)
-                                .filter(setSpectreAuthHeaderFilter.apply())
+                                .filter(setSpectreRoutingFilter.apply())
                         )
                         .uri(publishEventUrl))
                 .build();

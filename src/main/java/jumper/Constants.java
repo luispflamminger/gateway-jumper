@@ -52,4 +52,6 @@ public class Constants {
 
     public static final String SPACE = "space";
     public static final String HEADER_X_SPACEGATE_TOKEN = "X-Spacegate-Token";
+
+	public static final String ENVIRONMENT_PLACEHOLDER = "ENVIRONMENT_PLACEHOLDER";
 }

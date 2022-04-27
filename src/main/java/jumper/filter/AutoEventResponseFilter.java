@@ -60,7 +60,7 @@ public class AutoEventResponseFilter extends AbstractGatewayFilterFactory<AutoEv
                     AutoEvent eventRespMsg = aes.createEvent(jc, exchange, exchange.getResponse(), listener, responseBody);
 
                     // publish event (route to local Horizon)
-                    aes.publishEvent(eventRespMsg, publishEventUrl, jc, exchange);
+                    aes.publishEvent(eventRespMsg, jc, exchange);
                 }
 
             }));
