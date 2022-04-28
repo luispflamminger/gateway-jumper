@@ -2,7 +2,6 @@ package jumper.config;
 
 import brave.http.HttpRequestParser;
 import jumper.Constants;
-import jumper.utilities.OauthTokenUtil;
 import org.springframework.cloud.sleuth.instrument.web.HttpClientRequestParser;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

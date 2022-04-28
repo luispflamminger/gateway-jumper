@@ -1,27 +1,5 @@
 package jumper.filter;
 
-import static net.logstash.logback.argument.StructuredArguments.value;
-
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.util.HashMap;
-
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cloud.gateway.filter.GatewayFilter;
-import org.springframework.cloud.gateway.filter.GatewayFilterChain;
-import org.springframework.cloud.gateway.filter.OrderedGatewayFilter;
-import org.springframework.cloud.gateway.filter.RouteToRequestUrlFilter;
-import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
-import org.springframework.cloud.gateway.route.Route;
-import org.springframework.cloud.gateway.support.ServerWebExchangeUtils;
-import org.springframework.http.server.reactive.ServerHttpRequest;
-import org.springframework.stereotype.Component;
-import org.springframework.web.server.ServerWebExchange;
-
 import brave.Span;
 import brave.Tracer;
 import io.jsonwebtoken.Claims;
@@ -35,7 +13,27 @@ import jumper.model.request.JumperInfoRequest;
 import jumper.model.request.OutgoingRequest;
 import jumper.utilities.OauthTokenUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.gateway.filter.GatewayFilter;
+import org.springframework.cloud.gateway.filter.GatewayFilterChain;
+import org.springframework.cloud.gateway.filter.OrderedGatewayFilter;
+import org.springframework.cloud.gateway.filter.RouteToRequestUrlFilter;
+import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
+import org.springframework.cloud.gateway.route.Route;
+import org.springframework.cloud.gateway.support.ServerWebExchangeUtils;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
+
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.HashMap;
+
+import static net.logstash.logback.argument.StructuredArguments.value;
 
 @Component
 @Slf4j
@@ -85,8 +83,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
             String requestPath = api_base_path + api_resource;
             String remote_api_url = request.getHeaders().getFirst( Constants.HEADER_REMOTE_API_URL);
             String lastmileSecurityToken = null;
-
-            String debugHeader = request.getHeaders().getFirst( Constants.HEADER_DEBUG_RESPONSE_HEADER);
 
             String xSpacegateClientId = request.getHeaders().getFirst( Constants.HEADER_X_SPACEGATE_CLIENT_ID);
             String xSpacegateClientSecret = request.getHeaders().getFirst( Constants.HEADER_X_SPACEGATE_CLIENT_SECRET);
@@ -499,47 +495,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         ServerWebExchange exchange1 = exchange.mutate().request(request).build();
         chain.filter(exchange1);
     }
-    /*
-    private synchronized void setHeaders(ServerWebExchange exchange ) {
-    	
-    	ServerHttpRequest request = exchange.getRequest();
-    	
-    	token_endpoint = request.getHeaders().getFirst( Constants.HEADER_TOKEN_ENDPOINT);
-        tif_remote_issuer = request.getHeaders().getFirst( Constants.HEADER_ISSUER);
-        tif_clientID = request.getHeaders().getFirst( Constants.HEADER_CLIENT_ID);
-        tif_clientSecret = request.getHeaders().getFirst( Constants.HEADER_CLIENT_SECRET);
-        consumerToken = request.getHeaders().getFirst( Constants.HEADER_AUTHORIZATION);
-        api_base_path = request.getHeaders().getFirst( Constants.HEADER_API_BASE_PATH);
-        access_token_forwarding = request.getHeaders().getFirst( Constants.HEADER_ACCESS_TOKEN_FORWARDING);
-        realmName = request.getHeaders().getFirst( Constants.HEADER_REALM);
-        
-        if( realmName == null || realmName.isEmpty())
-        {
-            realmName = Constants.DEFAULT_REALM;
-        }
 
-        envName = request.getHeaders().getFirst( Constants.HEADER_ENVIRONMENT);
-
-        xB3TraceId = request.getHeaders().getFirst( Constants.HEADER_X_B3_TRACE_ID);
-        xTardisTraceId = request.getHeaders().getFirst( Constants.HEADER_X_TARDIS_TRACE_ID);
-        xBusinessContext = request.getHeaders().getFirst( Constants.HEADER_X_BUSINESS_CONTEXT);
-        xRequestId = request.getHeaders().getFirst( Constants.HEADER_X_REQUEST_ID);
-        xCorrelationId = request.getHeaders().getFirst( Constants.HEADER_X_CORRELATION_ID);
-
-        api_resource = request.getPath().value(); 
-        requestPath = api_base_path + api_resource;
-        remote_api_url = request.getHeaders().getFirst( Constants.HEADER_REMOTE_API_URL);
-        lastmileSecurityToken = null;
-
-        debugHeader = request.getHeaders().getFirst( Constants.HEADER_DEBUG_RESPONSE_HEADER);
-        
-        xSpacegateClientId = request.getHeaders().getFirst( Constants.HEADER_X_SPACEGATE_CLIENT_ID);
-        xSpacegateClientSecret = request.getHeaders().getFirst( Constants.HEADER_X_SPACEGATE_CLIENT_SECRET);
-        
-        jumper_config_Base64 = request.getHeaders().getFirst( Constants.HEADER_JUMPER_CONFIG);
-
-    }
-*/
     public static class Config {
         private boolean preLogger;
         private boolean postLogger;

@@ -1,11 +1,10 @@
 package jumper.model.request;
 
-import java.util.Map.Entry;
-import java.util.Set;
-
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.Map.Entry;
+import java.util.Set;
 
 @Getter
 @Setter

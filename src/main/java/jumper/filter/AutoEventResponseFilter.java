@@ -1,5 +1,10 @@
 package jumper.filter;
 
+import jumper.autoevent.AutoEvent;
+import jumper.autoevent.AutoEventService;
+import jumper.model.config.JumperConfig;
+import jumper.model.config.RouteListener;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
@@ -7,12 +12,6 @@ import org.springframework.cloud.gateway.filter.NettyWriteResponseFilter;
 import org.springframework.cloud.gateway.filter.OrderedGatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.stereotype.Component;
-
-import jumper.autoevent.AutoEvent;
-import jumper.autoevent.AutoEventService;
-import jumper.model.config.JumperConfig;
-import jumper.model.config.RouteListener;
-import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 @Component
@@ -60,7 +59,7 @@ public class AutoEventResponseFilter extends AbstractGatewayFilterFactory<AutoEv
                     AutoEvent eventRespMsg = aes.createEvent(jc, exchange, exchange.getResponse(), listener, responseBody);
 
                     // publish event (route to local Horizon)
-                    aes.publishEvent(eventRespMsg, jc, exchange);
+                    aes.publishEvent(eventRespMsg, jc);
                 }
 
             }));

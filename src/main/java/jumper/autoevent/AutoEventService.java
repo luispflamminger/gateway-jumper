@@ -145,7 +145,7 @@ public class AutoEventService
      *
      * @param event
      */
-    public void publishEvent(AutoEvent event, JumperConfig jc, ServerWebExchange exchange) {
+    public void publishEvent(AutoEvent event, JumperConfig jc) {
         String eventJson = null;
         try {
             eventJson = new ObjectMapper().writeValueAsString(event);
@@ -163,7 +163,9 @@ public class AutoEventService
         }
         //on proxy route we need to use token
         else {
-            envName = OauthTokenUtil.getClaimFromToken(jc.getConsumerToken(), "iss").replaceFirst(".*realms\\/", "");
+            if (jc.getConsumerToken() != null) {
+                envName = OauthTokenUtil.getClaimFromToken(jc.getConsumerToken(), "iss").replaceFirst(".*realms\\/", "");
+            }
         }
 
         publishEventMono(publishEventUrl.replaceFirst(Constants.ENVIRONMENT_PLACEHOLDER, envName),
@@ -190,54 +192,6 @@ public class AutoEventService
              */
     }
 
-
-/*
-        ClientResponse horizonResp = webClient.post()
-                .uri(url)
-                //.headers(HttpHeaders.AUTHORIZATION, Constants.BEARER + " " + gwToken.getAccessToken())
-                .headers(new Consumer<HttpHeaders>() {
-                    @Override
-                    public void accept(HttpHeaders httpHeaders) {
-                        if(jc != null) {
-                            httpHeaders.setBearerAuth(gwToken.getAccessToken());
-                        }
-                    }
-                })
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromValue(eventJson))
-                .exchange()
-                .block();
-
-        log.info("Horizon Response statusCode: "+horizonResp.statusCode().value());
-*/
-
-    /*
-    public Mono<String> publishEventMono(String url, String eventJson) {
-        final Mono<String> responseMono = webClient.post()
-                .uri(url)
-                .headers(new Consumer<HttpHeaders>() {
-                    @Override
-                    public void accept(HttpHeaders httpHeaders) {
-                        httpHeaders.setBearerAuth(gwToken.getAccessToken());
-        }
-                })
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromValue(eventJson))
-                .retrieve()
-                .onStatus(status -> !HttpStatus.CREATED.equals(status),
-                        response -> response.bodyToMono(String.class).map(body -> new RuntimeException(body)))
-                .bodyToMono(String.class)
-                .doOnSuccess(status -> {
-                    log.debug("publishEventMono success" );
-                })
-                .onErrorMap(e -> new RuntimeException("message", e));
-
-        return responseMono.flatMap(response -> {
-            log.debug("Horizon Response: {}", response);
-            return Mono.just(response);
-        });
-    }
-*/
     public Mono<Void> publishEventMono(String url, String eventJson, String token, String spanId) {
         final Mono<Void> responseMono = webClient.post()
                 .uri(url)

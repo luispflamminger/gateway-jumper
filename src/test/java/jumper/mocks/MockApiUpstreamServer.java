@@ -1,7 +1,6 @@
 package jumper.mocks;
 
 import jumper.Constants;
-import jumper.util.JumperConfigurator;
 import lombok.Getter;
 import org.mockserver.client.server.MockServerClient;
 import org.mockserver.integration.ClientAndServer;

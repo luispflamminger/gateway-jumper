@@ -1,7 +1,6 @@
 package jumper.util;
 
 import jumper.Constants;
-import jumper.util.AccessToken;
 import org.springframework.http.HttpHeaders;
 
 import java.util.function.Consumer;

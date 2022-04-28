@@ -1,12 +1,11 @@
 package jumper;
 
+import brave.http.HttpRequestParser;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import jumper.autoevent.AutoEventBodyRewrite;
 import jumper.filter.*;
-import reactor.netty.http.client.HttpClient;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
@@ -20,12 +19,9 @@ import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.web.reactive.function.client.WebClient;
-
-import brave.http.HttpRequestParser;
+import reactor.netty.http.client.HttpClient;
 
 import javax.net.ssl.SSLException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.LinkedList;
 import java.util.List;
 

@@ -2,8 +2,8 @@ package jumper.mocks;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jumper.util.AccessToken;
 import jumper.model.TokenInfo;
+import jumper.util.AccessToken;
 import lombok.Getter;
 import org.mockserver.client.server.MockServerClient;
 import org.mockserver.integration.ClientAndServer;

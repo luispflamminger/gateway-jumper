@@ -1,9 +1,9 @@
 package jumper.model.request;
 
-import java.util.HashMap;
-
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.HashMap;
 
 @Getter
 @Setter

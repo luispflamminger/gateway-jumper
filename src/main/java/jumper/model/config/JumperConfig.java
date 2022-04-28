@@ -1,18 +1,16 @@
 package jumper.model.config;
 
-import java.util.Base64;
-import java.util.HashMap;
-
-import jumper.utilities.OauthTokenUtil;
-import org.springframework.http.server.reactive.ServerHttpRequest;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import jumper.Constants;
+import jumper.utilities.OauthTokenUtil;
 import lombok.Data;
+import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.web.server.ServerWebExchange;
+
+import java.util.Base64;
+import java.util.HashMap;
 
 @Data
 public class JumperConfig {
