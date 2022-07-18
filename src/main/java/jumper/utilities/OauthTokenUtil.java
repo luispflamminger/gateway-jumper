@@ -115,36 +115,7 @@ public class OauthTokenUtil {
 		String consumerOriginZone = gatewayTokenclaims.getBody().get( "originZone", String.class);
 		String consumerOriginStargate = gatewayTokenclaims.getBody().get( "originStargate", String.class);
 		String sub = gatewayTokenclaims.getBody().get( "sub", String.class);
-/*
-		String privateKey = null;
-		// String privateKey =
-		// "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDInVuimjkCL+rjxn36ddYNQxZvwXy4GybDUALKB0iTFGCKgxDGBtH9odLGT6GIcWLnU0F1JbsdVFvdBgOhs83Nrd2Aqm7hIPpdsIAHt2qdgyUAMfwYws83ozB7ephPNEUFKCcKTqh1RfcnpLKodv2+kkoboEMQUxsEBlPB/EAY4Kcpwbe/jYyTv/w7Y9QnAcQRvnXKy0YwcOcWigTljI1L88tukr7ORyuhhw1gOBHw+eS6LYK2thAYt84a5jr0gHUG4MKkMnx6n0p+2CwpoIzD9Sg5qzqeoqKT9R5qg7/uo2t66sO2awcotZCEJWEyNVZpRtYFOxLASuwtanne3WM3AgMBAAECggEBAIfpk9tlgJnqvMf0AgVdL9dsTBcKjuRsAKbx3fHhXVnHxGASy5pdpIagy5tu95DowIjX7tDe7xW/wTzMhklW92cRE6/Hx7beEMDIgvS3XpO39alcM97SnHClLoN5WxbN4rTLrydcguRwsjE5c5COjPo/QdXVjZnRs8vWPYh+zS4MUF95n/pLFUe0ZDrboozjYDL88m7OXDIGcUf8gOfJdd3i7rC15iiLyKgrcCmL0e69qRFMpTM6v2EzWnZrKeyLQKByDlJZcW1irvLEL4hZE8inyLKfzB73KNo07YdJbofB418w3lAFYqO0fNWorF+tPldTXLFO6p4vip5sWFOnIYECgYEA/DzauAGgUt/gLt6rSyPslrBC9GU4cYdTMT6lBcJWoj95ZIqnzTjtUriCZrNor2+LYES8zH3T3nzaj4axWj50IU4K0ZMdmO1Izzur3FAsJJd2Za88Ne6m3cUs0AQVFeGV70JEE6+kKalOP8SG9AT9oDsnCb/JQBOkDwxNaO8/jkUCgYEAy5tizf7O+BhfmFJMD75SFJ7YvcEVTeC6nMKBOH5jaXv12uwxqVvd2nSqGoPfjhR78PQR1sm4S9Tz3wqgQeaLAXUzCAMbUyNQ963kEK03W7WzJsJKH+izHwXHD/eY4dtTiGRyTX71zmh74nLVTgobN5Vv2YdWii5MxlrSw6DtsUsCgYBxIJXz6v7NzIzOWJ24sJ7+ooUU+YTMHiZosrDumU+jqxY1yp4hw8Nk003g49wyurNm9M08Zb6tTY/0yTMnx1TsTwU5I2Ml4F5EW33j7K0vqCK4zlQR2DxMwI8tqHcQfkFxsmW38pGNAdsPbIQeU1KxF3aVv8dyDp0JBrp9MrhthQKBgEyGgoRaGQA2aPefNudT6RXG/j+TqqYyqPDySg8pscOby7QUwjWdSa0p3CVLG2MTX+IYWfwYpSQbTe2u2LzsIaLSofOI92QwCeaNfQKnl/7oNAWFUMbddzVZvo/Jx7Rb8vF4j12BMnH541YhQvqp4cDqcbeYnnYhIMoMqNrOSYgxAoGBAMO9zkUBWyD+L8E7huc4+8MxuLgjvrW562vGh5J/d3GZaNRz/Ra0ygQjzcyASLFffYP2T8HorHrToUwn1ha4wsjqYYveOjrQ4QgbW7c6Gi9zYoErwsFDt9BBfg/tH7JAciUPpLvKgAQDY9vSuw+39IcjTqkvB4aAEx8zt320Bkhe";
-		PrivateKey loadKey = null;
-		try
-		{
-			loadKey = loadPrivKey( privateKey);
-		}
-		catch( NoSuchAlgorithmException e1)
-		{
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-		catch( InvalidKeySpecException e1)
-		{
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-		catch( IOException e1)
-		{
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-		catch( URISyntaxException e1)
-		{
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-*/
+
 		HashMap<String, String> claims = new HashMap<String, String>();
 		claims.put( "typ", "Bearer");
 		claims.put( "azp", "stargate");
@@ -152,6 +123,7 @@ public class OauthTokenUtil {
 		claims.put( "requestPath", requestPath);
 		claims.put( "operation", operation);
 		claims.put( "clientId", clientId);
+		claims.put( "client_id", clientId);
 		claims.put( "env", envName);
 		claims.put( "originZone", consumerOriginZone);
 		claims.put( "originStargate", consumerOriginStargate);
@@ -175,34 +147,7 @@ public class OauthTokenUtil {
 		String consumerOriginZone = gatewayTokenclaims.getBody().get( "originZone", String.class);
 		String consumerOriginStargate = gatewayTokenclaims.getBody().get( "originStargate", String.class);
 		String sub = gatewayTokenclaims.getBody().get( "sub", String.class);
-/*
-		String privateKey = null;
-		PrivateKey loadKey = null;
-		try
-		{
-			loadKey = loadPrivKey( privateKey);
-		}
-		catch( NoSuchAlgorithmException e1)
-		{
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-		catch( InvalidKeySpecException e1)
-		{
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-		catch( IOException e1)
-		{
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-		catch( URISyntaxException e1)
-		{
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-*/
+
 		HashMap<String, String> claims = new HashMap<String, String>();
 		claims.put( "typ", "Bearer");
 		claims.put( "azp", "stargate");
@@ -213,6 +158,7 @@ public class OauthTokenUtil {
 		claims.put( "accessTokenSignature", signature);
 		claims.put( "originZone", consumerOriginZone);
 		claims.put( "originStargate", consumerOriginStargate);
+		claims.put( "client_id", clientId);
 
 		//return Jwts.builder().setClaims( claims).setIssuer( issuer).setExpiration( expiration).setIssuedAt( issuedAt).signWith( loadKey, SignatureAlgorithm.RS256).setHeaderParam( "kid", keyId).setHeaderParam( "typ", "JWT").compact();
 		return generateToken(claims, issuer, expiration, issuedAt);
@@ -283,21 +229,21 @@ public class OauthTokenUtil {
 		return privKey;
 	}
 	
-	public TokenInfo getAccessToken(String token_endpoint2, String tif_clientID2, String tif_clientSecret2, String scope) {
-		return getAccessToken(token_endpoint2, tif_clientID2, tif_clientSecret2, false, scope);
+	public TokenInfo getAccessToken(String token_endpoint2, String tif_clientID2, String tif_clientSecret2, String scope, String subscriberClientId) {
+		return getAccessToken(token_endpoint2, tif_clientID2, tif_clientSecret2, false, scope, subscriberClientId);
 	}
 
 	public TokenInfo getAccessToken(String token_endpoint2, String tif_clientID2, String tif_clientSecret2) {
-		return getAccessToken(token_endpoint2, tif_clientID2, tif_clientSecret2, false, null);
+		return getAccessToken(token_endpoint2, tif_clientID2, tif_clientSecret2, false, null, "");
 	}
 
-	public TokenInfo getAccessToken(String token_endpoint2, String tif_clientID2, String tif_clientSecret2, boolean autoevent, String scope) {
+	public TokenInfo getAccessToken(String token_endpoint2, String tif_clientID2, String tif_clientSecret2, boolean autoevent, String scope, String subscriberClientId) {
 
 		// (cache) try to grab a valid gateway mesh token from cache
 		if (log.isDebugEnabled()) {
 			tokenCache.printCache();
 		}
-		final String tokenKey = token_endpoint2 + tif_clientID2;
+		final String tokenKey = token_endpoint2 + tif_clientID2 + subscriberClientId;
 
 		TokenInfo gwAccessToken = tokenCache.getToken( tokenKey);
 
