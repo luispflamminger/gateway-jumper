@@ -10,11 +10,11 @@ USER 1000:1000
 
 EXPOSE 8080 8082
 
-COPY application.jar /usr/share/
+COPY target/*.jar /usr/share/jumper.jar
 COPY app.pem /usr/share/keypair/
 
 WORKDIR /usr/share/
 
-CMD java $JVM_OPTS -jar /usr/share/application.jar
+CMD java $JVM_OPTS -jar /usr/share/jumper.jar
 
 #CMD ["java", "$JVM_OPTS", "-jar", "/usr/share/application.jar"]
