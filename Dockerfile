@@ -11,7 +11,7 @@ USER 1000:1000
 EXPOSE 8080 8082
 
 COPY target/*.jar /usr/share/jumper.jar
-COPY app.pem /usr/share/keypair/
+COPY keypair/app.pem /usr/share/keypair/app.pem
 
 WORKDIR /usr/share/
 
