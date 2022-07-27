@@ -13,4 +13,9 @@ tif to tif-public:
 # new dev ops mtr 
 mtr to harbor:
   extends: .mtr_to_harbor
-  needs: ["build_deploy,dockerize"]
+  needs:
+    - job: build_deploy
+      artifacts: true
+    - job: dockerize
+      artifacts: false
+    
