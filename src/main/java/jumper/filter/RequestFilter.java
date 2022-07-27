@@ -222,12 +222,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
                         lastmileSecurityToken = OauthTokenUtil.generateExtGatewayToken( envName, consumerToken, request.getMethod().toString(), requestPath, lmsIssuer);
                         addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER+" "+lastmileSecurityToken);
-
-                        /*
-                         Added a workaround for enabling SAP Systems to validate a Last-Mile-Security Token
-                         Authorization Header is always deleted in the SAP Systems... Therefore we are storing the Last-Mile-Security Token in the X-Gateway-Token Header
-                         */
-                        addHeader(exchange, chain, Constants.HEADER_SAP_LASTMILE_SECURITY_TOKEN, Constants.BEARER+" "+lastmileSecurityToken);
                     }
                     else
                     {

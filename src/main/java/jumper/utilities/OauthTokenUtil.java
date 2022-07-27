@@ -123,7 +123,6 @@ public class OauthTokenUtil {
 		claims.put( "requestPath", requestPath);
 		claims.put( "operation", operation);
 		claims.put( "clientId", clientId);
-		//claims.put( "client_id", clientId);
 		claims.put( "env", envName);
 		claims.put( "originZone", consumerOriginZone);
 		claims.put( "originStargate", consumerOriginStargate);
@@ -158,7 +157,7 @@ public class OauthTokenUtil {
 		claims.put( "accessTokenSignature", signature);
 		claims.put( "originZone", consumerOriginZone);
 		claims.put( "originStargate", consumerOriginStargate);
-		//claims.put( "client_id", clientId);
+		claims.put( "clientId", clientId);
 
 		//return Jwts.builder().setClaims( claims).setIssuer( issuer).setExpiration( expiration).setIssuedAt( issuedAt).signWith( loadKey, SignatureAlgorithm.RS256).setHeaderParam( "kid", keyId).setHeaderParam( "typ", "JWT").compact();
 		return generateToken(claims, issuer, expiration, issuedAt);
