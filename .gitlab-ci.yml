@@ -5,3 +5,11 @@ include:
 
 variables:
   MTR_TARGET_IMAGE: ${CI_PROJECT_NAME}
+
+# new dev ops mtr 
+tif to tif-public:
+  extends: .tif_to_tif-public_group
+
+# new dev ops mtr 
+mtr to harbor:
+  extends: .mtr_to_harbor
