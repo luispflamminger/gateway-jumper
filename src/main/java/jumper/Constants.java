@@ -14,6 +14,7 @@ public class Constants {
 	public final static String HEADER_CONSUMER_TOKEN = "consumer-token";
 	public final static String HEADER_GATEWAY_TOKEN = "gateway_token";
 	public final static String HEADER_LASTMILE_SECURITY_TOKEN = "X-Gateway-Token";
+	public final static String HEADER_SAP_LASTMILE_SECURITY_TOKEN = "X-SAP-Gateway-Token";
 	public final static String HEADER_AUTHORIZATION = "Authorization";
 	public final static String HEADER_REMOTE_API_URL = "remote_api_url";
 	public final static String HEADER_ACCESS_TOKEN_FORWARDING = "access_token_forwarding";

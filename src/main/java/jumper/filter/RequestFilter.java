@@ -201,12 +201,12 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                         log.debug( "Get token for consumer: {} with clientId: {}", consumer, tif_clientID);
                         if( tif_clientID != null && tif_clientSecret != null)
                         {
-                            TokenInfo tokenInfo = oauthTokenUtil.getAccessToken( token_endpoint, tif_clientID, tif_clientSecret, client_scope);
+                            TokenInfo tokenInfo = oauthTokenUtil.getAccessToken( token_endpoint, tif_clientID, tif_clientSecret, client_scope, consumer);
                             addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER+" "+tokenInfo.getAccessToken());
                         }
                         else
                         {
-                            log.info( "no specified oauth config credentails for consumer: {}", consumer);
+                            log.info( "no specified oauth config credentials for consumer: {}", consumer);
                         }
 
                     }
