@@ -15,5 +15,4 @@ mtr to harbor:
     - job: build_deploy
       artifacts: true
     - job: dockerize
-      artifacts: false
     
