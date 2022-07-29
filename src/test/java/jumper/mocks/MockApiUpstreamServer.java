@@ -2,6 +2,7 @@ package jumper.mocks;
 
 import jumper.Constants;
 import lombok.Getter;
+import org.mockserver.client.server.ForwardChainExpectation;
 import org.mockserver.client.server.MockServerClient;
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.model.Header;
@@ -36,16 +37,38 @@ public class MockApiUpstreamServer {
         mockServer.stop();
     }
 
-    public void lastMileSecurityRequest() {
+    private ForwardChainExpectation request;
 
+    public void simpleRequest() {
+        List<Header> headersList = new ArrayList<>();
+        new MockServerClient(upstreamLocalHost, upstreamLocalPort)
+                .when(
+                        request()
+                                //.withHeaders(headersList)
+                                .withMethod("GET")
+                                .withPath("/sample"),
+                        exactly(1))
+                .respond(
+                        response()
+                                .withStatusCode(200)
+                                .withHeaders(
+                                        new Header("Content-Type", "application/json; charset=utf-8"),
+                                        new Header("Cache-Control", "public, max-age=86400"))
+                                .withBody("{ message: 'lastMileSecurity' }")
+                                .withDelay(TimeUnit.SECONDS, 1)
+
+                );
+    }
+
+    private List<Header> setBasicHeaders() {
         List<Header> headersList = new ArrayList<>();
         headersList.add(new Header("WebTestClient-Request-Id", "1"));
         headersList.add(new Header(HttpHeaders.AUTHORIZATION, Pattern.compile("Bearer\\s\\w+.\\w+.+.\\w+").pattern()));
-        headersList.add(new Header(Constants.HEADER_LASTMILE_SECURITY_TOKEN, Pattern.compile("Bearer\\s\\w+.\\w+.+.\\w+").pattern()));
         headersList.add(new Header(Constants.HEADER_X_ORIGIN_STARGATE, "https://aws.local.de"));
         headersList.add(new Header(Constants.HEADER_X_ORIGIN_ZONE, "aws"));
-        headersList.add(new Header(Constants.HEADER_X_FORWARDED_PORT, "80"));
-        headersList.add(new Header(HttpHeaders.USER_AGENT, "ReactorNetty/0.9.8.RELEASE"));
+        headersList.add(new Header(Constants.HEADER_X_FORWARDED_PORT, Constants.HEADER_X_FORWARDED_PORT_PORT));
+        headersList.add(new Header(Constants.HEADER_X_FORWARDED_PROTO, Constants.HEADER_X_FORWARDED_PROTO_HTTPS));
+        headersList.add(new Header(HttpHeaders.USER_AGENT, "ReactorNetty/0.9.20.RELEASE"));
         headersList.add(new Header(HttpHeaders.HOST, upstreamLocalHost + ":" + upstreamLocalPort));
         headersList.add(new Header(HttpHeaders.ACCEPT, "*/*"));
         headersList.add(new Header(Constants.HEADER_X_B3_TRACE_ID, Pattern.compile("\\w+").pattern()));
@@ -53,6 +76,14 @@ public class MockApiUpstreamServer {
         headersList.add(new Header(Constants.HEADER_X_B3_PARENT_SPAN_ID, Pattern.compile("\\w+").pattern()));
         headersList.add(new Header(Constants.HEADER_X_B3_SAMPLED, "1"));
         headersList.add(new Header(HttpHeaders.CONTENT_LENGTH, "0"));
+
+        return headersList;
+    }
+
+    public void lastMileSecurityRequest() {
+
+        List<Header> headersList = setBasicHeaders();
+        //headersList.add(new Header(Constants.HEADER_LASTMILE_SECURITY_TOKEN, Pattern.compile("Bearer\\s\\w+.\\w+.+.\\w+").pattern()));
 
         new MockServerClient(upstreamLocalHost, upstreamLocalPort)
                 .when(
@@ -71,6 +102,38 @@ public class MockApiUpstreamServer {
                                 .withDelay(TimeUnit.SECONDS, 1)
 
                 );
+    }
+
+    public void lastMileSecurityRequest(Header header) {
+
+        List<Header> headersList = setBasicHeaders();
+        if(header != null) {
+            headersList.add(header);
+        }
+        //headersList.add(new Header(Constants.HEADER_LASTMILE_SECURITY_TOKEN, Pattern.compile("Bearer\\s\\w+.\\w+.+.\\w+").pattern()));
+
+        MockServerClient mockServerClient = new MockServerClient(upstreamLocalHost, upstreamLocalPort);
+
+        request= mockServerClient
+                .when(
+                        request()
+                                .withHeaders(headersList)
+                                .withMethod("GET")
+                                .withPath("/lms"),
+                        exactly(1));
+    }
+
+    public void setResponse(int statusCode) {
+        request.respond(
+                response()
+                        .withStatusCode(statusCode)
+                        .withHeaders(
+                                new Header("Content-Type", "application/json; charset=utf-8"),
+                                new Header("Cache-Control", "public, max-age=86400"))
+                        .withBody("{ message: 'lastMileSecurity' }")
+                        .withDelay(TimeUnit.SECONDS, 1)
+
+        );
     }
 
     public void createExpectationForInvalidAuth() {
@@ -167,20 +230,7 @@ public class MockApiUpstreamServer {
     }
 
     public void enhancedLastMileSecurityRequest() {
-        List<Header> headersList = new ArrayList<>();
-        headersList.add(new Header("WebTestClient-Request-Id", "1"));
-        headersList.add(new Header(HttpHeaders.AUTHORIZATION, Pattern.compile("Bearer\\s\\w+.\\w+.+.\\w+").pattern()));
-        headersList.add(new Header(Constants.HEADER_X_ORIGIN_STARGATE, "https://aws.local.de"));
-        headersList.add(new Header(Constants.HEADER_X_ORIGIN_ZONE, "aws"));
-        headersList.add(new Header(Constants.HEADER_X_FORWARDED_PORT, "80"));
-        headersList.add(new Header(HttpHeaders.USER_AGENT, "ReactorNetty/0.9.8.RELEASE"));
-        headersList.add(new Header(HttpHeaders.HOST, upstreamLocalHost + ":" + upstreamLocalPort));
-        headersList.add(new Header(HttpHeaders.ACCEPT, "*/*"));
-        headersList.add(new Header(Constants.HEADER_X_B3_TRACE_ID, Pattern.compile("\\w+").pattern()));
-        headersList.add(new Header(Constants.HEADER_X_B3_SPAN_ID, Pattern.compile("\\w+").pattern()));
-        headersList.add(new Header(Constants.HEADER_X_B3_PARENT_SPAN_ID, Pattern.compile("\\w+").pattern()));
-        headersList.add(new Header(Constants.HEADER_X_B3_SAMPLED, "1"));
-        headersList.add(new Header(HttpHeaders.CONTENT_LENGTH, "0"));
+        List<Header> headersList = setBasicHeaders();
 
         new MockServerClient(upstreamLocalHost, upstreamLocalPort)
                 .when(

@@ -13,6 +13,8 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
+import static org.junit.Assert.assertTrue;
+
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class ApplicationTest {
@@ -36,6 +38,18 @@ public class ApplicationTest {
     public void tearDown() {
         mockUpstreamServer.stopServer();
         mockIrisServer.stopServer();
+    }
+
+    @Test
+    public void testSample() {
+        mockUpstreamServer.simpleRequest();
+        WebTestClient testClient = WebTestClient
+                .bindToServer()
+                .baseUrl("http://localhost:1080")
+                .build();
+
+        testClient.get().uri("/sample").exchange().expectStatus().isOk();
+
     }
 
     @Test
