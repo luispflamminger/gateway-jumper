@@ -7,11 +7,17 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockserver.model.Header;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
+import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.reactive.server.WebTestClient;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertTrue;
 
@@ -42,24 +48,40 @@ public class ApplicationTest {
 
     @Test
     public void testSample() {
-        mockUpstreamServer.simpleRequest();
+        mockUpstreamServer.callbackRequest();
+
         WebTestClient testClient = WebTestClient
                 .bindToServer()
                 .baseUrl("http://localhost:1080")
                 .build();
 
-        testClient.get().uri("/sample").exchange().expectStatus().isOk();
+        testClient.get().uri("/callback").exchange().expectStatus().isOk();
+        testClient.get().uri("/callback").exchange()
+                .expectHeader().doesNotExist(HttpHeaders.AUTHORIZATION)
+                .expectStatus().isOk();
 
     }
 
     @Test
     public void testLastMileSecurity() {
-        mockUpstreamServer.lastMileSecurityRequest();
+        //mockUpstreamServer.lastMileSecurityRequest();
+        mockUpstreamServer.callbackRequest();
 
         WebTestClient clientReq = WebTestClient.bindToApplicationContext(this.context)
                 .build();
-        clientReq.get().uri("/proxy/lms").headers(JumperConfigurator.getJumperLmsHeaders()).exchange()
+        clientReq.get().uri("/proxy/callback?statusCode=200").headers(JumperConfigurator.getJumperLmsHeaders()).exchange()
+                .expectHeader().valueMatches(HttpHeaders.AUTHORIZATION, Pattern.compile("Bearer\\s\\w+.\\w+.+.\\w+").pattern())
+                .expectHeader().valueMatches(Constants.HEADER_LASTMILE_SECURITY_TOKEN, Pattern.compile("Bearer\\s\\w+.\\w+.+.\\w+").pattern())
+                .expectHeader().valueMatches(Constants.HEADER_X_B3_TRACE_ID, Pattern.compile("\\w+").pattern())
+                .expectHeader().valueMatches(Constants.HEADER_X_B3_SPAN_ID, Pattern.compile("\\w+").pattern())
+                .expectHeader().valueMatches(Constants.HEADER_X_B3_PARENT_SPAN_ID, Pattern.compile("\\w+").pattern())
+                .expectHeader().valueMatches(Constants.HEADER_X_B3_SAMPLED, "1")
+                .expectHeader().valueMatches(Constants.HEADER_X_ORIGIN_STARGATE, "https://aws.local.de")
+                .expectHeader().valueMatches(Constants.HEADER_X_ORIGIN_ZONE, "aws")
+                .expectHeader().valueMatches(Constants.HEADER_X_FORWARDED_PORT, Constants.HEADER_X_FORWARDED_PORT_PORT)
+                .expectHeader().valueMatches(Constants.HEADER_X_FORWARDED_PROTO, Constants.HEADER_X_FORWARDED_PROTO_HTTPS)
                 .expectStatus().isOk();
+
     }
 
     @Test

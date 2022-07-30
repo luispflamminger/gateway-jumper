@@ -12,4 +12,4 @@ Feature: Last Mile Security
     And API Provider will respond with a 503 status code
     When consumer calls the API
     Then API Provider receives AccessToken and GatewayToken
-    And API consumer receives a 500 status code
+    And API consumer receives a 503 status code
