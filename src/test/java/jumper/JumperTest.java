@@ -17,9 +17,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
@@ -84,8 +86,12 @@ public class JumperTest {
          */
     }
 
-    @Then("API Provider receives AccessToken and GatewayToken")
-    public void apiProviderReceivesAccessTokenAndGatewayToken() {
+    @Then("API Provider receives {word} and {word}")
+    public void apiProviderReceivesAccessTokenAndGatewayToken(String at, String gt) {
+        if(!Objects.equals(at, "AccessToken") || !Objects.equals(gt, "GatewayToken")) {
+            requestExchange.expectStatus().isEqualTo(HttpStatus.UNAUTHORIZED);
+            return;
+        }
         requestExchange
                 .expectHeader().valueMatches(HttpHeaders.AUTHORIZATION, Pattern.compile("Bearer\\s\\w+.\\w+.+.\\w+").pattern())
                 .expectHeader().valueMatches(Constants.HEADER_LASTMILE_SECURITY_TOKEN, Pattern.compile("Bearer\\s\\w+.\\w+.+.\\w+").pattern())
