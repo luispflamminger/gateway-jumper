@@ -6,19 +6,16 @@ import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
-import io.cucumber.junit.CucumberOptions;
 import io.cucumber.spring.CucumberContextConfiguration;
 import jumper.mocks.MockApiUpstreamServer;
 import jumper.mocks.MockIrisServer;
 import jumper.util.JumperConfigurator;
-import org.junit.runner.RunWith;
 import org.mockserver.client.server.ForwardChainExpectation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import java.util.Objects;
@@ -26,11 +23,11 @@ import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 //@RunWith(Cucumber.class)
-@RunWith(SpringRunner.class)
-@CucumberOptions(features = "src/test/resources/features")
+//@RunWith(SpringRunner.class)
+//@CucumberOptions(features = "src/test/resources/features")
 @CucumberContextConfiguration
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-public class JumperTest {
+public class JumperUtilSteps {
 
     @Autowired
     private ApplicationContext context;
