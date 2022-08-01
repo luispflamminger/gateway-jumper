@@ -1,9 +1,7 @@
 package jumper;
 
 import io.cucumber.java.After;
-import io.cucumber.java.AfterStep;
 import io.cucumber.java.Before;
-import io.cucumber.java.BeforeStep;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
@@ -12,7 +10,6 @@ import io.cucumber.spring.CucumberContextConfiguration;
 import jumper.mocks.MockApiUpstreamServer;
 import jumper.mocks.MockIrisServer;
 import jumper.util.JumperConfigurator;
-import org.mockserver.client.server.ForwardChainExpectation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,7 +18,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
-import java.time.Duration;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
@@ -31,6 +27,7 @@ import java.util.regex.Pattern;
 @AutoConfigureWebTestClient(timeout = "PT65S") // PT65S - PT = Period time, S = seconds
 public class LastMileSecuritySteps {
 
+    private final BaseSteps baseSteps;
     @Autowired
     WebTestClient webTestClient;
 
@@ -44,6 +41,10 @@ public class LastMileSecuritySteps {
     String responseStatusCode;
 
     WebTestClient.ResponseSpec requestExchange;
+
+    public LastMileSecuritySteps(BaseSteps baseSteps) {
+        this.baseSteps = baseSteps;
+    }
 
     @Before("@lms")
     public void beforeScenario() {
@@ -65,14 +66,11 @@ public class LastMileSecuritySteps {
         httpHeadersOfRequest = JumperConfigurator.getJumperLmsHeaders();
     }
 
-    @And("API Provider will respond with a {int} status code")
-    public void apiProviderWillRespondWithAStatusCode(int statusCode) {
-        responseStatusCode = String.valueOf(statusCode);
-    }
-
     @When("consumer calls the API")
     public void consumerCallsTheAPI() {
         mockUpstreamServer.callbackRequest();
+
+        responseStatusCode = this.baseSteps.getResponseStatusCode();
 
         requestExchange = webTestClient.get().uri("/proxy/callback?statusCode=" + responseStatusCode).headers(httpHeadersOfRequest).exchange();
     }

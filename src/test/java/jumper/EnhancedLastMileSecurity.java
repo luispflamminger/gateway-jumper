@@ -23,9 +23,11 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
+
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureWebTestClient(timeout = "PT65S") // PT65S - PT = Period time, S = seconds
 public class EnhancedLastMileSecurity {
+    private final BaseSteps baseSteps;
 
     @Autowired
     WebTestClient webTestClient;
@@ -45,9 +47,13 @@ public class EnhancedLastMileSecurity {
     public void beforeScenario() {
         mockUpstreamServer = new MockApiUpstreamServer();
         mockUpstreamServer.startServer();
+        this.baseSteps.setMockUpstreamServer(mockUpstreamServer);
 
         mockIrisServer = new MockIrisServer();
         mockIrisServer.startServer();
+        this.baseSteps.setMockIrisServer(mockIrisServer);
+
+        this.baseSteps.setWebTestClient(webTestClient);
     }
 
     @After("@elms")
@@ -56,23 +62,25 @@ public class EnhancedLastMileSecurity {
         mockIrisServer.stopServer();
     }
 
+    public EnhancedLastMileSecurity(BaseSteps baseSteps) {
+        this.baseSteps = baseSteps;
+    }
+
     @Given("EnhancedLastMileSecurity is activated")
     public void enhancedlastmilesecurityIsActivated() {
         httpHeadersOfRequest = JumperConfigurator.getJumperElmsHeaders();
+        baseSteps.setHttpHeadersOfRequest(httpHeadersOfRequest);
     }
 
-    @And("APIs Provider will respond with a {int} status code")
-    public void apiProviderWillRespondWithAStatusCode(int statusCode) {
-        responseStatusCode = String.valueOf(statusCode);
-    }
+
 
     @Then("API Provider receives {word}")
     public void apiProviderReceivesMergedGatewayToken(String mergedGatewayToken) {
         if(!Objects.equals(mergedGatewayToken, "MergedGatewayToken")) {
-            requestExchange.expectStatus().isEqualTo(HttpStatus.UNAUTHORIZED);
+            this.baseSteps.getRequestExchange().expectStatus().isEqualTo(HttpStatus.UNAUTHORIZED);
             return;
         }
-        requestExchange
+        this.baseSteps.getRequestExchange()
                 .expectHeader().valueMatches(HttpHeaders.AUTHORIZATION, Pattern.compile("Bearer\\s\\w+.\\w+.+.\\w+").pattern())
                 .expectHeader().valueMatches(Constants.HEADER_X_B3_TRACE_ID, Pattern.compile("\\w+").pattern())
                 .expectHeader().valueMatches(Constants.HEADER_X_B3_SPAN_ID, Pattern.compile("\\w+").pattern())
@@ -82,17 +90,5 @@ public class EnhancedLastMileSecurity {
                 .expectHeader().valueMatches(Constants.HEADER_X_ORIGIN_ZONE, "aws")
                 .expectHeader().valueMatches(Constants.HEADER_X_FORWARDED_PORT, Constants.HEADER_X_FORWARDED_PORT_PORT)
                 .expectHeader().valueMatches(Constants.HEADER_X_FORWARDED_PROTO, Constants.HEADER_X_FORWARDED_PROTO_HTTPS);
-    }
-
-    @And("APIs consumer receives a {int} status code")
-    public void apiConsumerReceivesAStatusCode(int arg0) {
-        requestExchange.expectStatus().isEqualTo(arg0);
-    }
-
-    @When("consumer calls the APIs")
-    public void consumerCallsTheAPIs() {
-        mockUpstreamServer.callbackRequest();
-
-        requestExchange = webTestClient.get().uri("/proxy/callback?statusCode=" + responseStatusCode).headers(httpHeadersOfRequest).exchange();
     }
 }
