@@ -6,6 +6,7 @@ import org.mockserver.client.server.ForwardChainExpectation;
 import org.mockserver.client.server.MockServerClient;
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.model.Header;
+import org.mockserver.model.HttpError;
 import org.springframework.http.HttpHeaders;
 
 import java.util.ArrayList;
@@ -48,6 +49,21 @@ public class MockApiUpstreamServer {
                         callback()
                                 .withCallbackClass("jumper.mocks.TestExpectationCallback")
                 );
+    }
+
+
+    public void callbackRequestWithTimeout() {
+        new MockServerClient(upstreamLocalHost, upstreamLocalPort)
+                .when(
+                        request().withPath("/callback"))
+                .error(HttpError.error().withDelay(TimeUnit.SECONDS, 62));
+    }
+
+    public void callbackRequestWithDropConnection() {
+        new MockServerClient(upstreamLocalHost, upstreamLocalPort)
+                .when(
+                        request().withPath("/callback"))
+                .error(HttpError.error().withDropConnection(true));
     }
 
     public void simpleRequest() {

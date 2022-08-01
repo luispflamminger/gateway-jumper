@@ -20,7 +20,7 @@
 		<jacoco.plugin.version>0.8.5</jacoco.plugin.version>
 		<sonar.projectKey>${project.name}</sonar.projectKey>
 		<ch.qos.logback.version>1.2.3</ch.qos.logback.version>
-		<cucumber.version>7.4.1</cucumber.version>
+		<cucumber.version>7.5.0</cucumber.version>
 	</properties>
 
 	<dependencyManagement>

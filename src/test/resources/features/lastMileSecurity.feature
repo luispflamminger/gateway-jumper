@@ -1,3 +1,4 @@
+@lms
 Feature: Last Mile Security
 
   Scenario: Consumer calls an API with lastMileSecurity
@@ -20,3 +21,15 @@ Feature: Last Mile Security
     When consumer calls the API
     Then API Provider receives AccessToken and GatewayToken
     And API consumer receives a 503 status code
+
+  Scenario: Consumer calls an API with lastMileSecurity and Provider will have a timeout
+    Given lastMileSecurity is activated
+    And API Provider will respond with a 200 status code
+    When consumer calls the API and runs into timeout
+    Then API consumer receives a 504 status code
+
+  Scenario: Consumer calls an API with lastMileSecurity and connection will be dropped
+    Given lastMileSecurity is activated
+    And API Provider will respond with a 200 status code
+    When consumer calls the API and connection is dropped
+    Then API consumer receives a 500 status code
