@@ -30,6 +30,7 @@ public class AccessToken {
         claims.put( "sub", UUID.randomUUID().toString());
         claims.put( "originZone", originZone);
         claims.put( "originStargate", originStargate);
+        claims.put( "clientId", clientId);
 
         String issuer = "https://iris.localhost:1234/auth/realms/default";
 

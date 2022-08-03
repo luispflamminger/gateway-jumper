@@ -1,11 +1,16 @@
 package jumper.util;
 
 import jumper.Constants;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.http.HttpHeaders;
 
 import java.util.function.Consumer;
 
 public class JumperConfigurator {
+
+    public static String consumerZone;
+    public static String providerZone;
 
     public static Consumer<HttpHeaders> getJumperLmsHeaders(String consumerToken) {
         return httpHeaders -> {
@@ -22,8 +27,8 @@ public class JumperConfigurator {
         AccessToken consumerAccessToken = AccessToken.builder()
                 .env("local")
                 .clientId("eni--local-team--local-app")
-                .originZone("aws")
-                .originStargate("https://aws.local.de")
+                .originZone(consumerZone)
+                .originStargate("https://"+consumerZone+ ".local.de")
                 .build();
         return consumerAccessToken.getConsumerAccessToken();
     }
