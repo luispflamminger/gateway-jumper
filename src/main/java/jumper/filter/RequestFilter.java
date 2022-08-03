@@ -220,7 +220,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
                         log.debug( "Generating OneToken...");
 
-                        lastmileSecurityToken = OauthTokenUtil.generateExtGatewayToken( envName, consumerToken, request.getMethod().toString(), requestPath, lmsIssuer);
+                        lastmileSecurityToken = OauthTokenUtil.generateExtGatewayToken( envName, consumerToken, request.getMethod().toString(), requestPath, lmsIssuer, setSecurityScopes(jc, consumer));
                         addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER+" "+lastmileSecurityToken);
                     }
                     else
@@ -494,6 +494,13 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                 .build();
         ServerWebExchange exchange1 = exchange.mutate().request(request).build();
         chain.filter(exchange1);
+    }
+
+    private String setSecurityScopes(JumperConfig jumperConfig, String consumer){
+        if (jumperConfig.getSecurity() != null && jumperConfig.getSecurity().getScopes() != null && jumperConfig.getSecurity().getScopes().containsKey(consumer)){
+            return String.join(" ", jumperConfig.getSecurity().getScopes().get(consumer));
+        }
+        return null;
     }
 
     public static class Config {

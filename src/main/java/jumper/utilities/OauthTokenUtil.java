@@ -99,7 +99,7 @@ public class OauthTokenUtil {
 		//return null;
 	}
 
-	public static String generateExtGatewayToken( String envName, String consumerToken, String operation, String requestPath, String issuer) {
+	public static String generateExtGatewayToken(String envName, String consumerToken, String operation, String requestPath, String issuer, String scope) {
 
 		String[] token = consumerToken.split( " ");
 		String[] splitToken = token[1].split( "\\.");
@@ -126,6 +126,7 @@ public class OauthTokenUtil {
 		claims.put( "env", envName);
 		claims.put( "originZone", consumerOriginZone);
 		claims.put( "originStargate", consumerOriginStargate);
+		if (scope != null) claims.put( "scope", scope);
 
 		//return Jwts.builder().setClaims( claims).setIssuer( issuer).setExpiration( expiration).setIssuedAt( issuedAt).signWith( loadKey, SignatureAlgorithm.RS256).setHeaderParam( "kid", keyId).setHeaderParam( "typ", "JWT").compact();
 		return generateToken(claims, issuer, expiration, issuedAt);
