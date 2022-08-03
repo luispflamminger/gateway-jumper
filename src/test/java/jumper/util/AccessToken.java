@@ -32,6 +32,7 @@ public class AccessToken {
         claims.put( "sub", UUID.randomUUID().toString());
         claims.put( "originZone", originZone);
         claims.put( "originStargate", originStargate);
+        claims.put( "clientId", clientId);
 
         return buildAccessToken(claims);
     }

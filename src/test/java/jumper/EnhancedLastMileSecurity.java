@@ -86,8 +86,8 @@ public class EnhancedLastMileSecurity {
                 .expectHeader().valueMatches(Constants.HEADER_X_B3_SPAN_ID, Pattern.compile("\\w+").pattern())
                 .expectHeader().valueMatches(Constants.HEADER_X_B3_PARENT_SPAN_ID, Pattern.compile("\\w+").pattern())
                 .expectHeader().valueMatches(Constants.HEADER_X_B3_SAMPLED, "1")
-                .expectHeader().valueMatches(Constants.HEADER_X_ORIGIN_STARGATE, "https://aws.local.de")
-                .expectHeader().valueMatches(Constants.HEADER_X_ORIGIN_ZONE, "aws")
+                .expectHeader().valueMatches(Constants.HEADER_X_ORIGIN_STARGATE, "https://zone.local.de")
+                .expectHeader().valueMatches(Constants.HEADER_X_ORIGIN_ZONE, "localZone")
                 .expectHeader().valueMatches(Constants.HEADER_X_FORWARDED_PORT, Constants.HEADER_X_FORWARDED_PORT_PORT)
                 .expectHeader().valueMatches(Constants.HEADER_X_FORWARDED_PROTO, Constants.HEADER_X_FORWARDED_PROTO_HTTPS);
     }

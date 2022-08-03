@@ -3,6 +3,7 @@ package jumper;
 import io.cucumber.java.After;
 import io.cucumber.java.Before;
 import io.cucumber.java.en.And;
+import io.cucumber.java.en.Given;
 import io.cucumber.java.en.When;
 import io.cucumber.spring.CucumberContextConfiguration;
 import jumper.mocks.MockApiUpstreamServer;
@@ -31,20 +32,35 @@ public class BaseSteps {
     private WebTestClient webTestClient;
     private WebTestClient.ResponseSpec requestExchange;
 
-    @And("API Provider will respond with a {int} status code")
+    @And("API provider will respond with a {int} status code")
     public void apiProviderWillRespondWithAStatusCode(int statusCode) {
         responseStatusCode = String.valueOf(statusCode);
     }
 
-    @And("APIs consumer receives a {int} status code")
+    @And("API consumer receives a {int} status code")
     public void apisConsumerReceivesAStatusCode(int arg0) {
         requestExchange.expectStatus().isEqualTo(arg0);
     }
 
-    @When("consumer calls the APIs")
-    public void consumerCallsTheAPIs() {
+    @When("consumer calls the API")
+    public void consumerCallsTheAPI() {
         mockUpstreamServer.callbackRequest();
 
         requestExchange = webTestClient.get().uri("/proxy/callback?statusCode=" + responseStatusCode).headers(httpHeadersOfRequest).exchange();
     }
+
+    @When("consumer calls the API and runs into timeout")
+    public void consumerCallsTheAPIAndProviderRunsIntoTimeout() {
+        mockUpstreamServer.callbackRequestWithTimeout();
+
+        requestExchange = webTestClient.get().uri("/proxy/callback?statusCode=" + responseStatusCode).headers(httpHeadersOfRequest).exchange();
+    }
+
+    @When("consumer calls the API and connection is dropped")
+    public void consumerCallsTheAPIAndConnectionIsDropped() {
+        mockUpstreamServer.callbackRequestWithDropConnection();
+
+        requestExchange = webTestClient.get().uri("/proxy/callback?statusCode=" + responseStatusCode).headers(httpHeadersOfRequest).exchange();
+    }
+
 }
