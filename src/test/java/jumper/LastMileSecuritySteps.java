@@ -7,9 +7,13 @@ import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import io.cucumber.spring.CucumberContextConfiguration;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Header;
+import io.jsonwebtoken.Jwt;
 import jumper.mocks.MockApiUpstreamServer;
 import jumper.mocks.MockIrisServer;
 import jumper.util.JumperConfigurator;
+import jumper.utilities.OauthTokenUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,6 +25,8 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
+
+import static org.junit.Assert.assertNotNull;
 
 @CucumberContextConfiguration
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -41,6 +47,8 @@ public class LastMileSecuritySteps {
     String responseStatusCode;
 
     WebTestClient.ResponseSpec requestExchange;
+
+    String jwtTokenResponse;
 
     public LastMileSecuritySteps(BaseSteps baseSteps) {
         this.baseSteps = baseSteps;
@@ -70,20 +78,10 @@ public class LastMileSecuritySteps {
         httpHeadersOfRequest = JumperConfigurator.getJumperLmsHeaders();
         baseSteps.setHttpHeadersOfRequest(httpHeadersOfRequest);
     }
-/*
-    @When("consumer calls the API")
-    public void consumerCallsTheAPI() {
-        mockUpstreamServer.callbackRequest();
-
-        responseStatusCode = this.baseSteps.getResponseStatusCode();
-
-        requestExchange = webTestClient.get().uri("/proxy/callback?statusCode=" + responseStatusCode).headers(httpHeadersOfRequest).exchange();
-    }
-
- */
 
     @Then("API provider receives {word} and {word}")
     public void apiProviderReceivesAccessTokenAndGatewayToken(String at, String gt) {
+
         if(!Objects.equals(at, "AccessToken") || !Objects.equals(gt, "GatewayToken")) {
             this.baseSteps.getRequestExchange().expectStatus().isEqualTo(HttpStatus.UNAUTHORIZED);
             return;
@@ -95,48 +93,19 @@ public class LastMileSecuritySteps {
                 .expectHeader().valueMatches(Constants.HEADER_X_B3_SPAN_ID, Pattern.compile("\\w+").pattern())
                 .expectHeader().valueMatches(Constants.HEADER_X_B3_PARENT_SPAN_ID, Pattern.compile("\\w+").pattern())
                 .expectHeader().valueMatches(Constants.HEADER_X_B3_SAMPLED, "1")
-                .expectHeader().valueMatches(Constants.HEADER_X_ORIGIN_STARGATE, "https://"+JumperConfigurator.consumerZone+".local.de")
-                .expectHeader().valueMatches(Constants.HEADER_X_ORIGIN_ZONE, JumperConfigurator.consumerZone)
+                .expectHeader().valueMatches(Constants.HEADER_X_ORIGIN_STARGATE, "https://zone.local.de")
+                .expectHeader().valueMatches(Constants.HEADER_X_ORIGIN_ZONE, "localZone")
                 .expectHeader().valueMatches(Constants.HEADER_X_FORWARDED_PORT, Constants.HEADER_X_FORWARDED_PORT_PORT)
                 .expectHeader().valueMatches(Constants.HEADER_X_FORWARDED_PROTO, Constants.HEADER_X_FORWARDED_PROTO_HTTPS);
+
+        this.baseSteps.getRequestExchange().expectHeader().value(HttpHeaders.AUTHORIZATION, s -> {
+            jwtTokenResponse = s;
+        });
+
+        String jwtToken = OauthTokenUtil.getTokenWithoutSignature(jwtTokenResponse);
+        Jwt<Header, Claims> allClaimsFromConsumerToken = OauthTokenUtil.getAllClaimsFromConsumerToken(jwtToken);
+        String clientId = allClaimsFromConsumerToken.getBody().get( "clientId", String.class);
+        assertNotNull(clientId);
     }
 
-    @Given("API consumer on {word} zone")
-    public void apiConsumerOnCaaSZone(String zone) {
-        JumperConfigurator.consumerZone = zone;
-    }
-
-    @And("API provider on {word} zone")
-    public void apiProviderOnAWSZone(String zone) {
-        JumperConfigurator.providerZone = zone;
-    }
-/*
-    @And("API consumer receives a {int} status code")
-    public void apiConsumerReceivesAStatusCode(int arg0) {
-        requestExchange.expectStatus().isEqualTo(arg0);
-    }
-
- */
-/*
-    @When("consumer calls the API and runs into timeout")
-    public void consumerCallsTheAPIAndProviderRunsIntoTimeout() {
-        mockUpstreamServer.callbackRequestWithTimeout();
-
-        responseStatusCode = this.baseSteps.getResponseStatusCode();
-        requestExchange = webTestClient.get().uri("/proxy/callback?statusCode=" + responseStatusCode).headers(httpHeadersOfRequest).exchange();
-
-        this.baseSteps.setRequestExchange(requestExchange);
-    }
-
-    @When("consumer calls the API and connection is dropped")
-    public void consumerCallsTheAPIAndConnectionIsDropped() {
-        mockUpstreamServer.callbackRequestWithDropConnection();
-
-        responseStatusCode = this.baseSteps.getResponseStatusCode();
-        requestExchange = webTestClient.get().uri("/proxy/callback?statusCode=" + responseStatusCode).headers(httpHeadersOfRequest).exchange();
-
-        this.baseSteps.setRequestExchange(requestExchange);
-    }
-
- */
 }

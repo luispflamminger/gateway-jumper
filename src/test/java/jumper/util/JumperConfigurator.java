@@ -9,9 +9,6 @@ import java.util.function.Consumer;
 
 public class JumperConfigurator {
 
-    public static String consumerZone;
-    public static String providerZone;
-
     public static Consumer<HttpHeaders> getJumperLmsHeaders(String consumerToken) {
         return httpHeaders -> {
             httpHeaders.set(Constants.HEADER_REMOTE_API_URL, "http://localhost:1080");
@@ -27,8 +24,8 @@ public class JumperConfigurator {
         AccessToken consumerAccessToken = AccessToken.builder()
                 .env("local")
                 .clientId("eni--local-team--local-app")
-                .originZone(consumerZone)
-                .originStargate("https://"+consumerZone+ ".local.de")
+                .originZone("localZone")
+                .originStargate("https://zone.local.de")
                 .build();
         return consumerAccessToken.getConsumerAccessToken();
     }

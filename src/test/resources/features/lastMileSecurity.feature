@@ -33,12 +33,3 @@ Feature: Last Mile Security
     And API provider will respond with a 200 status code
     When consumer calls the API and connection is dropped
     Then API consumer receives a 500 status code
-    
-  Scenario: Consumer on CaaS zone calls an API with lastMileSecurity and Provider on AWS zone
-    Given API consumer on CaaS zone
-    And API provider on AWS zone
-    And lastMileSecurity is activated
-    And API provider will respond with a 200 status code
-    When consumer calls the API
-    Then API provider receives AccessToken and GatewayToken
-    And API consumer receives a 200 status code
