@@ -28,7 +28,6 @@ public class AccessToken {
         HashMap<String, String> claims = new HashMap<String, String>();
         claims.put( "typ", "Bearer");
         claims.put( "azp", clientId);
-        claims.put( "clientId", clientId);
         claims.put( "sub", UUID.randomUUID().toString());
         claims.put( "originZone", originZone);
         claims.put( "originStargate", originStargate);

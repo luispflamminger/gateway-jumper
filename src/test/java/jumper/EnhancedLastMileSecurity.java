@@ -1,16 +1,18 @@
 package jumper;
 
 import io.cucumber.java.After;
-import io.cucumber.java.AfterStep;
 import io.cucumber.java.Before;
-import io.cucumber.java.BeforeStep;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
-import io.cucumber.java.en.When;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Header;
+import io.jsonwebtoken.Jwt;
 import jumper.mocks.MockApiUpstreamServer;
 import jumper.mocks.MockIrisServer;
 import jumper.util.JumperConfigurator;
+import jumper.utilities.OauthTokenUtil;
+import org.junit.Assert;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -22,6 +24,8 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
+
+import static jumper.util.Config.*;
 
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -42,6 +46,8 @@ public class EnhancedLastMileSecurity {
     String responseStatusCode;
 
     WebTestClient.ResponseSpec requestExchange;
+
+    String jwtTokenResponse;
 
     @Before("@elms")
     public void beforeScenario() {
@@ -72,6 +78,13 @@ public class EnhancedLastMileSecurity {
         baseSteps.setHttpHeadersOfRequest(httpHeadersOfRequest);
     }
 
+    @And("JumperConfig security scope is added")
+    public void addJcSecurity(){
+        //todo just extend
+        httpHeadersOfRequest = JumperConfigurator.getJumperElmsHeadersWithSecurity();
+        baseSteps.setHttpHeadersOfRequest(httpHeadersOfRequest);
+    }
+
 
 
     @Then("API Provider receives {word}")
@@ -90,5 +103,45 @@ public class EnhancedLastMileSecurity {
                 .expectHeader().valueMatches(Constants.HEADER_X_ORIGIN_ZONE, "localZone")
                 .expectHeader().valueMatches(Constants.HEADER_X_FORWARDED_PORT, Constants.HEADER_X_FORWARDED_PORT_PORT)
                 .expectHeader().valueMatches(Constants.HEADER_X_FORWARDED_PROTO, Constants.HEADER_X_FORWARDED_PROTO_HTTPS);
+
+        this.baseSteps.getRequestExchange().expectHeader().value(HttpHeaders.AUTHORIZATION, s -> {
+            jwtTokenResponse = s;
+        });
+
+        /*"sub": "4e1bd9f4-a4d6-4c92-a256-ba9ccea6564b",
+  "clientId": "eni--local-team--local-app",
+  "azp": "stargate",
+  "originZone": "localZone",
+  "scope": "scope1 scope2",
+  "typ": "Bearer",
+  "operation": "GET",
+  "requestPath": "null/callback",
+  "originStargate": "https://zone.local.de",
+  "iss": "https://stargate-integration.test.dhei.telekom.de/auth/realms/default",
+  "exp": 1659595531,
+  "iat": 1659595231
+
+         */
+
+        String jwtToken = OauthTokenUtil.getTokenWithoutSignature(jwtTokenResponse);
+        Jwt<Header, Claims> allClaimsFromConsumerToken = OauthTokenUtil.getAllClaimsFromConsumerToken(jwtToken);
+        Assert.assertEquals(CONSUMER, allClaimsFromConsumerToken.getBody().get( "clientId", String.class));
+        Assert.assertEquals("stargate", allClaimsFromConsumerToken.getBody().get( "azp", String.class));
+        Assert.assertEquals(ORIGIN_ZONE, allClaimsFromConsumerToken.getBody().get( "originZone", String.class));
+        Assert.assertEquals("Bearer", allClaimsFromConsumerToken.getBody().get( "typ", String.class));
+        Assert.assertEquals("GET", allClaimsFromConsumerToken.getBody().get( "operation", String.class));
+        //Assert.assertEquals("", allClaimsFromConsumerToken.getBody().get( "requestPath", String.class));
+        Assert.assertEquals(ORIGIN_STARGATE, allClaimsFromConsumerToken.getBody().get( "originStargate", String.class));
+    }
+
+    @And("Authorization token contains scope claim")
+    public void authorizationTokenContainsScopeClaim() {
+        this.baseSteps.getRequestExchange().expectHeader().value(HttpHeaders.AUTHORIZATION, s -> {
+                    jwtTokenResponse = s;
+                });
+
+        String jwtToken = OauthTokenUtil.getTokenWithoutSignature(jwtTokenResponse);
+        Jwt<Header, Claims> allClaimsFromConsumerToken = OauthTokenUtil.getAllClaimsFromConsumerToken(jwtToken);
+        Assert.assertEquals(SCOPES, allClaimsFromConsumerToken.getBody().get( "scope", String.class));
     }
 }

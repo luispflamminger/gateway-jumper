@@ -497,8 +497,8 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
     }
 
     private String setSecurityScopes(JumperConfig jumperConfig, String consumer){
-        if (jumperConfig.getSecurity() != null && jumperConfig.getSecurity().getScopes() != null && jumperConfig.getSecurity().getScopes().containsKey(consumer)){
-            return String.join(" ", jumperConfig.getSecurity().getScopes().get(consumer));
+        if (jumperConfig.getOauthSecurity() != null && jumperConfig.getOauthSecurity().getScopes() != null && jumperConfig.getOauthSecurity().getScopes().containsKey(consumer)){
+            return jumperConfig.getOauthSecurity().getScopes().get(consumer);
         }
         return null;
     }

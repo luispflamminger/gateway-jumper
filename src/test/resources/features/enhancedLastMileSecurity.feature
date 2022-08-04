@@ -33,3 +33,12 @@ Feature: Enhanced Last Mile Security
     And API provider will respond with a 200 status code
     When consumer calls the API and connection is dropped
     Then API consumer receives a 500 status code
+
+  Scenario: Consumer calls an API with EnhancedLastMileSecurity and security scope
+    Given EnhancedLastMileSecurity is activated
+    And JumperConfig security scope is added
+    And API provider will respond with a 200 status code
+    When consumer calls the API
+    Then API Provider receives MergedGatewayToken
+    And Authorization token contains scope claim
+    And API consumer receives a 200 status code
