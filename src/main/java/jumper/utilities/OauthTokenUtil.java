@@ -13,6 +13,7 @@ import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -115,6 +116,7 @@ public class OauthTokenUtil {
 		String consumerOriginZone = gatewayTokenclaims.getBody().get( "originZone", String.class);
 		String consumerOriginStargate = gatewayTokenclaims.getBody().get( "originStargate", String.class);
 		String sub = gatewayTokenclaims.getBody().get( "sub", String.class);
+		String aud = gatewayTokenclaims.getBody().get( "aud", String.class);
 
 		HashMap<String, String> claims = new HashMap<String, String>();
 		claims.put( "typ", "Bearer");
@@ -126,6 +128,9 @@ public class OauthTokenUtil {
 		claims.put( "env", envName);
 		claims.put( "originZone", consumerOriginZone);
 		claims.put( "originStargate", consumerOriginStargate);
+		if(!StringUtils.isEmpty(aud)) {
+			claims.put("aud", aud);
+		}
 
 		//return Jwts.builder().setClaims( claims).setIssuer( issuer).setExpiration( expiration).setIssuedAt( issuedAt).signWith( loadKey, SignatureAlgorithm.RS256).setHeaderParam( "kid", keyId).setHeaderParam( "typ", "JWT").compact();
 		return generateToken(claims, issuer, expiration, issuedAt);
@@ -146,6 +151,7 @@ public class OauthTokenUtil {
 		String consumerOriginZone = gatewayTokenclaims.getBody().get( "originZone", String.class);
 		String consumerOriginStargate = gatewayTokenclaims.getBody().get( "originStargate", String.class);
 		String sub = gatewayTokenclaims.getBody().get( "sub", String.class);
+		String aud = gatewayTokenclaims.getBody().get( "aud", String.class);
 
 		HashMap<String, String> claims = new HashMap<String, String>();
 		claims.put( "typ", "Bearer");
@@ -158,6 +164,9 @@ public class OauthTokenUtil {
 		claims.put( "originZone", consumerOriginZone);
 		claims.put( "originStargate", consumerOriginStargate);
 		claims.put( "clientId", clientId);
+		if(!StringUtils.isEmpty(aud)) {
+			claims.put("aud", aud);
+		}
 
 		//return Jwts.builder().setClaims( claims).setIssuer( issuer).setExpiration( expiration).setIssuedAt( issuedAt).signWith( loadKey, SignatureAlgorithm.RS256).setHeaderParam( "kid", keyId).setHeaderParam( "typ", "JWT").compact();
 		return generateToken(claims, issuer, expiration, issuedAt);
