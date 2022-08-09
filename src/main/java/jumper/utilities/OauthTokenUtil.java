@@ -100,7 +100,8 @@ public class OauthTokenUtil {
 		//return null;
 	}
 
-	public static String generateExtGatewayToken(String envName, String consumerToken, String operation, String requestPath, String issuer, String scope) {
+	public static String generateExtGatewayToken(String envName, String consumerToken, String operation, String requestPath, String issuer, String scope, String publisher) {
+		//nearly to pass additional claims as a map, so far scope + publisher
 
 		String[] token = consumerToken.split( " ");
 		String[] splitToken = token[1].split( "\\.");
@@ -129,6 +130,7 @@ public class OauthTokenUtil {
 		claims.put( "originZone", consumerOriginZone);
 		claims.put( "originStargate", consumerOriginStargate);
 		if (scope != null) claims.put( "scope", scope);
+		if (publisher != null) claims.put ("publisherId", publisher);
 		if(!StringUtils.isEmpty(aud)) {
 			claims.put("aud", aud);
 		}

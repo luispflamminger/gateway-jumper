@@ -220,7 +220,14 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
                         log.debug( "Generating OneToken...");
 
-                        lastmileSecurityToken = OauthTokenUtil.generateExtGatewayToken( envName, consumerToken, request.getMethod().toString(), requestPath, lmsIssuer, setSecurityScopes(jc, consumer));
+                        lastmileSecurityToken = OauthTokenUtil.generateExtGatewayToken( envName,
+                                consumerToken,
+                                request.getMethod().toString(),
+                                requestPath,
+                                lmsIssuer,
+                                setSecurityScopes(jc, consumer),
+                                request.getHeaders().getFirst(Constants.HEADER_X_PUBLISHER_ID)
+                        );
                         addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER+" "+lastmileSecurityToken);
                     }
                     else
