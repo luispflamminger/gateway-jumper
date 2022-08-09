@@ -13,10 +13,10 @@ public class JumperConfigUtil{
 
 
     public static String getJcSecurity(){
-        HashMap<String, String> m = new HashMap<>();
-        m.put(CONSUMER, SCOPES);
+        HashMap<String, OauthSecurity> m = new HashMap<>();
+        m.put(CONSUMER, new OauthSecurity(SCOPES));
         JumperConfig jc = new JumperConfig();
-        jc.setOauthSecurity(new OauthSecurity(m));
+        jc.setOauthSecurity(m);
         return toBase64(jc);
     }
 

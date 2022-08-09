@@ -11,5 +11,5 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class OauthSecurity {
-    private HashMap<String, String> scopes;
+    private String scopes;
 }

@@ -1,6 +1,7 @@
 package jumper.model.config;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,12 +16,13 @@ import java.util.HashMap;
 
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class JumperConfig {
 
     private HashMap<String, OauthCredentials> oauth;
     private HashMap<String, RouteListener> routeListener;
     private GatewayClient gatewayClient;
-    private OauthSecurity oauthSecurity;
+    private HashMap<String,OauthSecurity> oauthSecurity;
 
     String token_endpoint;
     String tif_remote_issuer;

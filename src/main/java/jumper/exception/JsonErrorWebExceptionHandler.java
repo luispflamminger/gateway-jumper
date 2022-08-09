@@ -4,6 +4,7 @@ import java.util.*;
 
 import jumper.Constants;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.web.ResourceProperties;
 import org.springframework.boot.autoconfigure.web.reactive.error.DefaultErrorWebExceptionHandler;
 import org.springframework.boot.web.error.ErrorAttributeOptions;
@@ -23,6 +24,9 @@ import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 @Slf4j
 public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandler {
 
+    @Value( "${spring.application.name}")
+    private String applicationName;
+
     public JsonErrorWebExceptionHandler(ErrorAttributes errorAttributes,
                                         ResourceProperties resourceProperties,
                                         ErrorProperties errorProperties,
@@ -41,6 +45,7 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
         HttpStatus errorStatus = findHttpStatus(error, responseStatusAnnotation);
         Map<String, Object> errorAttributes = new HashMap<>(8);
 
+        errorAttributes.put("service", applicationName);
         errorAttributes.put("timestamp", new Date());
         errorAttributes.put("message", (error.getMessage() != null) ? error.getMessage() : "");
         errorAttributes.put("error", errorStatus.getReasonPhrase());
@@ -65,7 +70,7 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
     @Override
     protected int getHttpStatus(Map<String, Object> errorAttributes) {
         int code = (int) errorAttributes.getOrDefault("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-        log.warn("getHttpStatus code {}", code);
+        //log.warn("getHttpStatus code {}", code);
         // Here you can actually customize the HTTP response code based on the attributes inside the errorAttributes
         /*
         if code != 500 error log is suppressed

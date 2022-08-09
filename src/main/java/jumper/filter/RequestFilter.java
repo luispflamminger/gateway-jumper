@@ -504,8 +504,8 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
     }
 
     private String setSecurityScopes(JumperConfig jumperConfig, String consumer){
-        if (jumperConfig.getOauthSecurity() != null && jumperConfig.getOauthSecurity().getScopes() != null && jumperConfig.getOauthSecurity().getScopes().containsKey(consumer)){
-            return jumperConfig.getOauthSecurity().getScopes().get(consumer);
+        if (jumperConfig.getOauthSecurity() != null && jumperConfig.getOauthSecurity().containsKey(consumer)){
+            return jumperConfig.getOauthSecurity().get(consumer).getScopes();
         }
         return null;
     }
