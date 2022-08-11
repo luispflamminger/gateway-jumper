@@ -58,7 +58,7 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
         //for current jumper does not make sense
         //errorAttributes.put("path", request.path());
 
-        //should also evaluate include options (stacktrace. message, bindingErrors)
+        //should also evaluate include options (stacktrace, message, bindingErrors)
         return errorAttributes;
     }
 
@@ -70,7 +70,7 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
     @Override
     protected int getHttpStatus(Map<String, Object> errorAttributes) {
         int code = (int) errorAttributes.getOrDefault("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-        //log.warn("getHttpStatus code {}", code);
+        log.debug("errorAttributes {}", errorAttributes);
         // Here you can actually customize the HTTP response code based on the attributes inside the errorAttributes
         /*
         if code != 500 error log is suppressed
@@ -93,11 +93,11 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
         if (error instanceof ResponseStatusException) {
             return ((ResponseStatusException) error).getStatus();
         }
-
+/*
         if (error instanceof java.net.ConnectException) {
             return HttpStatus.GATEWAY_TIMEOUT;
         }
-
+*/
         return responseStatusAnnotation.getValue("code", HttpStatus.class).orElse(INTERNAL_SERVER_ERROR);
     }
 
