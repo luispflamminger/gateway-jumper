@@ -1,9 +1,9 @@
 package jumper.model.config;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jumper.Constants;
 import jumper.utilities.OauthTokenUtil;
@@ -16,7 +16,6 @@ import java.util.HashMap;
 
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class JumperConfig {
 
     private HashMap<String, OauthCredentials> oauth;
@@ -69,7 +68,7 @@ public class JumperConfig {
         JumperConfig jc = null;
         try
         {
-            jc = new ObjectMapper().readValue( decodedJson, JumperConfig.class);
+            jc = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false).readValue( decodedJson, JumperConfig.class);
         }
         catch( JsonProcessingException e)
         {
