@@ -1,19 +1,11 @@
 package jumper;
 
-import io.cucumber.java.After;
-import io.cucumber.java.Before;
 import io.cucumber.java.en.And;
-import io.cucumber.java.en.Given;
 import io.cucumber.java.en.When;
-import io.cucumber.spring.CucumberContextConfiguration;
 import jumper.mocks.MockApiUpstreamServer;
 import jumper.mocks.MockIrisServer;
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
@@ -40,6 +32,15 @@ public class BaseSteps {
     @And("API consumer receives a {int} status code")
     public void apisConsumerReceivesAStatusCode(int arg0) {
         requestExchange.expectStatus().isEqualTo(arg0);
+    }
+
+    @And("several realms are contained in the header separated with comma")
+    public void addCommaSeparatedRealmListToHeader() {
+        setHttpHeadersOfRequest(
+                httpHeadersOfRequest.andThen(
+                        httpHeaders -> httpHeaders.set(Constants.HEADER_REALM, "foo,bar," + Constants.DEFAULT_REALM)
+                )
+        );
     }
 
     @When("consumer calls the API")

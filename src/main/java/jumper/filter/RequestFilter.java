@@ -91,7 +91,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
             String jumper_config_Base64 = request.getHeaders().getFirst( Constants.HEADER_JUMPER_CONFIG);
 
             String consumerTokenWithoutSignature  = OauthTokenUtil.getTokenWithoutSignature( consumerToken);
-            Jwt<Header, Claims> consumerTokenclaims = OauthTokenUtil.getAllClaimsFromConsumerToken( consumerTokenWithoutSignature);
+            Jwt<Header, Claims> consumerTokenclaims = OauthTokenUtil.getAllClaimsFromToken( consumerTokenWithoutSignature);
             String consumer = consumerTokenclaims.getBody().get( "clientId", String.class);
             String consumerOriginStargate = consumerTokenclaims.getBody().get( "originStargate", String.class);
             String consumerOriginZone = consumerTokenclaims.getBody().get( "originZone", String.class);

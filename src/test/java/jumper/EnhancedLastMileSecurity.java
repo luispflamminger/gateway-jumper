@@ -1,20 +1,23 @@
 package jumper;
 
+import static org.junit.Assert.assertEquals;
+
 import io.cucumber.java.After;
-import io.cucumber.java.AfterStep;
 import io.cucumber.java.Before;
-import io.cucumber.java.BeforeStep;
-import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
-import io.cucumber.java.en.When;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Header;
+import io.jsonwebtoken.Jwt;
 import jumper.mocks.MockApiUpstreamServer;
 import jumper.mocks.MockIrisServer;
 import jumper.util.JumperConfigurator;
+import jumper.utilities.OauthTokenUtil;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -25,6 +28,7 @@ import java.util.regex.Pattern;
 
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@RequiredArgsConstructor
 @AutoConfigureWebTestClient(timeout = "PT65S") // PT65S - PT = Period time, S = seconds
 public class EnhancedLastMileSecurity {
     private final BaseSteps baseSteps;
@@ -32,16 +36,13 @@ public class EnhancedLastMileSecurity {
     @Autowired
     WebTestClient webTestClient;
 
-    @Autowired
-    private ApplicationContext context;
+    @Value( "${jumper.issuer.url}")
+    private String localIssuerUrl;
 
     MockApiUpstreamServer mockUpstreamServer;
     MockIrisServer mockIrisServer;
 
     Consumer<HttpHeaders> httpHeadersOfRequest;
-    String responseStatusCode;
-
-    WebTestClient.ResponseSpec requestExchange;
 
     @Before("@elms")
     public void beforeScenario() {
@@ -62,17 +63,11 @@ public class EnhancedLastMileSecurity {
         mockIrisServer.stopServer();
     }
 
-    public EnhancedLastMileSecurity(BaseSteps baseSteps) {
-        this.baseSteps = baseSteps;
-    }
-
     @Given("EnhancedLastMileSecurity is activated")
     public void enhancedlastmilesecurityIsActivated() {
         httpHeadersOfRequest = JumperConfigurator.getJumperElmsHeaders();
         baseSteps.setHttpHeadersOfRequest(httpHeadersOfRequest);
     }
-
-
 
     @Then("API Provider receives {word}")
     public void apiProviderReceivesMergedGatewayToken(String mergedGatewayToken) {
@@ -90,5 +85,12 @@ public class EnhancedLastMileSecurity {
                 .expectHeader().valueMatches(Constants.HEADER_X_ORIGIN_ZONE, "localZone")
                 .expectHeader().valueMatches(Constants.HEADER_X_FORWARDED_PORT, Constants.HEADER_X_FORWARDED_PORT_PORT)
                 .expectHeader().valueMatches(Constants.HEADER_X_FORWARDED_PROTO, Constants.HEADER_X_FORWARDED_PROTO_HTTPS);
+
+        this.baseSteps.getRequestExchange().expectHeader().value(HttpHeaders.AUTHORIZATION, this::checkToken);
+    }
+
+    private void checkToken(String token) {
+        Jwt<Header, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
+        assertEquals(localIssuerUrl + "/" + Constants.DEFAULT_REALM, claimsFromToken.getBody().get( "iss", String.class));
     }
 }
