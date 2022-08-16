@@ -10,7 +10,7 @@ Feature: Enhanced Last Mile Security
 
   Scenario: Consumer calls an API with EnhancedLastMileSecurity and realm header contains several values
     Given EnhancedLastMileSecurity is activated
-    And several realms are contained in the header separated with comma
+    And several realm fields are contained in the header
     And API provider will respond with a 200 status code
     When consumer calls the API
     Then API Provider receives MergedGatewayToken

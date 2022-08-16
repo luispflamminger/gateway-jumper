@@ -10,7 +10,7 @@ Feature: Last Mile Security
 
   Scenario: Consumer calls an API with lastMileSecurity and realm header contains several values
     Given lastMileSecurity is activated
-    And several realms are contained in the header separated with comma
+    And several realm fields are contained in the header
     And API provider will respond with a 200 status code
     When consumer calls the API
     Then API provider receives AccessToken and GatewayToken

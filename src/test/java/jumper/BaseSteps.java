@@ -34,11 +34,15 @@ public class BaseSteps {
         requestExchange.expectStatus().isEqualTo(arg0);
     }
 
-    @And("several realms are contained in the header separated with comma")
+    @And("several realm fields are contained in the header")
     public void addCommaSeparatedRealmListToHeader() {
         setHttpHeadersOfRequest(
                 httpHeadersOfRequest.andThen(
-                        httpHeaders -> httpHeaders.set(Constants.HEADER_REALM, "foo,bar," + Constants.DEFAULT_REALM)
+                        httpHeaders -> {
+                            httpHeaders.add(Constants.HEADER_REALM, "foo");
+                            httpHeaders.add(Constants.HEADER_REALM, "huhuhu");
+                            httpHeaders.add(Constants.HEADER_REALM, Constants.DEFAULT_REALM);
+                        }
                 )
         );
     }

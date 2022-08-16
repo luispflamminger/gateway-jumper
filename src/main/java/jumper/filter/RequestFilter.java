@@ -350,14 +350,12 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
     }
 
     private String getLastValueFromHeaderField(ServerHttpRequest request, String headerName) {
-        String originalHeaderValue = request.getHeaders().getFirst(headerName);
-
-        if (StringUtils.contains(originalHeaderValue, ",")) {
-            return StringUtils.substringAfterLast(originalHeaderValue, ",");
-        } else {
-            return originalHeaderValue;
-        }
+        return request.getHeaders().getValuesAsList(headerName)
+                .stream()
+                .reduce((first, last) -> last)
+                .orElse(null);
     }
+
     private void checkForSpaceZone(ServerWebExchange exchange, GatewayFilterChain chain, String zone, String token ) {
         if(zone != null && zone.equals(Constants.SPACE)) {
             addHeader(exchange, chain, Constants.HEADER_X_SPACEGATE_TOKEN, token);
