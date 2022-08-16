@@ -1,22 +1,25 @@
 package jumper;
 
+import static org.junit.Assert.assertEquals;
+
 import io.cucumber.java.After;
 import io.cucumber.java.Before;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
+import jumper.mocks.MockApiUpstreamServer;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Header;
 import io.jsonwebtoken.Jwt;
-import jumper.mocks.MockApiUpstreamServer;
 import jumper.mocks.MockIrisServer;
 import jumper.util.JumperConfigurator;
 import jumper.utilities.OauthTokenUtil;
+import lombok.RequiredArgsConstructor;
 import org.junit.Assert;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -29,6 +32,7 @@ import static jumper.util.Config.*;
 
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@RequiredArgsConstructor
 @AutoConfigureWebTestClient(timeout = "PT65S") // PT65S - PT = Period time, S = seconds
 public class EnhancedLastMileSecurity {
     private final BaseSteps baseSteps;
@@ -36,16 +40,13 @@ public class EnhancedLastMileSecurity {
     @Autowired
     WebTestClient webTestClient;
 
-    @Autowired
-    private ApplicationContext context;
+    @Value( "${jumper.issuer.url}")
+    private String localIssuerUrl;
 
     MockApiUpstreamServer mockUpstreamServer;
     MockIrisServer mockIrisServer;
 
     Consumer<HttpHeaders> httpHeadersOfRequest;
-    String responseStatusCode;
-
-    WebTestClient.ResponseSpec requestExchange;
 
     String jwtTokenResponse;
 
@@ -66,10 +67,6 @@ public class EnhancedLastMileSecurity {
     public void afterScenario() {
         mockUpstreamServer.stopServer();
         mockIrisServer.stopServer();
-    }
-
-    public EnhancedLastMileSecurity(BaseSteps baseSteps) {
-        this.baseSteps = baseSteps;
     }
 
     @Given("EnhancedLastMileSecurity is activated")
@@ -104,9 +101,11 @@ public class EnhancedLastMileSecurity {
                 .expectHeader().valueMatches(Constants.HEADER_X_FORWARDED_PORT, Constants.HEADER_X_FORWARDED_PORT_PORT)
                 .expectHeader().valueMatches(Constants.HEADER_X_FORWARDED_PROTO, Constants.HEADER_X_FORWARDED_PROTO_HTTPS);
 
-        this.baseSteps.getRequestExchange().expectHeader().value(HttpHeaders.AUTHORIZATION, s -> {
-            jwtTokenResponse = s;
-        });
+        this.baseSteps.getRequestExchange().expectHeader().value(HttpHeaders.AUTHORIZATION, this::checkToken);
+    }
+
+    private void checkToken(String token) {
+        Jwt<Header, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
 
         /*"sub": "4e1bd9f4-a4d6-4c92-a256-ba9ccea6564b",
   "clientId": "eni--local-team--local-app",
@@ -123,15 +122,16 @@ public class EnhancedLastMileSecurity {
 
          */
 
-        String jwtToken = OauthTokenUtil.getTokenWithoutSignature(jwtTokenResponse);
-        Jwt<Header, Claims> allClaimsFromConsumerToken = OauthTokenUtil.getAllClaimsFromConsumerToken(jwtToken);
-        Assert.assertEquals(CONSUMER, allClaimsFromConsumerToken.getBody().get( "clientId", String.class));
-        Assert.assertEquals("stargate", allClaimsFromConsumerToken.getBody().get( "azp", String.class));
-        Assert.assertEquals(ORIGIN_ZONE, allClaimsFromConsumerToken.getBody().get( "originZone", String.class));
-        Assert.assertEquals("Bearer", allClaimsFromConsumerToken.getBody().get( "typ", String.class));
-        Assert.assertEquals("GET", allClaimsFromConsumerToken.getBody().get( "operation", String.class));
-        //Assert.assertEquals("", allClaimsFromConsumerToken.getBody().get( "requestPath", String.class));
-        Assert.assertEquals(ORIGIN_STARGATE, allClaimsFromConsumerToken.getBody().get( "originStargate", String.class));
+
+        assertEquals(CONSUMER, claimsFromToken.getBody().get( "clientId", String.class));
+        assertEquals("stargate", claimsFromToken.getBody().get( "azp", String.class));
+        assertEquals(ORIGIN_ZONE, claimsFromToken.getBody().get( "originZone", String.class));
+        assertEquals("Bearer", claimsFromToken.getBody().get( "typ", String.class));
+        assertEquals("GET", claimsFromToken.getBody().get( "operation", String.class));
+        //assertEquals("", allClaimsFromConsumerToken.getBody().get( "requestPath", String.class));
+        assertEquals(ORIGIN_STARGATE, allClaimsFromConsumerToken.getBody().get( "originStargate", String.class));
+
+        assertEquals(localIssuerUrl + "/" + Constants.DEFAULT_REALM, claimsFromToken.getBody().get( "iss", String.class));
     }
 
     @And("Authorization token contains scope claim")

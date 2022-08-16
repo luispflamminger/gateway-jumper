@@ -8,6 +8,14 @@ Feature: Last Mile Security
     Then API provider receives AccessToken and GatewayToken
     And API consumer receives a 200 status code
 
+  Scenario: Consumer calls an API with lastMileSecurity and realm header contains several values
+    Given lastMileSecurity is activated
+    And several realms are contained in the header separated with comma
+    And API provider will respond with a 200 status code
+    When consumer calls the API
+    Then API provider receives AccessToken and GatewayToken
+    And API consumer receives a 200 status code
+
   Scenario: Consumer calls an API with lastMileSecurity and Provider respond with a 401
     Given lastMileSecurity is activated
     And API provider will respond with a 401 status code

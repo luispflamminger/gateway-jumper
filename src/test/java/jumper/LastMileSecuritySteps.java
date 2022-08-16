@@ -12,10 +12,11 @@ import jumper.mocks.MockApiUpstreamServer;
 import jumper.mocks.MockIrisServer;
 import jumper.util.JumperConfigurator;
 import jumper.utilities.OauthTokenUtil;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -24,33 +25,27 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 @CucumberContextConfiguration
+@RequiredArgsConstructor
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureWebTestClient(timeout = "PT65S") // PT65S - PT = Period time, S = seconds
 public class LastMileSecuritySteps {
 
     private final BaseSteps baseSteps;
+
     @Autowired
     WebTestClient webTestClient;
 
-    @Autowired
-    private ApplicationContext context;
+    @Value( "${jumper.issuer.url}")
+    private String localIssuerUrl;
 
     MockApiUpstreamServer mockUpstreamServer;
     MockIrisServer mockIrisServer;
 
     Consumer<HttpHeaders> httpHeadersOfRequest;
-    String responseStatusCode;
-
-    WebTestClient.ResponseSpec requestExchange;
-
-    String jwtTokenResponse;
-
-    public LastMileSecuritySteps(BaseSteps baseSteps) {
-        this.baseSteps = baseSteps;
-    }
 
     @Before("@lms")
     public void beforeScenario() {
@@ -96,14 +91,20 @@ public class LastMileSecuritySteps {
                 .expectHeader().valueMatches(Constants.HEADER_X_FORWARDED_PORT, Constants.HEADER_X_FORWARDED_PORT_PORT)
                 .expectHeader().valueMatches(Constants.HEADER_X_FORWARDED_PROTO, Constants.HEADER_X_FORWARDED_PROTO_HTTPS);
 
-        this.baseSteps.getRequestExchange().expectHeader().value(HttpHeaders.AUTHORIZATION, s -> {
-            jwtTokenResponse = s;
-        });
+        this.baseSteps.getRequestExchange().expectHeader().value(HttpHeaders.AUTHORIZATION, this::checkConsumerToken);
+        this.baseSteps.getRequestExchange().expectHeader().value(Constants.HEADER_LASTMILE_SECURITY_TOKEN, this::checkGatewayToken);
+    }
 
-        String jwtToken = OauthTokenUtil.getTokenWithoutSignature(jwtTokenResponse);
-        Jwt<Header, Claims> allClaimsFromConsumerToken = OauthTokenUtil.getAllClaimsFromConsumerToken(jwtToken);
-        String clientId = allClaimsFromConsumerToken.getBody().get( "clientId", String.class);
-        assertNotNull(clientId);
+    private void checkConsumerToken(String consumerToken) {
+        Jwt<Header, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(consumerToken));
+
+        assertNotNull(claimsFromToken.getBody().get( "clientId", String.class));
+    }
+
+    private void checkGatewayToken(String gatewayToken) {
+        Jwt<Header, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(gatewayToken));
+
+        assertEquals(localIssuerUrl + "/" + Constants.DEFAULT_REALM, claimsFromToken.getBody().get( "iss", String.class));
     }
 
 

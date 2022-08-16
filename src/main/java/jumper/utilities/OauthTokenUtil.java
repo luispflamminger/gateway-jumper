@@ -65,12 +65,12 @@ public class OauthTokenUtil {
 
 	public static String getClaimFromToken(String consumerToken, String claimName){
 		String consumerTokenWithoutSignature = getTokenWithoutSignature( consumerToken);
-		Jwt<Header, Claims> consumerTokenclaims = getAllClaimsFromConsumerToken( consumerTokenWithoutSignature);
+		Jwt<Header, Claims> consumerTokenclaims = getAllClaimsFromToken( consumerTokenWithoutSignature);
 		String claimValue = consumerTokenclaims.getBody().get( claimName, String.class);
 		return claimValue;
 	}
 
-	public static Jwt<Header, Claims> getAllClaimsFromConsumerToken( String consumerToken) {
+	public static Jwt<Header, Claims> getAllClaimsFromToken( String consumerToken) {
 
 		try
 		{
@@ -107,7 +107,7 @@ public class OauthTokenUtil {
 		String[] splitToken = token[1].split( "\\.");
 		String consumerTokenWithoutSignature = splitToken[0]+"."+splitToken[1]+".";
 
-		Jwt<Header, Claims> gatewayTokenclaims = getAllClaimsFromConsumerToken( consumerTokenWithoutSignature);
+		Jwt<Header, Claims> gatewayTokenclaims = getAllClaimsFromToken( consumerTokenWithoutSignature);
 
 		Date issuedAt = gatewayTokenclaims.getBody().getIssuedAt();
 //	        Date now = new Date();
@@ -146,7 +146,7 @@ public class OauthTokenUtil {
 		String consumerTokenWithoutSignature = splitToken[0]+"."+splitToken[1]+".";
 		String signature = splitToken[2];
 
-		Jwt<Header, Claims> gatewayTokenclaims = getAllClaimsFromConsumerToken( consumerTokenWithoutSignature);
+		Jwt<Header, Claims> gatewayTokenclaims = getAllClaimsFromToken( consumerTokenWithoutSignature);
 
 		Date issuedAt = gatewayTokenclaims.getBody().getIssuedAt();
 		Date expiration = gatewayTokenclaims.getBody().getExpiration();
