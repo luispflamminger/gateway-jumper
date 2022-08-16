@@ -48,8 +48,6 @@ public class EnhancedLastMileSecurity {
 
     Consumer<HttpHeaders> httpHeadersOfRequest;
 
-    String jwtTokenResponse;
-
     @Before("@elms")
     public void beforeScenario() {
         mockUpstreamServer = new MockApiUpstreamServer();
@@ -107,41 +105,37 @@ public class EnhancedLastMileSecurity {
     private void checkToken(String token) {
         Jwt<Header, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
 
-        /*"sub": "4e1bd9f4-a4d6-4c92-a256-ba9ccea6564b",
-  "clientId": "eni--local-team--local-app",
-  "azp": "stargate",
-  "originZone": "localZone",
-  "scope": "scope1 scope2",
-  "typ": "Bearer",
-  "operation": "GET",
-  "requestPath": "null/callback",
-  "originStargate": "https://zone.local.de",
-  "iss": "https://stargate-integration.test.dhei.telekom.de/auth/realms/default",
-  "exp": 1659595531,
-  "iat": 1659595231
-
+        /*  "sub": "4e1bd9f4-a4d6-4c92-a256-ba9ccea6564b",
+            "clientId": "eni--local-team--local-app",
+            "azp": "stargate",
+            "originZone": "localZone",
+            "scope": "scope1 scope2",
+            "typ": "Bearer",
+            "operation": "GET",
+            "requestPath": "null/callback",
+            "originStargate": "https://zone.local.de",
+            "iss": "https://stargate-integration.test.dhei.telekom.de/auth/realms/default",
+            "exp": 1659595531,
+            "iat": 1659595231
          */
-
 
         assertEquals(CONSUMER, claimsFromToken.getBody().get( "clientId", String.class));
         assertEquals("stargate", claimsFromToken.getBody().get( "azp", String.class));
         assertEquals(ORIGIN_ZONE, claimsFromToken.getBody().get( "originZone", String.class));
         assertEquals("Bearer", claimsFromToken.getBody().get( "typ", String.class));
         assertEquals("GET", claimsFromToken.getBody().get( "operation", String.class));
-        //assertEquals("", allClaimsFromConsumerToken.getBody().get( "requestPath", String.class));
-        assertEquals(ORIGIN_STARGATE, allClaimsFromConsumerToken.getBody().get( "originStargate", String.class));
+        //assertEquals("", claimsFromToken.getBody().get( "requestPath", String.class));
+        assertEquals(ORIGIN_STARGATE, claimsFromToken.getBody().get( "originStargate", String.class));
 
         assertEquals(localIssuerUrl + "/" + Constants.DEFAULT_REALM, claimsFromToken.getBody().get( "iss", String.class));
     }
 
     @And("Authorization token contains scope claim")
     public void authorizationTokenContainsScopeClaim() {
-        this.baseSteps.getRequestExchange().expectHeader().value(HttpHeaders.AUTHORIZATION, s -> {
-                    jwtTokenResponse = s;
-                });
-
-        String jwtToken = OauthTokenUtil.getTokenWithoutSignature(jwtTokenResponse);
-        Jwt<Header, Claims> allClaimsFromConsumerToken = OauthTokenUtil.getAllClaimsFromConsumerToken(jwtToken);
-        Assert.assertEquals(SCOPES, allClaimsFromConsumerToken.getBody().get( "scope", String.class));
+        this.baseSteps.getRequestExchange().expectHeader().value(HttpHeaders.AUTHORIZATION, tokenWithScopes -> {
+            String jwtToken = OauthTokenUtil.getTokenWithoutSignature(tokenWithScopes);
+            Jwt<Header, Claims> allClaimsFromConsumerToken = OauthTokenUtil.getAllClaimsFromToken(jwtToken);
+            Assert.assertEquals(SCOPES, allClaimsFromConsumerToken.getBody().get( "scope", String.class));
+        });
     }
 }
