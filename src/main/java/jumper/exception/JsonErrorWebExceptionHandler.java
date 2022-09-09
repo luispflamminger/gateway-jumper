@@ -73,7 +73,7 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
         log.debug("errorAttributes {}", errorAttributes);
         // Here you can actually customize the HTTP response code based on the attributes inside the errorAttributes
         /*
-        if code != 500 error log is suppressed
+        if code != 500 error log is suppressed later
 
 	protected void logError(ServerRequest request, ServerResponse response, Throwable throwable) {
 		if (logger.isDebugEnabled()) {
@@ -93,12 +93,25 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
         if (error instanceof ResponseStatusException) {
             return ((ResponseStatusException) error).getStatus();
         }
-/*
+
+        /*
+        io.netty.channel.ConnectTimeoutException
+        io.netty.channel.AbstractChannel$AnnotatedConnectException
+         */
+        /*
         if (error instanceof java.net.ConnectException) {
+            logError();
             return HttpStatus.GATEWAY_TIMEOUT;
         }
-*/
+        */
+
         return responseStatusAnnotation.getValue("code", HttpStatus.class).orElse(INTERNAL_SERVER_ERROR);
+    }
+
+//todo need to stabilize error logging before we start to overwrite status
+    private void logError(){
+       /* log.error(LogMessage.of(() -> String.format("%s 500 Server Error for %s",
+                request.exchange().getLogPrefix(), formatRequest(request))), throwable);*/
     }
 
 }
