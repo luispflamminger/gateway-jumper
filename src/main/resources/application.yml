@@ -27,7 +27,7 @@ spring:
             methods: GET,POST,PUT,DELETE,PATCH,HEAD
       httpclient:
         pool:
-          type: ELASTIC #default
+          type: DISABLED #default
           max-idle-time: 2000ms
         connect-timeout: 10000
         response-timeout: 61s # ingress 60s
