@@ -6,7 +6,7 @@
 
 	<groupId>org.springframework</groupId>
 	<artifactId>jumper2</artifactId>
-	<version>3.2.9-ConnectionFixed</version>
+	<version>3.2.9-ConnectionFixedNoEvict</version>
 
 	<parent>
 		<groupId>org.springframework.boot</groupId>

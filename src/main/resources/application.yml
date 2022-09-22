@@ -32,7 +32,7 @@ spring:
           acquire-timeout: 8000
           max-life-time: 300s
           max-idle-time: 2s
-          eviction-interval: 10s
+          #eviction-interval: 10s
         connect-timeout: 10000
         response-timeout: 61s # ingress 60s
         #ssl:
