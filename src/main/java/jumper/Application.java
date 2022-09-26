@@ -63,7 +63,7 @@ public class Application {
                 .route("jumper_route", p -> p
                         .path("/proxy/**")
                         .filters(f -> f
-                                .rewritePath("/proxy/?(?<segment>/?.*)", "/$\\{segment}")
+//                                .rewritePath("/proxy/?(?<segment>/?.*)", "/$\\{segment}")
                                 .filter(requestFilter.apply(new RequestFilter.Config(true, true)))
                                 .filter(removeHeader.apply(c -> c.setName("jumper_config")))
                                 .filter(removeHeader.apply(c -> c.setName("token_endpoint")))
@@ -88,7 +88,7 @@ public class Application {
                         //.and().method("POST")
                         //.and().readBody(String.class, requestBody -> {return true;})
                         .filters(f -> f
-                                        .rewritePath("/listener/?(?<segment>/?.*)", "/$\\{segment}")
+//                                        .rewritePath("/listener/?(?<segment>/?.*)", "/$\\{segment}")
                                         .filter(requestFilter.apply(new RequestFilter.Config(true, true)))
 /*
                                .modifyResponseBody(String.class, String.class,
