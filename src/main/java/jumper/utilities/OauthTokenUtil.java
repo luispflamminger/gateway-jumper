@@ -141,6 +141,7 @@ public class OauthTokenUtil {
 
 	public static String generateGatewayToken( String envName, String consumerToken, String operation, String requestPath, String issuer) {
 
+
 		String[] token = consumerToken.split( " ");
 		String[] splitToken = token[1].split( "\\.");
 		String consumerTokenWithoutSignature = splitToken[0]+"."+splitToken[1]+".";
@@ -194,6 +195,7 @@ public class OauthTokenUtil {
 		PrivateKey loadKey = null;
 		try
 		{
+			log.info("GatewayToken or OneToken: Loading privateKey");
 			loadKey = loadPrivKey( privateKey);
 		}
 		catch( NoSuchAlgorithmException e1)
@@ -213,6 +215,7 @@ public class OauthTokenUtil {
 			log.error("URISyntaxException", e1);
 		}
 
+		log.info("GatewayToken or OneToken: Generating with all claims");
 		return Jwts.builder().setClaims( claims).setIssuer( issuer).setExpiration( expiration).setIssuedAt( issuedAt).signWith( loadKey, SignatureAlgorithm.RS256).setHeaderParam( "kid", keyId).setHeaderParam( "typ", "JWT").compact();
 	}
 
