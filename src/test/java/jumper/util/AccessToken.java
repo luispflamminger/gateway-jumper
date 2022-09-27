@@ -12,6 +12,7 @@ import java.security.PrivateKey;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -30,21 +31,9 @@ public class AccessToken {
         claims.put( "sub", UUID.randomUUID().toString());
         claims.put( "originZone", originZone);
         claims.put( "originStargate", originStargate);
+        claims.put( "clientId", clientId);
 
-        String issuer = "https://iris.localhost:1234/auth/realms/default";
-
-        Date issuedAt = new Date(System.currentTimeMillis());
-        Date expiration = new Date(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(5));
-        PrivateKey privateKey = null;
-        try {
-            privateKey = OauthTokenUtil.loadPrivKey(null);
-        } catch (IOException | URISyntaxException | NoSuchAlgorithmException | InvalidKeySpecException e) {
-            e.getStackTrace();
-        }
-
-        String keyId = "123456";
-
-        return Jwts.builder().setClaims( claims).setIssuer( issuer).setExpiration( expiration).setIssuedAt( issuedAt).signWith( privateKey, SignatureAlgorithm.RS256).setHeaderParam( "kid", keyId).setHeaderParam( "typ", "JWT").compact();
+        return buildAccessToken(claims);
     }
 
     public String getGwMeshToken() {
@@ -57,7 +46,13 @@ public class AccessToken {
         claims.put( "originZone", originZone);
         claims.put( "originStargate", originStargate);
 
+        return buildAccessToken(claims);
+    }
+
+
+    private String buildAccessToken(Map<String, String> claims) {
         String issuer = "https://iris.remote:1234/auth/realms/default";
+
 
         Date issuedAt = new Date(System.currentTimeMillis());
         Date expiration = new Date(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(5));
@@ -70,9 +65,8 @@ public class AccessToken {
 
         String keyId = "123456";
 
-        return Jwts.builder().setClaims( claims).setIssuer( issuer).setExpiration( expiration).setIssuedAt( issuedAt).signWith( privateKey, SignatureAlgorithm.RS256).setHeaderParam( "kid", keyId).setHeaderParam( "typ", "JWT").compact();
+        return Jwts.builder().setClaims(claims).setIssuer(issuer).setExpiration(expiration).setIssuedAt(issuedAt).signWith(privateKey, SignatureAlgorithm.RS256).setHeaderParam("kid", keyId).setHeaderParam("typ", "JWT").compact();
+
     }
-
-
 
 }

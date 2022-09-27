@@ -5,6 +5,8 @@ import org.springframework.http.HttpHeaders;
 
 import java.util.function.Consumer;
 
+import static jumper.util.JumperConfigUtil.getJcSecurity;
+
 public class JumperConfigurator {
 
     public static Consumer<HttpHeaders> getJumperLmsHeaders(String consumerToken) {
@@ -22,8 +24,8 @@ public class JumperConfigurator {
         AccessToken consumerAccessToken = AccessToken.builder()
                 .env("local")
                 .clientId("eni--local-team--local-app")
-                .originZone("aws")
-                .originStargate("https://aws.local.de")
+                .originZone("localZone")
+                .originStargate("https://zone.local.de")
                 .build();
         return consumerAccessToken.getConsumerAccessToken();
     }
@@ -73,6 +75,15 @@ public class JumperConfigurator {
             httpHeaders.set(Constants.HEADER_CLIENT_ID, clientId);
             httpHeaders.set(Constants.HEADER_CLIENT_SECRET, "secret");
             httpHeaders.setBearerAuth(getSpaceConsumerAccessToken());
+        };
+    }
+
+    public static Consumer<HttpHeaders> getJumperElmsHeadersWithSecurity() {
+        return httpHeaders -> {
+            httpHeaders.set(Constants.HEADER_REMOTE_API_URL, "http://localhost:1080");
+            httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcSecurity());
+            httpHeaders.setBearerAuth(getConsumerAccessToken());
+            httpHeaders.set(Constants.HEADER_ACCESS_TOKEN_FORWARDING, "false");
         };
     }
 }

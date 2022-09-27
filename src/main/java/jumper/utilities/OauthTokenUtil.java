@@ -65,12 +65,12 @@ public class OauthTokenUtil {
 
 	public static String getClaimFromToken(String consumerToken, String claimName){
 		String consumerTokenWithoutSignature = getTokenWithoutSignature( consumerToken);
-		Jwt<Header, Claims> consumerTokenclaims = getAllClaimsFromConsumerToken( consumerTokenWithoutSignature);
+		Jwt<Header, Claims> consumerTokenclaims = getAllClaimsFromToken( consumerTokenWithoutSignature);
 		String claimValue = consumerTokenclaims.getBody().get( claimName, String.class);
 		return claimValue;
 	}
 
-	public static Jwt<Header, Claims> getAllClaimsFromConsumerToken( String consumerToken) {
+	public static Jwt<Header, Claims> getAllClaimsFromToken( String consumerToken) {
 
 		try
 		{
@@ -100,14 +100,14 @@ public class OauthTokenUtil {
 		//return null;
 	}
 
-	public static String generateExtGatewayToken( String envName, String consumerToken, String operation, String requestPath, String issuer) {
+	public static String generateExtGatewayToken(String envName, String consumerToken, String operation, String requestPath, String issuer, String scope, String publisher) {
+		//nearly to pass additional claims as a map, so far scope + publisher
 
 		String[] token = consumerToken.split( " ");
 		String[] splitToken = token[1].split( "\\.");
 		String consumerTokenWithoutSignature = splitToken[0]+"."+splitToken[1]+".";
 
-		log.info("OneToken: Decoding AccessToken and getting all claims from AccessToken");
-		Jwt<Header, Claims> gatewayTokenclaims = getAllClaimsFromConsumerToken( consumerTokenWithoutSignature);
+		Jwt<Header, Claims> gatewayTokenclaims = getAllClaimsFromToken( consumerTokenWithoutSignature);
 
 		Date issuedAt = gatewayTokenclaims.getBody().getIssuedAt();
 //	        Date now = new Date();
@@ -129,6 +129,8 @@ public class OauthTokenUtil {
 		claims.put( "env", envName);
 		claims.put( "originZone", consumerOriginZone);
 		claims.put( "originStargate", consumerOriginStargate);
+		if (scope != null) claims.put( "scope", scope);
+		if (publisher != null) claims.put ("publisherId", publisher);
 		if(!StringUtils.isEmpty(aud)) {
 			claims.put("aud", aud);
 		}
@@ -145,8 +147,7 @@ public class OauthTokenUtil {
 		String consumerTokenWithoutSignature = splitToken[0]+"."+splitToken[1]+".";
 		String signature = splitToken[2];
 
-		log.info("GatewayToken: Decoding AccessToken and getting all claims from AccessToken");
-		Jwt<Header, Claims> gatewayTokenclaims = getAllClaimsFromConsumerToken( consumerTokenWithoutSignature);
+		Jwt<Header, Claims> gatewayTokenclaims = getAllClaimsFromToken( consumerTokenWithoutSignature);
 
 		Date issuedAt = gatewayTokenclaims.getBody().getIssuedAt();
 		Date expiration = gatewayTokenclaims.getBody().getExpiration();

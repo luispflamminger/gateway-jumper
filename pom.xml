@@ -6,7 +6,7 @@
 
 	<groupId>org.springframework</groupId>
 	<artifactId>jumper2</artifactId>
-	<version>3.2.4-loginfos</version>
+	<version>3.2.7</version>
 
 	<parent>
 		<groupId>org.springframework.boot</groupId>
@@ -20,6 +20,7 @@
 		<jacoco.plugin.version>0.8.5</jacoco.plugin.version>
 		<sonar.projectKey>${project.name}</sonar.projectKey>
 		<ch.qos.logback.version>1.2.3</ch.qos.logback.version>
+		<cucumber.version>7.5.0</cucumber.version>
 	</properties>
 
 	<dependencyManagement>
@@ -145,6 +146,34 @@
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-starter-zipkin</artifactId>
 			<version>2.2.8.RELEASE</version>
+		</dependency>
+
+		<dependency>
+			<groupId>io.cucumber</groupId>
+			<artifactId>cucumber-java</artifactId>
+			<version>${cucumber.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>io.cucumber</groupId>
+			<artifactId>cucumber-junit</artifactId>
+			<version>${cucumber.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>io.cucumber</groupId>
+			<artifactId>cucumber-spring</artifactId>
+			<version>${cucumber.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>io.cucumber</groupId>
+			<artifactId>cucumber-junit-platform-engine</artifactId>
+			<version>${cucumber.version}</version>
+			<scope>test</scope>
 		</dependency>
 
 	</dependencies>

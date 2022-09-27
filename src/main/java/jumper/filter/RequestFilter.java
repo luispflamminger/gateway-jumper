@@ -13,6 +13,7 @@ import jumper.model.request.JumperInfoRequest;
 import jumper.model.request.OutgoingRequest;
 import jumper.utilities.OauthTokenUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
@@ -63,42 +64,42 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
             String client_scope = "";
 
             //String routing_path = request.getURI().toString().replaceFirst(".*?:\\d+", "");
-            String token_endpoint = request.getHeaders().getFirst( Constants.HEADER_TOKEN_ENDPOINT);
-            String tif_remote_issuer = request.getHeaders().getFirst( Constants.HEADER_ISSUER);
-            String tif_clientID = request.getHeaders().getFirst( Constants.HEADER_CLIENT_ID);
-            String tif_clientSecret = request.getHeaders().getFirst( Constants.HEADER_CLIENT_SECRET);
+            String token_endpoint = getLastValueFromHeaderField( request, Constants.HEADER_TOKEN_ENDPOINT);
+            String tif_remote_issuer = getLastValueFromHeaderField( request, Constants.HEADER_ISSUER);
+            String tif_clientID = getLastValueFromHeaderField( request, Constants.HEADER_CLIENT_ID);
+            String tif_clientSecret = getLastValueFromHeaderField( request, Constants.HEADER_CLIENT_SECRET);
             String consumerToken = request.getHeaders().getFirst( Constants.HEADER_AUTHORIZATION);
-            String api_base_path = request.getHeaders().getFirst( Constants.HEADER_API_BASE_PATH);
-            String access_token_forwarding = request.getHeaders().getFirst( Constants.HEADER_ACCESS_TOKEN_FORWARDING);
-            String realmName = request.getHeaders().getFirst( Constants.HEADER_REALM);
+            String api_base_path = getLastValueFromHeaderField( request, Constants.HEADER_API_BASE_PATH);
+            String access_token_forwarding = getLastValueFromHeaderField( request, Constants.HEADER_ACCESS_TOKEN_FORWARDING);
+            String realmName = getLastValueFromHeaderField( request, Constants.HEADER_REALM);
 
-            if( realmName == null || realmName.isEmpty())
+            if( StringUtils.isBlank(realmName))
             {
                 realmName = Constants.DEFAULT_REALM;
             }
 
-            String envName = request.getHeaders().getFirst( Constants.HEADER_ENVIRONMENT);
+            String envName = getLastValueFromHeaderField( request, Constants.HEADER_ENVIRONMENT);
 
             String api_resource = request.getPath().value();
             String requestPath = api_base_path + api_resource;
-            String remote_api_url = request.getHeaders().getFirst( Constants.HEADER_REMOTE_API_URL);
+            String remote_api_url = getLastValueFromHeaderField( request, Constants.HEADER_REMOTE_API_URL);
             String lastmileSecurityToken = null;
 
             String xSpacegateClientId = request.getHeaders().getFirst( Constants.HEADER_X_SPACEGATE_CLIENT_ID);
             String xSpacegateClientSecret = request.getHeaders().getFirst( Constants.HEADER_X_SPACEGATE_CLIENT_SECRET);
-            String xSpacegateScope = request.getHeaders().getFirst(Constants.HEADER_X_SPACEGATE_SCOPE);
+            String xSpacegateScope = request.getHeaders().getFirst( Constants.HEADER_X_SPACEGATE_SCOPE);
 
-            String jumper_config_Base64 = request.getHeaders().getFirst( Constants.HEADER_JUMPER_CONFIG);
+            String jumper_config_Base64 = getLastValueFromHeaderField( request, Constants.HEADER_JUMPER_CONFIG);
 
             String consumerTokenWithoutSignature  = OauthTokenUtil.getTokenWithoutSignature( consumerToken);
-            Jwt<Header, Claims> consumerTokenclaims = OauthTokenUtil.getAllClaimsFromConsumerToken( consumerTokenWithoutSignature);
+            Jwt<Header, Claims> consumerTokenclaims = OauthTokenUtil.getAllClaimsFromToken( consumerTokenWithoutSignature);
             String consumer = consumerTokenclaims.getBody().get( "clientId", String.class);
             String consumerOriginStargate = consumerTokenclaims.getBody().get( "originStargate", String.class);
             String consumerOriginZone = consumerTokenclaims.getBody().get( "originZone", String.class);
 
             // jumper config
             JumperConfig jc = null;
-            if (jumper_config_Base64 != null && !jumper_config_Base64.isEmpty())
+            if (StringUtils.isNotBlank(jumper_config_Base64))
             {
                 jc = JumperConfig.fromBase64( jumper_config_Base64);
                 jc.fillWithLegacyHeaders( request); // TODO: remove as soon we have completely shifted to json_config
@@ -220,8 +221,14 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
                         log.info( "Generating OneToken...");
 
-                        lastmileSecurityToken = OauthTokenUtil.generateExtGatewayToken( envName, consumerToken, request.getMethod().toString(), requestPath, lmsIssuer);
-                        log.info("OneToken: Generating OneToken finished");
+                        lastmileSecurityToken = OauthTokenUtil.generateExtGatewayToken( envName,
+                                consumerToken,
+                                request.getMethod().toString(),
+                                requestPath,
+                                lmsIssuer,
+                                setSecurityScopes(jc, consumer),
+                                request.getHeaders().getFirst(Constants.HEADER_X_PUBLISHER_ID)
+                        );
                         addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER+" "+lastmileSecurityToken);
                     }
                     else
@@ -341,6 +348,13 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                         }
                     }));
         }, RouteToRequestUrlFilter.ROUTE_TO_URL_FILTER_ORDER + 1);
+    }
+
+    private String getLastValueFromHeaderField(ServerHttpRequest request, String headerName) {
+        return request.getHeaders().getValuesAsList(headerName)
+                .stream()
+                .reduce((first, last) -> last)
+                .orElse(null);
     }
 
     private void checkForSpaceZone(ServerWebExchange exchange, GatewayFilterChain chain, String zone, String token ) {
@@ -496,6 +510,20 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                 .build();
         ServerWebExchange exchange1 = exchange.mutate().request(request).build();
         chain.filter(exchange1);
+    }
+
+    private String setSecurityScopes(JumperConfig jumperConfig, String consumer){
+        //temporarily we will support both oauth structures
+        //todo remove oauthSecurity
+        if (jumperConfig.getOauthSecurity() != null) {
+            if (jumperConfig.getOauthSecurity().containsKey(consumer)) {
+                return jumperConfig.getOauthSecurity().get(consumer).getScopes();
+            }
+        }
+        if (jumperConfig.getOauth() != null && jumperConfig.getOauth().containsKey(consumer)){
+            return jumperConfig.getOauth().get(consumer).getScopes();
+        }
+        return null;
     }
 
     public static class Config {
