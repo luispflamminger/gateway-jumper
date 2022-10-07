@@ -28,11 +28,11 @@ spring:
       httpclient:
         pool:
           type: fixed
-          max-connections: 1000
+          max-connections: 500
           acquire-timeout: 8000
           max-life-time: 300s
-          max-idle-time: 2s
-          #eviction-interval: 10s
+          max-idle-time: 5s
+          #eviction-interval: 120s
         connect-timeout: 10000
         response-timeout: 61s # ingress 60s
         #ssl:
