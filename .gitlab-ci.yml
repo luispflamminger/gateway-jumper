@@ -6,9 +6,6 @@ include:
 variables:
   MTR_TARGET_IMAGE: ${CI_PROJECT_NAME}
 
-tif to tif-public:
-  extends: .tif_to_tif-public_group
-
 mtr to harbor:
   extends: .mtr_to_harbor
   needs:
