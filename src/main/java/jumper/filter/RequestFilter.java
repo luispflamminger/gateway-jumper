@@ -133,6 +133,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                 //String routing_path = _uri.getPath().replaceFirst("^/$","");
                 //String routing_path = _uri.getRawPath().replaceFirst("^/$","");
                 routing_path = _uri.getRawPath().replaceFirst("^/(proxy|listener)", ""); //for token should be also decoded
+                requestPath += routing_path;
                 if (_query != null) routing_path = routing_path  + "?" + _query;
                 if (_fragment != null) routing_path = routing_path + "#" + _fragment;
 
@@ -144,9 +145,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
             } catch (URISyntaxException e) {
                  throw new RuntimeException("TardisException", e);//todo create proper fallback
             }
-
-            requestPath += routing_path;
-
 
             if( remote_api_url != null && !remote_api_url.startsWith( Constants.LOCALHOST_ISSUER_SERVICE))
             {
