@@ -5,6 +5,7 @@ import io.jsonwebtoken.security.SignatureException;
 import io.netty.channel.ConnectTimeoutException;
 import jumper.JumperCache;
 import jumper.model.TokenInfo;
+import jumper.model.config.OauthCredentials;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -250,6 +251,77 @@ public class OauthTokenUtil {
 
 	public TokenInfo getAccessToken(String token_endpoint2, String tif_clientID2, String tif_clientSecret2) {
 		return getAccessToken(token_endpoint2, tif_clientID2, tif_clientSecret2, false, null, "");
+	}
+
+	public TokenInfo getAccessToken(String tokenEndpoint, OauthCredentials oauthCredentials, String subscriberClientId) {
+
+		String id;
+
+		if(oauthCredentials.getClientId() != null && !oauthCredentials.getClientId().isBlank()) {
+			id = oauthCredentials.getClientId();
+		} else {
+			id = oauthCredentials.getUsername();
+		}
+
+		final String tokenKey = tokenEndpoint + id + subscriberClientId;
+
+		TokenInfo accessToken = tokenCache.getToken( tokenKey);
+
+		if(accessToken == null) {
+
+			MultiValueMap<String, String> cc = new LinkedMultiValueMap<>();
+
+			if(oauthCredentials.getClientId() != null && !oauthCredentials.getClientId().isBlank() && oauthCredentials.getClientSecret() != null && !oauthCredentials.getClientSecret().isBlank()) {
+				cc.add("client_id", oauthCredentials.getClientId());
+				cc.add("client_secret", oauthCredentials.getClientSecret());
+			}
+
+			if(oauthCredentials.getUsername() != null && !oauthCredentials.getUsername().isBlank() && oauthCredentials.getPassword() != null && !oauthCredentials.getPassword().isBlank()) {
+				cc.add("username", oauthCredentials.getUsername());
+				cc.add("password", oauthCredentials.getPassword());
+			}
+
+			if(oauthCredentials.getRefreshToken() != null && !oauthCredentials.getRefreshToken().isBlank()) {
+				cc.add("refresh_token", oauthCredentials.getRefreshToken());
+			}
+
+			if(oauthCredentials.getScopes() != null && !oauthCredentials.getScopes().isEmpty()) {
+				cc.add("scope", oauthCredentials.getScopes());
+			}
+
+			cc.add("grant_type", oauthCredentials.getGrantType());
+
+			// get GW mesh token from remote IDP
+			accessToken = webClient.post()
+					.uri(tokenEndpoint)
+					.header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+					.body(BodyInserters.fromFormData(cc))
+					.retrieve()
+					.onStatus(HttpStatus::is4xxClientError,
+							response -> {
+								logClientErrorResponse(response, tokenEndpoint, id);
+								return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to retrieve token from " + tokenEndpoint + " for client " + id));
+							})
+					.bodyToMono(TokenInfo.class)
+					.retryWhen(Retry.max(3)
+							.filter(throwable -> throwable instanceof ConnectTimeoutException)
+							.onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
+										throw new ServerErrorException("Failed to connect to " + tokenEndpoint, (Throwable) null);
+									}
+							)
+					)
+					.block();
+
+			if (accessToken == null) {
+				throw new RuntimeException("could not get access token");
+			}
+			// cache the gateway mesh token
+			tokenCache.saveToken(tokenKey, accessToken);
+
+		}
+
+		return accessToken;
+
 	}
 
 	public TokenInfo getAccessToken(String token_endpoint2, String tif_clientID2, String tif_clientSecret2, boolean autoevent, String scope, String subscriberClientId) {
