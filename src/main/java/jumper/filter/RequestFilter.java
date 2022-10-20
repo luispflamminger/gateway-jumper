@@ -73,6 +73,9 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
             String access_token_forwarding = getLastValueFromHeaderField( request, Constants.HEADER_ACCESS_TOKEN_FORWARDING);
             String realmName = getLastValueFromHeaderField( request, Constants.HEADER_REALM);
 
+            String apiKey = getLastValueFromHeaderField( request, Constants.HEADER_X_API_KEY);
+            String consumerName = getLastValueFromHeaderField( request, Constants.HEADER_X_CONSUMER_NAME);
+
             if( StringUtils.isBlank(realmName))
             {
                 realmName = Constants.DEFAULT_REALM;
@@ -93,11 +96,27 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
             String jumper_config_Base64 = getLastValueFromHeaderField( request, Constants.HEADER_JUMPER_CONFIG);
 
+            String consumer = "";
+            String consumerOriginStargate  = "";
+            String consumerOriginZone = "";
+            if(noApiKeySet(apiKey)) {
+                String consumerTokenWithoutSignature  = OauthTokenUtil.getTokenWithoutSignature( consumerToken);
+                Jwt<Header, Claims> consumerTokenclaims = OauthTokenUtil.getAllClaimsFromToken( consumerTokenWithoutSignature);
+                consumer = consumerTokenclaims.getBody().get( "clientId", String.class);
+                consumerOriginStargate = consumerTokenclaims.getBody().get( "originStargate", String.class);
+                consumerOriginZone = consumerTokenclaims.getBody().get( "originZone", String.class);
+
+                addHeader(exchange, chain, Constants.HEADER_X_ORIGIN_STARGATE, consumerOriginStargate);
+                addHeader(exchange, chain, Constants.HEADER_X_ORIGIN_ZONE, consumerOriginZone);
+            }
+
+            /*
             String consumerTokenWithoutSignature  = OauthTokenUtil.getTokenWithoutSignature( consumerToken);
             Jwt<Header, Claims> consumerTokenclaims = OauthTokenUtil.getAllClaimsFromToken( consumerTokenWithoutSignature);
             String consumer = consumerTokenclaims.getBody().get( "clientId", String.class);
             String consumerOriginStargate = consumerTokenclaims.getBody().get( "originStargate", String.class);
             String consumerOriginZone = consumerTokenclaims.getBody().get( "originZone", String.class);
+            */
 
             // jumper config
             JumperConfig jc = null;
@@ -199,6 +218,14 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                         );
                         addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER+" "+lastmileSecurityToken);
                     }
+                    else if (apiKey != null && consumerName != null)
+                    {
+                        log.debug("----------------API Key to Token-------------");
+                        log.debug("Generating OneToken from api key...");
+
+                        lastmileSecurityToken = OauthTokenUtil.generateExtGatewayToken_ApiKey(envName, request.getMethod().toString(), requestPath, lmsIssuer, consumerName);
+                        addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER + " " + lastmileSecurityToken);
+                    }
                     else
                     {
                         log.debug( "----------------LAST MILE SECURITY (LEGACY)-------------");
@@ -239,10 +266,12 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
             }
 
+            /*
             addHeader(exchange, chain, Constants.HEADER_X_ORIGIN_STARGATE, consumerOriginStargate);
             addHeader(exchange, chain, Constants.HEADER_X_ORIGIN_ZONE, consumerOriginZone);
+            */
 
-            if (consumerOriginStargate != null) {
+            if (consumerOriginStargate != null && noApiKeySet(apiKey)) {
                 String hostStargate = "";
                 try {
                     URL url = new URL(consumerOriginStargate);
@@ -290,6 +319,10 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                         }
                     }));
         }, RouteToRequestUrlFilter.ROUTE_TO_URL_FILTER_ORDER + 1);
+    }
+
+    private boolean noApiKeySet(String apiKey) {
+        return apiKey == null || apiKey.isEmpty();
     }
 
     private void clientCredentialsFlow_legacy(ServerWebExchange exchange, GatewayFilterChain chain, String client_scope, String token_endpoint, String tif_clientID, String tif_clientSecret, String xSpacegateClientId, String xSpacegateClientSecret, String xSpacegateScope, String consumer, JumperConfig jc) {
