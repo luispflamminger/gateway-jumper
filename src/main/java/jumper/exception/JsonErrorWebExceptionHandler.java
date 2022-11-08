@@ -10,6 +10,7 @@ import org.springframework.boot.autoconfigure.web.reactive.error.DefaultErrorWeb
 import org.springframework.boot.web.error.ErrorAttributeOptions;
 import org.springframework.core.annotation.MergedAnnotation;
 import org.springframework.core.annotation.MergedAnnotations;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.reactive.function.server.*;
 
@@ -42,12 +43,13 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
         MergedAnnotation<ResponseStatus> responseStatusAnnotation = MergedAnnotations
                 .from(error.getClass(), MergedAnnotations.SearchStrategy.TYPE_HIERARCHY).get(ResponseStatus.class);
 
-        HttpStatus errorStatus = findHttpStatus(error, responseStatusAnnotation);
+        //HttpStatus errorStatus = findHttpStatus(error, responseStatusAnnotation);
+        HttpStatus errorStatus = findHttpStatus(request, error, responseStatusAnnotation);
         Map<String, Object> errorAttributes = new HashMap<>(8);
 
         errorAttributes.put("service", applicationName);
         errorAttributes.put("timestamp", new Date());
-        errorAttributes.put("message", (error.getMessage() != null) ? error.getMessage() : "");
+        errorAttributes.put("message", determineMessage(error, responseStatusAnnotation));
         errorAttributes.put("error", errorStatus.getReasonPhrase());
         errorAttributes.put("status", errorStatus.value());
         errorAttributes.put("method", request.methodName());
@@ -73,7 +75,7 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
         log.debug("errorAttributes {}", errorAttributes);
         // Here you can actually customize the HTTP response code based on the attributes inside the errorAttributes
         /*
-        if code != 500 error log is suppressed
+        if code != 500 error log is suppressed later
 
 	protected void logError(ServerRequest request, ServerResponse response, Throwable throwable) {
 		if (logger.isDebugEnabled()) {
@@ -89,16 +91,46 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
         return code;
     }
 
-    private HttpStatus findHttpStatus(Throwable error, MergedAnnotation<ResponseStatus> responseStatusAnnotation) {
+    //private HttpStatus findHttpStatus(Throwable error, MergedAnnotation<ResponseStatus> responseStatusAnnotation) {
+    private HttpStatus findHttpStatus(ServerRequest request, Throwable error, MergedAnnotation<ResponseStatus> responseStatusAnnotation) {
         if (error instanceof ResponseStatusException) {
             return ((ResponseStatusException) error).getStatus();
         }
-/*
+
+        /*
+        io.netty.channel.ConnectTimeoutException
+        io.netty.channel.AbstractChannel$AnnotatedConnectException
+         */
+
         if (error instanceof java.net.ConnectException) {
+            logError(request, error);
             return HttpStatus.GATEWAY_TIMEOUT;
         }
-*/
+
+
         return responseStatusAnnotation.getValue("code", HttpStatus.class).orElse(INTERNAL_SERVER_ERROR);
+    }
+
+    private void logError(ServerRequest request, Throwable throwable){
+       log.error(request.exchange().getLogPrefix() + this.formatError(throwable, request));
+    }
+
+    private String formatError(Throwable ex, ServerRequest request) {
+        String reason = ex.getClass().getSimpleName() + ": " + ex.getMessage();
+        return "Resolved [" + reason + "] for HTTP " + request.methodName() + " " + request.path();
+    }
+
+    private String determineMessage(Throwable error, MergedAnnotation<ResponseStatus> responseStatusAnnotation) {
+        if (error instanceof ResponseStatusException) {
+            return ((ResponseStatusException)error).getReason();
+        } else {
+            String reason = (String)responseStatusAnnotation.getValue("reason", String.class).orElse("");
+            if (StringUtils.hasText(reason)) {
+                return reason;
+            } else {
+                return error.getMessage() != null ? error.getMessage() : "";
+            }
+        }
     }
 
 }

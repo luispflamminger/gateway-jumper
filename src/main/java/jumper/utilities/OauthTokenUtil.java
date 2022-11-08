@@ -8,6 +8,7 @@ import jumper.model.TokenInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.stereotype.Service;
@@ -15,7 +16,10 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.server.ServerErrorException;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.util.retry.Retry;
@@ -309,10 +313,19 @@ public class OauthTokenUtil {
 						.header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
 						.body(BodyInserters.fromFormData(cc))
 						.retrieve()
+						.onStatus(HttpStatus::is4xxClientError,
+								response -> {
+									logClientErrorResponse(response, token_endpoint2, tif_clientID2);
+									return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to retrieve token from " + token_endpoint2 + " for client " + tif_clientID2));
+								})
 						.bodyToMono(TokenInfo.class)
 						.retryWhen(Retry.max(3)
-						.filter(throwable -> throwable instanceof ConnectTimeoutException))
-						.onErrorMap(e -> new RuntimeException("message",e))
+							.filter(throwable -> throwable instanceof ConnectTimeoutException)
+								.onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
+									throw new ServerErrorException("Failed to connect to " + token_endpoint2, (Throwable) null);
+								}
+							)
+						)
 						.block();
 /*
 				try {
@@ -357,5 +370,12 @@ public class OauthTokenUtil {
 			return Mono.just(response);
 		});
 	}
+
+	private void logClientErrorResponse(ClientResponse response, String tokenEndopoint, String clientId) {
+			response.bodyToMono(String.class)
+					.publishOn(Schedulers.boundedElastic())
+					.subscribe(body -> log.warn("Client error occurred while getting token for issuer {} and client {}: {}", tokenEndopoint, clientId, body));
+		}
+
 
 }

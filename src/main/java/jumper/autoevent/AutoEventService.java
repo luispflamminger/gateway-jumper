@@ -241,7 +241,7 @@ public class AutoEventService
         if (log.isDebugEnabled()) {
             log.debug("Response headers: {}", response.headers().asHttpHeaders());
             response.bodyToMono(String.class)
-                    .publishOn(Schedulers.elastic())
+                    .publishOn(Schedulers.boundedElastic())
                     .subscribe(body -> log.debug("Response body: {}", body));
         }
     }

@@ -60,7 +60,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         return new OrderedGatewayFilter((exchange, chain) -> {
 
             ServerHttpRequest request = exchange.getRequest();
-            
+
             String client_scope = "";
 
             //String routing_path = request.getURI().toString().replaceFirst(".*?:\\d+", "");
@@ -80,8 +80,10 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
             String envName = getLastValueFromHeaderField( request, Constants.HEADER_ENVIRONMENT);
 
-            String api_resource = request.getPath().value();
-            String requestPath = api_base_path + api_resource;
+            //String api_resource = request.getPath().value();
+            //String requestPath = api_base_path + api_resource;
+            String routing_path;
+            String requestPath = api_base_path;
             String remote_api_url = getLastValueFromHeaderField( request, Constants.HEADER_REMOTE_API_URL);
             String lastmileSecurityToken = null;
 
@@ -123,6 +125,26 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
             JumperInfoRequest jumperInfoRequest = new JumperInfoRequest();
             jumperInfoRequest.setEnvironment( envName);
+
+            try {
+                URI _uri = request.getURI();
+                String _query = _uri.getRawQuery();
+                String _fragment = _uri.getFragment();
+                //String routing_path = _uri.getPath().replaceFirst("^/$","");
+                //String routing_path = _uri.getRawPath().replaceFirst("^/$","");
+                routing_path = _uri.getRawPath().replaceFirst("^/(proxy|listener)", ""); //for token should be also decoded
+                requestPath += routing_path;
+                if (_query != null) routing_path = routing_path  + "?" + _query;
+                if (_fragment != null) routing_path = routing_path + "#" + _fragment;
+
+                String finalApiUrl = remote_api_url.replaceAll("/$", "") + routing_path;
+
+                log.debug("Routing set to: " + finalApiUrl);
+
+                exchange.getAttributes().put(ServerWebExchangeUtils.GATEWAY_REQUEST_URL_ATTR, new URI(finalApiUrl));
+            } catch (URISyntaxException e) {
+                 throw new RuntimeException("TardisException", e);//todo create proper fallback
+            }
 
             if( remote_api_url != null && !remote_api_url.startsWith( Constants.LOCALHOST_ISSUER_SERVICE))
             {
@@ -293,12 +315,12 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
             incReq.setBasePath(api_base_path);
             incReq.setHost(remote_api_url);
             incReq.setMethod(request.getMethodValue());
-            incReq.setResource(api_resource);
+            incReq.setResource(routing_path);
 
             OutgoingRequest outgoingRequest = new OutgoingRequest();
             outgoingRequest.setHost( remote_api_url);
             outgoingRequest.setBasePath( null);
-            outgoingRequest.setResource( api_resource);
+            outgoingRequest.setResource( routing_path);
             outgoingRequest.setMethod( request.getMethod().toString());
 
             HashMap<String, String> logEntries = new HashMap<String, String>();
@@ -309,31 +331,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
             log.info( "logging request", value( "jumperInfo", jumperInfoRequest));
 
-
-            try {
-                //String finalApiUrl = remote_api_url.replaceAll("/$", "") + api_resource;
-                /*
-                String finalApiUrl = remote_api_url.replaceAll("/$", "") + routing_path;
-                log.debug("Routing set to " + finalApiUrl);
-                 */
-
-                URI _uri = request.getURI();
-                String _query = _uri.getRawQuery();
-                String _fragment = _uri.getFragment();
-                //String routing_path = _uri.getPath().replaceFirst("^/$","");
-                String routing_path = _uri.getRawPath().replaceFirst("^/$","");
-                if (_query != null) routing_path = routing_path  + "?" + _query;
-                if (_fragment != null) routing_path = routing_path + "#" + _fragment;
-
-                String finalApiUrl = remote_api_url.replaceAll("/$", "") + routing_path;
-                log.debug("Routing set to: " + finalApiUrl);
-
-                exchange.getAttributes().put(ServerWebExchangeUtils.GATEWAY_REQUEST_URL_ATTR, new URI(finalApiUrl));
-            } catch (URISyntaxException e) {
-                //log.error(e.getMessage());
-                throw new RuntimeException("TardisException", e);//todo create proper fallback
-            }
-            //assureGatewayToken(exchange, jc);
             addTracing(request, api_base_path, envName, consumer, consumerOriginStargate);
 
             return chain.filter(exchange)
