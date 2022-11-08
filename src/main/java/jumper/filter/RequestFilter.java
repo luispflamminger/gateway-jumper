@@ -241,7 +241,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                         jumperInfoRequest.setMeshActivated( false);
                         jumperInfoRequest.setExternalAuthorization( false);
 
-                        log.debug( "Generating OneToken...");
+                        log.info( "Generating OneToken...");
 
                         lastmileSecurityToken = OauthTokenUtil.generateExtGatewayToken( envName,
                                 consumerToken,
@@ -261,9 +261,10 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                         jumperInfoRequest.setMeshActivated( false);
                         jumperInfoRequest.setExternalAuthorization( false);
 
-                        log.debug( "Generating GatewayToken");
+                        log.info( "Generating GatewayToken...");
 
                         lastmileSecurityToken = OauthTokenUtil.generateGatewayToken( envName, consumerToken, request.getMethod().toString(), requestPath, lmsIssuer);
+                        log.info("GatewayToken: Generating GatewayToken finished");
                         addHeader(exchange, chain, Constants.HEADER_LASTMILE_SECURITY_TOKEN, Constants.BEARER+" "+lastmileSecurityToken);
                         log.debug( "lastMileSecurityToken: "+lastmileSecurityToken);
                     }
