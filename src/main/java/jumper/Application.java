@@ -80,7 +80,6 @@ public class Application {
                                 .filter(removeHeader.apply(c -> c.setName("x-anonymous-groups")))
                                 .filter(removeHeader.apply(c -> c.setName("x-forwarded-prefix")))
                                 .filter(removeHeader.apply(c -> c.setName("access_token_forwarding")))
-                                .filter(removeHeader.apply(c -> c.setName("x-api-key")))
                                 .filter(responseFilter.apply(c -> c.setName("test")))
                         )
                         .uri("no://op"))

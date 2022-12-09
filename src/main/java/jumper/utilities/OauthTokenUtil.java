@@ -106,23 +106,6 @@ public class OauthTokenUtil {
 		//return null;
 	}
 
-	public static String generateExtGatewayToken_ApiKey(String envName, String operation, String requestPath, String issuer, String clientId) {
-
-		HashMap<String, String> claims = new HashMap<String, String>();
-		claims.put( "typ", "Bearer");
-		claims.put( "azp", "stargate");
-		claims.put( "requestPath", requestPath);
-		claims.put( "operation", operation);
-		claims.put( "clientId", clientId);
-		claims.put( "env", envName);
-
-		return generateToken(claims,
-				issuer,
-				new Date(System.currentTimeMillis() + 300 * 1000),
-				new Date(System.currentTimeMillis())
-		);
-	}
-
 	public static String generateExtGatewayToken(String envName, String consumerToken, String operation, String requestPath, String issuer, String scope, String publisher) {
 		//nearly to pass additional claims as a map, so far scope + publisher
 

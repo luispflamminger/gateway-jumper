@@ -35,9 +35,6 @@ public class Constants {
 	public final static String HEADER_X_SUBSCRIPTION_ID = "x-subscription-id";
 	public final static String HEADER_B3 = "b3";
 
-	public final static String HEADER_X_API_KEY = "x-api-key";
-	public final static String HEADER_X_CONSUMER_NAME = "x-consumer-username";
-
 	public final static String HEADER_X_FORWARDED_HOST = "X-Forwarded-Host";
 	public final static String HEADER_X_FORWARDED_PORT = "X-Forwarded-Port";
 	public final static String HEADER_X_FORWARDED_PROTO = "X-Forwarded-Proto";
