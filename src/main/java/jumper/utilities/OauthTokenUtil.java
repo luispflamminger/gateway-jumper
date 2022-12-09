@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.stereotype.Service;
+import org.springframework.util.Base64Utils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
@@ -287,10 +288,11 @@ public class OauthTokenUtil {
 		if(accessToken == null) {
 
 			MultiValueMap<String, String> cc = new LinkedMultiValueMap<>();
+			String basicAuth = "";
 
 			if(oauthCredentials.getClientId() != null && !oauthCredentials.getClientId().isBlank() && oauthCredentials.getClientSecret() != null && !oauthCredentials.getClientSecret().isBlank()) {
-				cc.add("client_id", oauthCredentials.getClientId());
-				cc.add("client_secret", oauthCredentials.getClientSecret());
+				String basicAuthPreparation = oauthCredentials.getClientId()+":"+oauthCredentials.getClientSecret();
+				basicAuth = Base64Utils.encodeToString(basicAuthPreparation.getBytes());
 			}
 
 			if(oauthCredentials.getUsername() != null && !oauthCredentials.getUsername().isBlank() && oauthCredentials.getPassword() != null && !oauthCredentials.getPassword().isBlank()) {
@@ -312,6 +314,7 @@ public class OauthTokenUtil {
 			accessToken = webClient.post()
 					.uri(tokenEndpoint)
 					.header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+					.header(HttpHeaders.AUTHORIZATION, "Basic "+basicAuth )
 					.body(BodyInserters.fromFormData(cc))
 					.retrieve()
 					.onStatus(HttpStatus::is4xxClientError,
