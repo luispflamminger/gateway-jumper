@@ -273,14 +273,21 @@ public class OauthTokenUtil {
 			MultiValueMap<String, String> cc = new LinkedMultiValueMap<>();
 			String basicAuth = "";
 
+			boolean clientCredentialsSet = false;
 			if(oauthCredentials.getClientId() != null && !oauthCredentials.getClientId().isBlank() && oauthCredentials.getClientSecret() != null && !oauthCredentials.getClientSecret().isBlank()) {
 				String basicAuthPreparation = oauthCredentials.getClientId()+":"+oauthCredentials.getClientSecret();
 				basicAuth = Base64Utils.encodeToString(basicAuthPreparation.getBytes());
+				clientCredentialsSet = true;
 			}
 
 			if(oauthCredentials.getUsername() != null && !oauthCredentials.getUsername().isBlank() && oauthCredentials.getPassword() != null && !oauthCredentials.getPassword().isBlank()) {
-				cc.add("username", oauthCredentials.getUsername());
-				cc.add("password", oauthCredentials.getPassword());
+				if(clientCredentialsSet) {
+					cc.add("username", oauthCredentials.getUsername());
+					cc.add("password", oauthCredentials.getPassword());
+				} else {
+					String basicAuthPreparation = oauthCredentials.getUsername()+":"+oauthCredentials.getPassword();
+					basicAuth = Base64Utils.encodeToString(basicAuthPreparation.getBytes());
+				}
 			}
 
 			if(oauthCredentials.getRefreshToken() != null && !oauthCredentials.getRefreshToken().isBlank()) {
