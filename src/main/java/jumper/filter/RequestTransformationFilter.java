@@ -36,7 +36,7 @@ public class RequestTransformationFilter implements  GatewayFilter, Ordered{
             return modifyRequestBodyFilter
                     .apply(
                             new ModifyRequestBodyGatewayFilterFactory.Config()
-                                    .setRewriteFunction(String.class, String.class, requestBodyRewrite))
+                                    .setRewriteFunction(byte[].class, byte[].class, requestBodyRewrite))
                     .filter(exchange, chain);
         }
 
