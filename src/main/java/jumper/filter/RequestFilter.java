@@ -167,70 +167,16 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                         log.debug( "Remote TokenEndpoint is set to: %s", token_endpoint);
                         log.debug( "Get token from external idp");
 
-                        if( xSpacegateClientId != null && !xSpacegateClientId.isBlank())
+                        if( jc.getOauth() != null && jc.getOauth().containsKey(consumer) && jc.getOauth().get(consumer).getGrantType() != null && !jc.getOauth().get(consumer).getGrantType().isBlank())
                         {
-                            log.debug( "Using SubscriberClientId {} from xSpacegateClientId-Header", xSpacegateClientId);
-                            tif_clientID = xSpacegateClientId;
-                            removeHeader(exchange, chain, Constants.HEADER_X_SPACEGATE_CLIENT_ID);
-                        }
-                        else if( jc.getOauth() != null && jc.getOauth().containsKey( consumer) && jc.getOauth().get( consumer).getClientId() != null && !jc.getOauth().get( consumer).getClientId().isBlank())
-                        {
-                            log.debug( "Using SubscriberClientId {} from JumperConfig", jc.getOauth().get( consumer).getClientId());
-                            tif_clientID = jc.getOauth().get( consumer).getClientId();
-                        }
-                        else
-                        {
-                            log.debug( "Using default ProviderClientId {}", tif_clientID);
-                        }
-
-                        // set clientSecret
-                        if( xSpacegateClientSecret != null)
-                        {
-                            log.debug( "Using SubscriberClientSecret from xSpacegateClientSecret-Header");
-                            tif_clientSecret = xSpacegateClientSecret;
-                            removeHeader(exchange, chain, Constants.HEADER_X_SPACEGATE_CLIENT_SECRET);
-                        }
-                        else if( jc.getOauth() != null && jc.getOauth().containsKey( consumer) && jc.getOauth().get( consumer).getClientSecret() != null && !jc.getOauth().get( consumer).getClientSecret().isBlank())
-                        {
-                            log.debug( "Using SubscriberClientSecret from JumperConfig");
-                            tif_clientSecret = jc.getOauth().get( consumer).getClientSecret();
-                        }
-                        else
-                        {
-                            log.debug( "Using default ProviderClientSecret");
-                        }
-                        
-                        // set scope
-                        if( xSpacegateScope != null)
-                        {
-                            log.debug( "Using Scope from xSpacegateScope-Header");
-                            client_scope = xSpacegateScope;
-                            removeHeader(exchange, chain, Constants.HEADER_X_SPACEGATE_SCOPE);
-                        }
-                        else if( jc.getOauth() != null && jc.getOauth().containsKey( consumer) && jc.getOauth().get( consumer).getScopes() != null && !jc.getOauth().get( consumer).getScopes().isBlank())
-                        {
-                            client_scope = jc.getOauth().get(consumer).getScopes();
-                        }
-                        else
-                        {
-                        	log.debug("Using default Provider scope");
-                        	if(jc.getScopes() != null && !jc.getScopes().isEmpty())
-                        	{
-                        		client_scope = jc.getScopes();
-                        	}
-                        }
-
-
-                        log.debug( "Get token for consumer: {} with clientId: {}", consumer, tif_clientID);
-                        if( tif_clientID != null && tif_clientSecret != null)
-                        {
-                            TokenInfo tokenInfo = oauthTokenUtil.getAccessToken( token_endpoint, tif_clientID, tif_clientSecret, client_scope, consumer);
+                            TokenInfo tokenInfo = oauthTokenUtil.getAccessToken(token_endpoint, jc.getOauth().get(consumer), consumer);
                             addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER+" "+tokenInfo.getAccessToken());
                         }
                         else
                         {
-                            log.info( "no specified oauth config credentials for consumer: {}", consumer);
+                            clientCredentialsFlow_legacy(exchange, chain, client_scope, token_endpoint, tif_clientID, tif_clientSecret, xSpacegateClientId, xSpacegateClientSecret, xSpacegateScope, consumer, jc);
                         }
+
 
                     }
                     else if( access_token_forwarding != null && access_token_forwarding.equals( "false"))
@@ -345,6 +291,73 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                         }
                     }));
         }, RouteToRequestUrlFilter.ROUTE_TO_URL_FILTER_ORDER + 1);
+    }
+
+    private void clientCredentialsFlow_legacy(ServerWebExchange exchange, GatewayFilterChain chain, String client_scope, String token_endpoint, String tif_clientID, String tif_clientSecret, String xSpacegateClientId, String xSpacegateClientSecret, String xSpacegateScope, String consumer, JumperConfig jc) {
+        if( xSpacegateClientId != null && !xSpacegateClientId.isBlank())
+        {
+            log.debug( "Using SubscriberClientId {} from xSpacegateClientId-Header", xSpacegateClientId);
+            tif_clientID = xSpacegateClientId;
+            removeHeader(exchange, chain, Constants.HEADER_X_SPACEGATE_CLIENT_ID);
+        }
+        else if( jc.getOauth() != null && jc.getOauth().containsKey(consumer) && jc.getOauth().get(consumer).getClientId() != null && !jc.getOauth().get(consumer).getClientId().isBlank())
+        {
+            log.debug( "Using SubscriberClientId {} from JumperConfig", jc.getOauth().get(consumer).getClientId());
+            tif_clientID = jc.getOauth().get(consumer).getClientId();
+        }
+        else
+        {
+            log.debug( "Using default ProviderClientId {}", tif_clientID);
+        }
+
+        // set clientSecret
+        if( xSpacegateClientSecret != null)
+        {
+            log.debug( "Using SubscriberClientSecret from xSpacegateClientSecret-Header");
+            tif_clientSecret = xSpacegateClientSecret;
+            removeHeader(exchange, chain, Constants.HEADER_X_SPACEGATE_CLIENT_SECRET);
+        }
+        else if( jc.getOauth() != null && jc.getOauth().containsKey(consumer) && jc.getOauth().get(consumer).getClientSecret() != null && !jc.getOauth().get(consumer).getClientSecret().isBlank())
+        {
+            log.debug( "Using SubscriberClientSecret from JumperConfig");
+            tif_clientSecret = jc.getOauth().get(consumer).getClientSecret();
+        }
+        else
+        {
+            log.debug( "Using default ProviderClientSecret");
+        }
+
+        // set scope
+        if( xSpacegateScope != null)
+        {
+            log.debug( "Using Scope from xSpacegateScope-Header");
+            client_scope = xSpacegateScope;
+            removeHeader(exchange, chain, Constants.HEADER_X_SPACEGATE_SCOPE);
+        }
+        else if( jc.getOauth() != null && jc.getOauth().containsKey(consumer) && jc.getOauth().get(consumer).getScopes() != null && !jc.getOauth().get(consumer).getScopes().isBlank())
+        {
+            client_scope = jc.getOauth().get(consumer).getScopes();
+        }
+        else
+        {
+            log.debug("Using default Provider scope");
+            if(jc.getScopes() != null && !jc.getScopes().isEmpty())
+            {
+                client_scope = jc.getScopes();
+            }
+        }
+
+
+        log.debug( "Get token for consumer: {} with clientId: {}", consumer, tif_clientID);
+        if( tif_clientID != null && tif_clientSecret != null)
+        {
+            TokenInfo tokenInfo = oauthTokenUtil.getAccessToken(token_endpoint, tif_clientID, tif_clientSecret, client_scope, consumer);
+            addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER+" "+tokenInfo.getAccessToken());
+        }
+        else
+        {
+            log.info( "no specified oauth config credentials for consumer: {}", consumer);
+        }
     }
 
     private String getLastValueFromHeaderField(ServerHttpRequest request, String headerName) {
