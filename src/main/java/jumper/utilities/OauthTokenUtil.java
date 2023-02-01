@@ -137,7 +137,10 @@ public class OauthTokenUtil {
 		claims.put( "originStargate", consumerOriginStargate);
 		if (scope != null) claims.put( "scope", scope);
 		if (publisherId != null) claims.put ("publisherId", publisherId);
-		if (subscriberId != null) claims.put ("subscriberId", subscriberId);
+		if (subscriberId != null) {
+			claims.put ("subscriberId", subscriberId);
+			claims.put ("aud", subscriberId);
+		}
 		if(!StringUtils.isEmpty(aud)) {
 			claims.put("aud", aud);
 		}
