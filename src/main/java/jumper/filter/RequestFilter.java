@@ -195,7 +195,8 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                                 requestPath,
                                 lmsIssuer,
                                 setSecurityScopes(jc, consumer),
-                                request.getHeaders().getFirst(Constants.HEADER_X_PUBLISHER_ID)
+[]                                request.getHeaders().getFirst(Constants.HEADER_X_PUBLISHER_ID),
+                                request.getHeaders().getFirst(Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID)
                         );
                         addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER+" "+lastmileSecurityToken);
                     }
