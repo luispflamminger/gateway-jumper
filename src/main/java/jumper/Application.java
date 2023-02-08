@@ -4,7 +4,7 @@ import brave.http.HttpRequestParser;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import jumper.autoevent.AutoEventBodyRewrite;
+import jumper.spectre.SpectreBodyRewrite;
 import jumper.filter.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,7 +39,7 @@ public class Application {
     public final String listenerQueryParam = "listener";
 
     @Autowired
-    private AutoEventBodyRewrite autoEventBodyRewrite;
+    private SpectreBodyRewrite spectreBodyRewrite;
 
     public static void main(String[] args) {
         SpringApplication.run(Application.class, args);
@@ -58,7 +58,7 @@ public class Application {
     }
 */
     @Bean
-    public RouteLocator proxyRoute(RouteLocatorBuilder builder, RequestFilter requestFilter, RemoveHeaderFilter removeHeader, ResponseFilter responseFilter, AutoEventRequestFilter autoEventRequestFilter, AutoEventResponseFilter autoEventResponseFilter, RequestTransformationFilter requestTransformationFilter, ResponseTransformationFilter responseTransformationFilter, SetSpectreRoutingFilter setSpectreRoutingFilter) {
+    public RouteLocator proxyRoute(RouteLocatorBuilder builder, RequestFilter requestFilter, RemoveHeaderFilter removeHeader, ResponseFilter responseFilter, SpectreRequestFilter spectreRequestFilter, SpectreResponseFilter spectreResponseFilter, RequestTransformationFilter requestTransformationFilter, ResponseTransformationFilter responseTransformationFilter, SetSpectreRoutingFilter setSpectreRoutingFilter) {
         return builder.routes()
                 .route("jumper_route", p -> p
                         .path("/proxy/**")
@@ -114,8 +114,8 @@ public class Application {
 */
                                         .filter(requestTransformationFilter)
                                         .filter(responseTransformationFilter)
-                                        .filter(autoEventRequestFilter.apply(new AutoEventRequestFilter.Config()))
-                                        .filter(autoEventResponseFilter.apply(new AutoEventResponseFilter.Config()))
+                                        .filter(spectreRequestFilter.apply(new SpectreRequestFilter.Config()))
+                                        .filter(spectreResponseFilter.apply(new SpectreResponseFilter.Config()))
                                         .filter(removeHeader.apply(c -> c.setName("jumper_config")))
                                         .filter(removeHeader.apply(c -> c.setName("token_endpoint")))
                                         .filter(removeHeader.apply(c -> c.setName("remote_api_url")))
@@ -138,7 +138,7 @@ public class Application {
                         .path("/autoevent/**").and().method(HttpMethod.POST)
                         .filters(f -> f
                                 .modifyRequestBody(String.class, String.class,
-                                        autoEventBodyRewrite)
+                                        spectreBodyRewrite)
 //                                .rewritePath("/autoevent", publishEventUrlPath)
                                 .removeRequestParameter(listenerQueryParam)
                                 .filter(setSpectreRoutingFilter.apply())

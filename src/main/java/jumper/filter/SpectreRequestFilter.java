@@ -1,7 +1,7 @@
 package jumper.filter;
 
-import jumper.autoevent.AutoEvent;
-import jumper.autoevent.AutoEventService;
+import jumper.model.config.Spectre;
+import jumper.spectre.SpectreService;
 import jumper.model.config.JumperConfig;
 import jumper.model.config.RouteListener;
 import lombok.extern.slf4j.Slf4j;
@@ -15,17 +15,17 @@ import org.springframework.stereotype.Component;
 
 @Component
 @Slf4j
-public class AutoEventRequestFilter extends AbstractGatewayFilterFactory<AutoEventRequestFilter.Config> {
+public class SpectreRequestFilter extends AbstractGatewayFilterFactory<SpectreRequestFilter.Config> {
 
     @Value( "${horizon.publishEventUrl}")
     private String publishEventUrl;
 
     @Autowired
-    AutoEventService aes;
+    SpectreService aes;
 
     public static final int AUTO_EVENT_REQUEST_FILTER_ORDER = RequestTransformationFilter.REQUEST_TRANSFORM_FILTER_ORDER+1;
 
-    public AutoEventRequestFilter()  {
+    public SpectreRequestFilter()  {
         super(Config.class);
     }
 
@@ -34,6 +34,9 @@ public class AutoEventRequestFilter extends AbstractGatewayFilterFactory<AutoEve
         return new OrderedGatewayFilter((exchange, chain) -> {
 
             ServerHttpRequest request = exchange.getRequest();
+
+            String requestBody = exchange.getAttribute("cachedRequestBodyObject");
+            log.debug("Request: headers={}, payload={}", request.getHeaders().toSingleValueMap(), requestBody);
 
             //JumperConfig jc = JumperConfig.parseConfigFrom( request);
             JumperConfig jc = JumperConfig.parseConfigFrom( exchange);
@@ -44,12 +47,8 @@ public class AutoEventRequestFilter extends AbstractGatewayFilterFactory<AutoEve
 
             RouteListener listener = jc.getRouteListener().get( jc.getConsumer());
 
-            String requestBody = exchange.getAttribute("cachedRequestBodyObject");
-            log.debug("Request: payload={}", requestBody);
-
-
             // Create Event with additional information
-            AutoEvent eventReqMsg = aes.createEvent(jc, exchange, exchange.getRequest(), listener, requestBody);
+            Spectre eventReqMsg = aes.createEvent(jc, exchange, exchange.getRequest(), listener, requestBody);
 
             // publish event (route to local Horizon)
             aes.publishEvent(eventReqMsg, jc);

@@ -1,7 +1,7 @@
 package jumper.filter;
 
-import jumper.autoevent.AutoEvent;
-import jumper.autoevent.AutoEventService;
+import jumper.model.config.Spectre;
+import jumper.spectre.SpectreService;
 import jumper.model.config.JumperConfig;
 import jumper.model.config.RouteListener;
 import lombok.extern.slf4j.Slf4j;
@@ -16,13 +16,13 @@ import reactor.core.publisher.Mono;
 
 @Component
 @Slf4j
-public class AutoEventResponseFilter extends AbstractGatewayFilterFactory<AutoEventResponseFilter.Config> {
+public class SpectreResponseFilter extends AbstractGatewayFilterFactory<SpectreResponseFilter.Config> {
 
     @Value( "${horizon.publishEventUrl}")
     private String publishEventUrl;
 
     @Autowired
-    AutoEventService aes;
+    SpectreService aes;
 
 
     /**
@@ -32,7 +32,7 @@ public class AutoEventResponseFilter extends AbstractGatewayFilterFactory<AutoEv
      */
     public static final int AUTO_EVENT_RESPONSE_FILTER_ORDER = NettyWriteResponseFilter.WRITE_RESPONSE_FILTER_ORDER - 2;
 
-    public AutoEventResponseFilter()  {
+    public SpectreResponseFilter()  {
         super(Config.class);
     }
 
@@ -46,17 +46,18 @@ public class AutoEventResponseFilter extends AbstractGatewayFilterFactory<AutoEv
 
             return chain.filter(exchange).then(Mono.fromRunnable(() -> {
 
+                String responseBody = exchange.getAttribute("cachedResponseBodyObject");
+                log.debug("Response: headers={}, payload={}", exchange.getResponse().getHeaders().toSingleValueMap(), responseBody);
+
+
                 //ServerHttpRequest request = exchange.getRequest();
                 JumperConfig jc = JumperConfig.parseConfigFrom(exchange);
                 if(aes.isListenerMatched(jc))
                 {
                     RouteListener listener = jc.getRouteListener().get( jc.getConsumer());
 
-                    String responseBody = exchange.getAttribute("cachedResponseBodyObject");
-                    log.debug("Response: payload={}", responseBody);
-
                     // Create Event with additional information
-                    AutoEvent eventRespMsg = aes.createEvent(jc, exchange, exchange.getResponse(), listener, responseBody);
+                    Spectre eventRespMsg = aes.createEvent(jc, exchange, exchange.getResponse(), listener, responseBody);
 
                     // publish event (route to local Horizon)
                     aes.publishEvent(eventRespMsg, jc);

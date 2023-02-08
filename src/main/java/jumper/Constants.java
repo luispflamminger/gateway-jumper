@@ -31,7 +31,7 @@ public class Constants {
 	public final static String HEADER_X_BUSINESS_CONTEXT = "x-business-context";
 	public final static String HEADER_X_REQUEST_ID = "x-request-id";
 	public final static String HEADER_X_CORRELATION_ID = "x-correlation-id";
-	public final static String HEADER_X_PUBLISHER_ID = "x-pubsub-publisher-id";
+	public final static String HEADER_X_PUBSUB_PUBLISHER_ID = "x-pubsub-publisher-id";
 	public final static String HEADER_X_SUBSCRIPTION_ID = "x-subscription-id";
 	public final static String HEADER_X_PUBSUB_SUBSCRIBER_ID = "x-pubsub-subscriber-id";
 

@@ -1,4 +1,4 @@
-package jumper.autoevent;
+package jumper.spectre;
 
 import brave.Span;
 import brave.Tracer;
@@ -6,8 +6,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jumper.Constants;
-import jumper.model.config.JumperConfig;
-import jumper.model.config.RouteListener;
+import jumper.model.config.*;
 import jumper.utilities.OauthTokenUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -33,7 +32,7 @@ import java.util.function.Consumer;
 
 @Slf4j
 @Service
-public class AutoEventService
+public class SpectreService
 {
     @Autowired
     Tracer tracer;
@@ -73,29 +72,29 @@ public class AutoEventService
 
     }
 
-    public AutoEvent createEvent(JumperConfig jc, ServerWebExchange exchange, Object http, RouteListener listener, String payload) {
+    public Spectre createEvent(JumperConfig jc, ServerWebExchange exchange, Object http, RouteListener listener, String payload) {
 
         ServerHttpRequest rq = exchange.getRequest();
         ServerHttpResponse rs = exchange.getResponse();
 
-        AutoEvent event = new AutoEvent();
+        Spectre event = new Spectre();
         event.setSpecversion( "1.0");
         event.setSource( stargateUrl);
         event.setId( UUID.randomUUID());
         event.setDatacontenttype( "application/json");
         event.setType( "de.telekom.ei.listener");
 
-        AutoEventData data = null;
+        SpectreData data = null;
         String spanName = "Spectre request";
         if( http instanceof ServerHttpRequest)
         {
-            data = new AutoEventData();
+            data = new SpectreData();
             Map<String,String> httpHeaders = new HashMap<>();
             httpHeaders.putAll(rq.getHeaders().toSingleValueMap());
             httpHeaders.replace(Constants.HEADER_AUTHORIZATION, jc.getConsumerToken());
             httpHeaders.remove(Constants.HEADER_CONSUMER_TOKEN);
             data.setHeader( httpHeaders);
-            data.setKind( AutoEventKind.REQUEST.toString());
+            data.setKind( SpectreKind.REQUEST.toString());
             data.setPayload(parsePayload(rq.getHeaders().getContentType(), payload));
             data.setParameters(rq.getQueryParams().toSingleValueMap());
         }
@@ -104,12 +103,12 @@ public class AutoEventService
         {
             spanName = ("Spectre response");
 
-            data = new AutoEventData();
+            data = new SpectreData();
             Map<String,String> httpHeaders = new HashMap<>();
             httpHeaders.putAll(rs.getHeaders().toSingleValueMap());
             httpHeaders.put(Constants.HEADER_X_TARDIS_TRACE_ID, rq.getHeaders().getFirst(Constants.HEADER_X_TARDIS_TRACE_ID));
             data.setHeader( httpHeaders);
-            data.setKind( AutoEventKind.RESPONSE.toString());
+            data.setKind( SpectreKind.RESPONSE.toString());
             data.setPayload(parsePayload(rs.getHeaders().getContentType(), payload));
             data.setStatus( rs.getStatusCode().value());
         }
@@ -145,7 +144,7 @@ public class AutoEventService
      *
      * @param event
      */
-    public void publishEvent(AutoEvent event, JumperConfig jc) {
+    public void publishEvent(Spectre event, JumperConfig jc) {
         String eventJson = null;
         try {
             eventJson = new ObjectMapper().writeValueAsString(event);
@@ -200,7 +199,7 @@ public class AutoEventService
                     public void accept(HttpHeaders httpHeaders) {
                         httpHeaders.setBearerAuth(token);
 
-                        //pass tracing info from request to autoevent, maybe also new client span should be created
+                        //pass tracing info from request to spectre, maybe also new client span should be created
                         Span currentSpan = tracer.currentSpan();
                         if (currentSpan != null) {
                             /*

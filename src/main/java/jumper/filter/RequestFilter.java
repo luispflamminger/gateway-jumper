@@ -115,7 +115,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
             log.debug( "JumperConfig encodedAsBase64: {}", JumperConfig.toBase64( jc));
             log.debug( "JumperConfig decoded: {}", jc.toString());
 
-            //store enhanced jumper_config for usage in AutoEventFilters
+            //store enhanced jumper_config for usage in SpectreFilters
             exchange.getAttributes().put(Constants.HEADER_JUMPER_CONFIG, JumperConfig.toBase64( jc));
 
             // Pre-processing
@@ -195,7 +195,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                                 requestPath,
                                 lmsIssuer,
                                 setSecurityScopes(jc, consumer),
-                                request.getHeaders().getFirst(Constants.HEADER_X_PUBLISHER_ID),
+                                request.getHeaders().getFirst(Constants.HEADER_X_PUBSUB_PUBLISHER_ID),
                                 request.getHeaders().getFirst(Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID)
                         );
                         addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER+" "+lastmileSecurityToken);
@@ -391,7 +391,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         String xRequestId = request.getHeaders().getFirst( Constants.HEADER_X_REQUEST_ID);
         String xCorrelationId = request.getHeaders().getFirst( Constants.HEADER_X_CORRELATION_ID);
         Long contentLength = request.getHeaders().getContentLength();
-        String publisherId = request.getHeaders().getFirst(Constants.HEADER_X_PUBLISHER_ID);
+        String publisherId = request.getHeaders().getFirst(Constants.HEADER_X_PUBSUB_PUBLISHER_ID);
 
         Span newSpan = this.tracer.nextSpan().name( "Request Filter");
         try( Tracer.SpanInScope ws = this.tracer.withSpanInScope( newSpan.start()))
@@ -458,6 +458,11 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                 String subscriptionId = request.getHeaders().getFirst(Constants.HEADER_X_SUBSCRIPTION_ID);
                 if (subscriptionId != null){
                     newSpan.tag("subscription-id", subscriptionId);
+                }
+
+                String subscriber = request.getHeaders().getFirst(Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID);
+                if (subscriber != null){
+                    newSpan.tag("subscriber", subscriber);
                 }
             }
             //not callback, assume request-response

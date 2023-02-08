@@ -17,7 +17,7 @@ public class ResponseTransformationFilter implements  GatewayFilter, Ordered{
     @Autowired private ResponseBodyRewrite responseBodyRewrite;
 
 
-    public static final int RESPONSE_TRANSFORM_FILTER_ORDER = AutoEventResponseFilter.AUTO_EVENT_RESPONSE_FILTER_ORDER-1;
+    public static final int RESPONSE_TRANSFORM_FILTER_ORDER = SpectreResponseFilter.AUTO_EVENT_RESPONSE_FILTER_ORDER-1;
 
         @Override
         public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {

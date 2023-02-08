@@ -1,4 +1,4 @@
-package jumper.autoevent;
+package jumper.model.config;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Data
-public class AutoEventData
+public class SpectreData
 {
     String consumer; // <consumer-app-id-1>
     String provider; // <provider-app-id-1>

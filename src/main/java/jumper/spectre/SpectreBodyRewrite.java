@@ -1,7 +1,8 @@
-package jumper.autoevent;
+package jumper.spectre;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jumper.model.config.Spectre;
 import lombok.extern.slf4j.Slf4j;
 import org.reactivestreams.Publisher;
 import org.springframework.cloud.gateway.filter.factory.rewrite.RewriteFunction;
@@ -14,7 +15,7 @@ import java.io.IOException;
 
 @Slf4j
 @Service
-public class AutoEventBodyRewrite implements RewriteFunction<String, String> {
+public class SpectreBodyRewrite implements RewriteFunction<String, String> {
     public final String listenerQueryParam = "listener";
 
     @Override
@@ -27,10 +28,10 @@ public class AutoEventBodyRewrite implements RewriteFunction<String, String> {
             id = params.getFirst(listenerQueryParam);
         }
 
-        log.debug("Autoevent: payload={}", body);
+        log.debug("Spectre: payload={}", body);
 
         // adjust EventType.<applicationId>
-        AutoEvent event = adjustEventType(body, id);
+        Spectre event = adjustEventType(body, id);
 
         String eventJson = null;
         try
@@ -41,16 +42,16 @@ public class AutoEventBodyRewrite implements RewriteFunction<String, String> {
         {
             e1.printStackTrace();
         }
-        log.debug("Autoevent: adjusted={}", eventJson);
+        log.debug("Spectre: adjusted={}", eventJson);
         return Mono.just(eventJson);
     }
 
-    private AutoEvent adjustEventType( String body, String id) {
-        AutoEvent event = null;
+    private Spectre adjustEventType(String body, String id) {
+        Spectre event = null;
 
         try
         {
-            event = new ObjectMapper().readValue( body, AutoEvent.class);
+            event = new ObjectMapper().readValue( body, Spectre.class);
             event.setType( event.getType()+"."+id);
         }
         catch( IOException e)

@@ -24,7 +24,7 @@ public class ServerParserConfiguration {
             String xCorrelationId = req.header( Constants.HEADER_X_CORRELATION_ID);
             String consumerOriginStargate = req.header(Constants.HEADER_X_ORIGIN_STARGATE);
             String envName = req.header(Constants.HEADER_ENVIRONMENT);
-            String publisherId = req.header(Constants.HEADER_X_PUBLISHER_ID);
+            String publisherId = req.header(Constants.HEADER_X_PUBSUB_PUBLISHER_ID);
             String token;
 
             String spanName = "Provider";
@@ -98,6 +98,11 @@ public class ServerParserConfiguration {
                 String subscriptionId = req.header(Constants.HEADER_X_SUBSCRIPTION_ID);
                 if (subscriptionId != null){
                     span.tag("subscription-id", subscriptionId);
+                }
+
+                String subscriber = req.header((Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID));
+                if (subscriber != null){
+                    span.tag("subscriber", subscriber);
                 }
 
             }

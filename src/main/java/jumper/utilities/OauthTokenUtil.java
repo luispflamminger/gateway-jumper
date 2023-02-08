@@ -39,380 +39,320 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 @Slf4j
 @Service
 public class OauthTokenUtil {
-	//WebClient webClient = WebClient.create();
+    //WebClient webClient = WebClient.create();
 
-	@Autowired
-	private WebClient webClient;
-	
-	@Autowired
-	JumperCache tokenCache;
+    @Autowired
+    private WebClient webClient;
 
-	private static String keyId = "74f16025-ff3d-453b-a917-eca975423dea";
-	
-	public static String getTokenWithoutSignature( String consumerToken) {
+    @Autowired
+    JumperCache tokenCache;
 
-		String[] token = consumerToken.split( " ");
-		String[] splitToken = token[1].split( "\\.");
-		String consumerTokenWithoutSignature = splitToken[0]+"."+splitToken[1]+".";
+    private static String keyId = "74f16025-ff3d-453b-a917-eca975423dea";
 
-		return consumerTokenWithoutSignature;
-	}
+    public static String getTokenWithoutSignature(String consumerToken) {
 
-	public static String getConsumerFromToken( String consumerToken) {
-		return getClaimFromToken(consumerToken, "clientId");
-	}
-
-	public static String getClaimFromToken(String consumerToken, String claimName){
-		String consumerTokenWithoutSignature = getTokenWithoutSignature( consumerToken);
-		Jwt<Header, Claims> consumerTokenclaims = getAllClaimsFromToken( consumerTokenWithoutSignature);
-		String claimValue = consumerTokenclaims.getBody().get( claimName, String.class);
-		return claimValue;
-	}
-
-	public static Jwt<Header, Claims> getAllClaimsFromToken( String consumerToken) {
-
-		try
-		{
-			return Jwts.parserBuilder().setAllowedClockSkewSeconds(3600).build().parseClaimsJwt( consumerToken);
+		if (consumerToken == null){
+			throw new IllegalStateException("Consumer token not provided, but expected");
 		}
-		catch( SignatureException e)
-		{
-			log.error("SignatureException", e);
-		}
-		catch( ExpiredJwtException e)
-		{
-			log.error("ExpiredJwtException", e);
-		}
-		catch( UnsupportedJwtException e)
-		{
-			log.error("UnsupportedJwtException", e);
-		}
-		catch( MalformedJwtException e)
-		{
-			log.error("MalformedJwtException", e);
-		}
-		catch( IllegalArgumentException e)
-		{
-			log.error("IllegalArgumentException", e);
-		}
-		throw new IllegalStateException("Was not able to parse consumer token");
-		//return null;
-	}
 
-	public static String generateExtGatewayToken(String envName, String consumerToken, String operation, String requestPath, String issuer, String scope, String publisherId, String subscriberId) {
-		//nearly to pass additional claims as a map, so far scope + publisher
+        String[] token = consumerToken.split(" ");
+        String[] splitToken = token[1].split("\\.");
+        String consumerTokenWithoutSignature = splitToken[0] + "." + splitToken[1] + ".";
 
-		String[] token = consumerToken.split( " ");
-		String[] splitToken = token[1].split( "\\.");
-		String consumerTokenWithoutSignature = splitToken[0]+"."+splitToken[1]+".";
+        return consumerTokenWithoutSignature;
+    }
 
-		Jwt<Header, Claims> gatewayTokenclaims = getAllClaimsFromToken( consumerTokenWithoutSignature);
+    public static String getConsumerFromToken(String consumerToken) {
+        return getClaimFromToken(consumerToken, "clientId");
+    }
 
-		Date issuedAt = gatewayTokenclaims.getBody().getIssuedAt();
+    public static String getClaimFromToken(String consumerToken, String claimName) {
+        String consumerTokenWithoutSignature = getTokenWithoutSignature(consumerToken);
+        Jwt<Header, Claims> consumerTokenclaims = getAllClaimsFromToken(consumerTokenWithoutSignature);
+        String claimValue = consumerTokenclaims.getBody().get(claimName, String.class);
+        return claimValue;
+    }
+
+    public static Jwt<Header, Claims> getAllClaimsFromToken(String consumerToken) {
+
+        try {
+            return Jwts.parserBuilder().setAllowedClockSkewSeconds(3600).build().parseClaimsJwt(consumerToken);
+        } catch (SignatureException e) {
+            log.error("SignatureException", e);
+        } catch (ExpiredJwtException e) {
+            log.error("ExpiredJwtException", e);
+        } catch (UnsupportedJwtException e) {
+            log.error("UnsupportedJwtException", e);
+        } catch (MalformedJwtException e) {
+            log.error("MalformedJwtException", e);
+        } catch (IllegalArgumentException e) {
+            log.error("IllegalArgumentException", e);
+        }
+        throw new IllegalStateException("Was not able to parse consumer token");
+    }
+
+    public static String generateExtGatewayToken(String envName, String consumerToken, String operation, String requestPath, String issuer, String scope, String publisherId, String subscriberId) {
+        //nearly to pass additional claims as a map, so far scope + publisher
+
+        String[] token = consumerToken.split(" ");
+        String[] splitToken = token[1].split("\\.");
+        String consumerTokenWithoutSignature = splitToken[0] + "." + splitToken[1] + ".";
+
+        Jwt<Header, Claims> gatewayTokenclaims = getAllClaimsFromToken(consumerTokenWithoutSignature);
+
+        Date issuedAt = gatewayTokenclaims.getBody().getIssuedAt();
 //	        Date now = new Date();
 //	        Date expiration = new Date(now.getTime() + 3600_000L * 24 * 30);;
-		Date expiration = gatewayTokenclaims.getBody().getExpiration();
-		String clientId = gatewayTokenclaims.getBody().get( "clientId", String.class);
-		String consumerOriginZone = gatewayTokenclaims.getBody().get( "originZone", String.class);
-		String consumerOriginStargate = gatewayTokenclaims.getBody().get( "originStargate", String.class);
-		String sub = gatewayTokenclaims.getBody().get( "sub", String.class);
-		String aud = gatewayTokenclaims.getBody().get( "aud", String.class);
+        Date expiration = gatewayTokenclaims.getBody().getExpiration();
+        String clientId = gatewayTokenclaims.getBody().get("clientId", String.class);
+        String consumerOriginZone = gatewayTokenclaims.getBody().get("originZone", String.class);
+        String consumerOriginStargate = gatewayTokenclaims.getBody().get("originStargate", String.class);
+        String sub = gatewayTokenclaims.getBody().get("sub", String.class);
+        String aud = gatewayTokenclaims.getBody().get("aud", String.class);
 
-		HashMap<String, String> claims = new HashMap<String, String>();
-		claims.put( "typ", "Bearer");
-		claims.put( "azp", "stargate");
-		claims.put( "sub", sub);
-		claims.put( "requestPath", requestPath);
-		claims.put( "operation", operation);
-		claims.put( "clientId", clientId);
-		claims.put( "env", envName);
-		claims.put( "originZone", consumerOriginZone);
-		claims.put( "originStargate", consumerOriginStargate);
-		if (scope != null) claims.put( "scope", scope);
-		if (publisherId != null) claims.put ("publisherId", publisherId);
-		if (subscriberId != null) {
-			claims.put ("subscriberId", subscriberId);
-			claims.put ("aud", subscriberId);
-		}
-		if(!StringUtils.isEmpty(aud)) {
-			claims.put("aud", aud);
-		}
+        HashMap<String, String> claims = new HashMap<String, String>();
+        claims.put("typ", "Bearer");
+        claims.put("azp", "stargate");
+        claims.put("sub", sub);
+        claims.put("requestPath", requestPath);
+        claims.put("operation", operation);
+        claims.put("clientId", clientId);
+        claims.put("env", envName);
+        claims.put("originZone", consumerOriginZone);
+        claims.put("originStargate", consumerOriginStargate);
+        if (scope != null) claims.put("scope", scope);
+        if (publisherId != null) claims.put("publisherId", publisherId);
+        if (subscriberId != null) {
+            claims.put("subscriberId", subscriberId);
+            claims.put("aud", subscriberId);
+        }
+        if (!StringUtils.isEmpty(aud)) {
+            claims.put("aud", aud);
+        }
 
-		//return Jwts.builder().setClaims( claims).setIssuer( issuer).setExpiration( expiration).setIssuedAt( issuedAt).signWith( loadKey, SignatureAlgorithm.RS256).setHeaderParam( "kid", keyId).setHeaderParam( "typ", "JWT").compact();
-		return generateToken(claims, issuer, expiration, issuedAt);
-	}
+        return generateToken(claims, issuer, expiration, issuedAt);
+    }
 
-	public static String generateGatewayToken( String envName, String consumerToken, String operation, String requestPath, String issuer) {
+    public static String generateGatewayToken(String envName, String consumerToken, String operation, String requestPath, String issuer) {
 
 
-		String[] token = consumerToken.split( " ");
-		String[] splitToken = token[1].split( "\\.");
-		String consumerTokenWithoutSignature = splitToken[0]+"."+splitToken[1]+".";
-		String signature = splitToken[2];
+        String[] token = consumerToken.split(" ");
+        String[] splitToken = token[1].split("\\.");
+        String consumerTokenWithoutSignature = splitToken[0] + "." + splitToken[1] + ".";
+        String signature = splitToken[2];
 
-		Jwt<Header, Claims> gatewayTokenclaims = getAllClaimsFromToken( consumerTokenWithoutSignature);
+        Jwt<Header, Claims> gatewayTokenclaims = getAllClaimsFromToken(consumerTokenWithoutSignature);
 
-		Date issuedAt = gatewayTokenclaims.getBody().getIssuedAt();
-		Date expiration = gatewayTokenclaims.getBody().getExpiration();
-		String clientId = gatewayTokenclaims.getBody().get( "clientId", String.class);
-		String consumerOriginZone = gatewayTokenclaims.getBody().get( "originZone", String.class);
-		String consumerOriginStargate = gatewayTokenclaims.getBody().get( "originStargate", String.class);
-		String sub = gatewayTokenclaims.getBody().get( "sub", String.class);
-		String aud = gatewayTokenclaims.getBody().get( "aud", String.class);
+        Date issuedAt = gatewayTokenclaims.getBody().getIssuedAt();
+        Date expiration = gatewayTokenclaims.getBody().getExpiration();
+        String clientId = gatewayTokenclaims.getBody().get("clientId", String.class);
+        String consumerOriginZone = gatewayTokenclaims.getBody().get("originZone", String.class);
+        String consumerOriginStargate = gatewayTokenclaims.getBody().get("originStargate", String.class);
+        String sub = gatewayTokenclaims.getBody().get("sub", String.class);
+        String aud = gatewayTokenclaims.getBody().get("aud", String.class);
 
-		HashMap<String, String> claims = new HashMap<String, String>();
-		claims.put( "typ", "Bearer");
-		claims.put( "azp", "stargate");
-		claims.put( "sub", sub);
-		claims.put( "requestPath", requestPath);
-		claims.put( "operation", operation);
+        HashMap<String, String> claims = new HashMap<String, String>();
+        claims.put("typ", "Bearer");
+        claims.put("azp", "stargate");
+        claims.put("sub", sub);
+        claims.put("requestPath", requestPath);
+        claims.put("operation", operation);
 //	      claims.put("env", envName);
-		claims.put( "accessTokenSignature", signature);
-		claims.put( "originZone", consumerOriginZone);
-		claims.put( "originStargate", consumerOriginStargate);
-		claims.put( "clientId", clientId);
-		if(!StringUtils.isEmpty(aud)) {
-			claims.put("aud", aud);
-		}
+        claims.put("accessTokenSignature", signature);
+        claims.put("originZone", consumerOriginZone);
+        claims.put("originStargate", consumerOriginStargate);
+        claims.put("clientId", clientId);
+        if (!StringUtils.isEmpty(aud)) {
+            claims.put("aud", aud);
+        }
 
-		//return Jwts.builder().setClaims( claims).setIssuer( issuer).setExpiration( expiration).setIssuedAt( issuedAt).signWith( loadKey, SignatureAlgorithm.RS256).setHeaderParam( "kid", keyId).setHeaderParam( "typ", "JWT").compact();
-		return generateToken(claims, issuer, expiration, issuedAt);
-	}
+        return generateToken(claims, issuer, expiration, issuedAt);
+    }
 
-	public static String generateGatewayTokenForPublisher(String issuer){
-		HashMap<String, String> claims = new HashMap<String, String>();
-		claims.put( "typ", "Bearer");
-		claims.put( "azp", "stargate");
-		claims.put( "clientId", "gateway");
+    public static String generateGatewayTokenForPublisher(String issuer) {
+        HashMap<String, String> claims = new HashMap<String, String>();
+        claims.put("typ", "Bearer");
+        claims.put("azp", "stargate");
+        claims.put("clientId", "gateway");
 
-		return generateToken(claims,
-				issuer,
-				new Date(System.currentTimeMillis() + 300 * 1000),
-				new Date(System.currentTimeMillis())
-				);
-	}
-
-
-	private static String generateToken(HashMap<String, String> claims, String issuer, Date expiration, Date issuedAt){
-		String privateKey = null;
-		PrivateKey loadKey = null;
-		try
-		{
-			log.info("GatewayToken or OneToken: Loading privateKey");
-			loadKey = loadPrivKey( privateKey);
-		}
-		catch( NoSuchAlgorithmException e1)
-		{
-			log.error("NoSuchAlgorithmException", e1);
-		}
-		catch( InvalidKeySpecException e1)
-		{
-			log.error("InvalidKeySpecException", e1);
-		}
-		catch( IOException e1)
-		{
-			log.error("IOException", e1);
-		}
-		catch( URISyntaxException e1)
-		{
-			log.error("URISyntaxException", e1);
-		}
-
-		log.info("GatewayToken or OneToken: Generating with all claims");
-		return Jwts.builder().setClaims( claims).setIssuer( issuer).setExpiration( expiration).setIssuedAt( issuedAt).signWith( loadKey, SignatureAlgorithm.RS256).setHeaderParam( "kid", keyId).setHeaderParam( "typ", "JWT").compact();
-	}
+        return generateToken(claims,
+                issuer,
+                new Date(System.currentTimeMillis() + 300 * 1000),
+                new Date(System.currentTimeMillis())
+        );
+    }
 
 
-	public static PrivateKey loadPrivKey( String key) throws IOException, URISyntaxException, NoSuchAlgorithmException, InvalidKeySpecException {
+    private static String generateToken(HashMap<String, String> claims, String issuer, Date expiration, Date issuedAt) {
+        String privateKey = null;
+        PrivateKey loadKey = null;
+        try {
+            log.info("GatewayToken or OneToken: Loading privateKey");
+            loadKey = loadPrivKey(privateKey);
+        } catch (NoSuchAlgorithmException e1) {
+            log.error("NoSuchAlgorithmException", e1);
+        } catch (InvalidKeySpecException e1) {
+            log.error("InvalidKeySpecException", e1);
+        } catch (IOException e1) {
+            log.error("IOException", e1);
+        } catch (URISyntaxException e1) {
+            log.error("URISyntaxException", e1);
+        }
 
-		String privateKeyContent;
-		if( key == null)
-		{
-			File projectDir = new File( System.getProperty( "user.dir")+"/keypair/app.pem");
-
-			privateKeyContent = new String( Files.readAllBytes( Path.of( projectDir.toURI())));
-			privateKeyContent = privateKeyContent.replaceAll( "(\\r|\\n)", "").replace( "-----BEGIN PRIVATE KEY-----", "").replace( "-----END PRIVATE KEY-----", "");
-		}
-		else
-		{
-			privateKeyContent = key;
-		}
-
-		KeyFactory kf = KeyFactory.getInstance( "RSA");
-
-		PKCS8EncodedKeySpec keySpecPKCS8 = new PKCS8EncodedKeySpec( Base64.getDecoder().decode( privateKeyContent));
-		PrivateKey privKey = kf.generatePrivate( keySpecPKCS8);
-
-		return privKey;
-	}
-	
-	public TokenInfo getAccessToken(String token_endpoint2, String tif_clientID2, String tif_clientSecret2, String scope, String subscriberClientId) {
-		return getAccessToken(token_endpoint2, tif_clientID2, tif_clientSecret2, false, scope, subscriberClientId);
-	}
-
-	public TokenInfo getAccessToken(String token_endpoint2, String tif_clientID2, String tif_clientSecret2) {
-		return getAccessToken(token_endpoint2, tif_clientID2, tif_clientSecret2, false, null, "");
-	}
-
-	public TokenInfo getAccessToken(String tokenEndpoint, OauthCredentials oauthCredentials, String subscriberClientId) {
-
-		String id;
-
-		if(oauthCredentials.getClientId() != null && !oauthCredentials.getClientId().isBlank()) {
-			id = oauthCredentials.getClientId();
-		} else {
-			id = oauthCredentials.getUsername();
-		}
-
-		final String tokenKey = tokenEndpoint + id + subscriberClientId;
-
-		TokenInfo accessToken = tokenCache.getToken( tokenKey);
-
-		if(accessToken == null) {
-
-			MultiValueMap<String, String> cc = new LinkedMultiValueMap<>();
-			String basicAuth = "";
-
-			boolean clientCredentialsSet = false;
-			if(oauthCredentials.getClientId() != null && !oauthCredentials.getClientId().isBlank() && oauthCredentials.getClientSecret() != null && !oauthCredentials.getClientSecret().isBlank()) {
-				String basicAuthPreparation = oauthCredentials.getClientId()+":"+oauthCredentials.getClientSecret();
-				basicAuth = Base64Utils.encodeToString(basicAuthPreparation.getBytes());
-				clientCredentialsSet = true;
-			}
-
-			if(oauthCredentials.getUsername() != null && !oauthCredentials.getUsername().isBlank() && oauthCredentials.getPassword() != null && !oauthCredentials.getPassword().isBlank()) {
-				if(clientCredentialsSet) {
-					cc.add("username", oauthCredentials.getUsername());
-					cc.add("password", oauthCredentials.getPassword());
-				} else {
-					String basicAuthPreparation = oauthCredentials.getUsername()+":"+oauthCredentials.getPassword();
-					basicAuth = Base64Utils.encodeToString(basicAuthPreparation.getBytes());
-				}
-			}
-
-			if(oauthCredentials.getRefreshToken() != null && !oauthCredentials.getRefreshToken().isBlank()) {
-				cc.add("refresh_token", oauthCredentials.getRefreshToken());
-			}
-
-			if(oauthCredentials.getScopes() != null && !oauthCredentials.getScopes().isEmpty()) {
-				cc.add("scope", oauthCredentials.getScopes());
-			}
-
-			cc.add("grant_type", oauthCredentials.getGrantType());
-
-			// get GW mesh token from remote IDP
-			accessToken = webClient.post()
-					.uri(tokenEndpoint)
-					.header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-					.header(HttpHeaders.AUTHORIZATION, "Basic "+basicAuth )
-					.body(BodyInserters.fromFormData(cc))
-					.retrieve()
-					.onStatus(HttpStatus::is4xxClientError,
-							response -> {
-								logClientErrorResponse(response, tokenEndpoint, id);
-								return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to retrieve token from " + tokenEndpoint + " for client " + id));
-							})
-					.bodyToMono(TokenInfo.class)
-					.retryWhen(Retry.max(3)
-							.filter(throwable -> throwable instanceof ConnectTimeoutException)
-							.onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
-										throw new ServerErrorException("Failed to connect to " + tokenEndpoint, (Throwable) null);
-									}
-							)
-					)
-					.block();
-
-			if (accessToken == null) {
-				throw new RuntimeException("could not get access token");
-			}
-			// cache the gateway mesh token
-			tokenCache.saveToken(tokenKey, accessToken);
-
-		}
-
-		return accessToken;
-
-	}
-
-	public TokenInfo getAccessToken(String token_endpoint2, String tif_clientID2, String tif_clientSecret2, boolean autoevent, String scope, String subscriberClientId) {
-
-		// (cache) try to grab a valid gateway mesh token from cache
-		if (log.isDebugEnabled()) {
-			tokenCache.printCache();
-		}
-		final String tokenKey = token_endpoint2 + tif_clientID2 + subscriberClientId;
-
-		TokenInfo gwAccessToken = tokenCache.getToken( tokenKey);
+        log.info("GatewayToken or OneToken: Generating with all claims");
+        return Jwts.builder().setClaims(claims).setIssuer(issuer).setExpiration(expiration).setIssuedAt(issuedAt).signWith(loadKey, SignatureAlgorithm.RS256).setHeaderParam("kid", keyId).setHeaderParam("typ", "JWT").compact();
+    }
 
 
-		if (gwAccessToken == null) {
+    public static PrivateKey loadPrivKey(String key) throws IOException, URISyntaxException, NoSuchAlgorithmException, InvalidKeySpecException {
 
-			MultiValueMap<String, String> cc = new LinkedMultiValueMap<>();
-			cc.add("client_id", tif_clientID2);
-			cc.add("client_secret", tif_clientSecret2);
-			cc.add("grant_type", AuthorizationGrantType.CLIENT_CREDENTIALS.getValue());
-			if(scope != null && !scope.isEmpty()) {
-				cc.add("scope", scope);
-			}
+        String privateKeyContent;
+        if (key == null) {
+            File projectDir = new File(System.getProperty("user.dir") + "/keypair/app.pem");
 
-			/*
-			Mono blockingWrapper = Mono.fromCallable(() -> {
-				return /* make a remote synchronous call /
-					});
-					blockingWrapper = blockingWrapper.subscribeOn(Schedulers.boundedElastic());
-			 */
+            privateKeyContent = new String(Files.readAllBytes(Path.of(projectDir.toURI())));
+            privateKeyContent = privateKeyContent.replaceAll("(\\r|\\n)", "").replace("-----BEGIN PRIVATE KEY-----", "").replace("-----END PRIVATE KEY-----", "");
+        } else {
+            privateKeyContent = key;
+        }
+
+        KeyFactory kf = KeyFactory.getInstance("RSA");
+
+        PKCS8EncodedKeySpec keySpecPKCS8 = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(privateKeyContent));
+        PrivateKey privKey = kf.generatePrivate(keySpecPKCS8);
+
+        return privKey;
+    }
+
+    public TokenInfo getAccessToken(String token_endpoint2, String tif_clientID2, String tif_clientSecret2) {
+        return getAccessToken(token_endpoint2, tif_clientID2, tif_clientSecret2, null, "");
+    }
+
+    public TokenInfo getAccessToken(String tokenEndpoint, OauthCredentials oauthCredentials, String subscriberClientId) {
+
+        String id;
+
+        if (oauthCredentials.getClientId() != null && !oauthCredentials.getClientId().isBlank()) {
+            id = oauthCredentials.getClientId();
+        } else {
+            id = oauthCredentials.getUsername();
+        }
+
+        final String tokenKey = tokenEndpoint + id + subscriberClientId;
+
+        TokenInfo accessToken = tokenCache.getToken(tokenKey);
+
+        if (accessToken == null) {
+
+            MultiValueMap<String, String> cc = new LinkedMultiValueMap<>();
+            String basicAuth = "";
+
+            boolean clientCredentialsSet = false;
+            if (oauthCredentials.getClientId() != null && !oauthCredentials.getClientId().isBlank() && oauthCredentials.getClientSecret() != null && !oauthCredentials.getClientSecret().isBlank()) {
+                String basicAuthPreparation = oauthCredentials.getClientId() + ":" + oauthCredentials.getClientSecret();
+                basicAuth = Base64Utils.encodeToString(basicAuthPreparation.getBytes());
+                clientCredentialsSet = true;
+            }
+
+            if (oauthCredentials.getUsername() != null && !oauthCredentials.getUsername().isBlank() && oauthCredentials.getPassword() != null && !oauthCredentials.getPassword().isBlank()) {
+                if (clientCredentialsSet) {
+                    cc.add("username", oauthCredentials.getUsername());
+                    cc.add("password", oauthCredentials.getPassword());
+                } else {
+                    String basicAuthPreparation = oauthCredentials.getUsername() + ":" + oauthCredentials.getPassword();
+                    basicAuth = Base64Utils.encodeToString(basicAuthPreparation.getBytes());
+                }
+            }
+
+            if (oauthCredentials.getRefreshToken() != null && !oauthCredentials.getRefreshToken().isBlank()) {
+                cc.add("refresh_token", oauthCredentials.getRefreshToken());
+            }
+
+            if (oauthCredentials.getScopes() != null && !oauthCredentials.getScopes().isEmpty()) {
+                cc.add("scope", oauthCredentials.getScopes());
+            }
+
+            cc.add("grant_type", oauthCredentials.getGrantType());
+
+            // get GW mesh token from remote IDP
+            accessToken = webClient.post()
+                    .uri(tokenEndpoint)
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+                    .header(HttpHeaders.AUTHORIZATION, "Basic " + basicAuth)
+                    .body(BodyInserters.fromFormData(cc))
+                    .retrieve()
+                    .onStatus(HttpStatus::is4xxClientError,
+                            response -> {
+                                logClientErrorResponse(response, tokenEndpoint, id);
+                                return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to retrieve token from " + tokenEndpoint + " for client " + id));
+                            })
+                    .bodyToMono(TokenInfo.class)
+                    .retryWhen(Retry.max(3)
+                            .filter(throwable -> throwable instanceof ConnectTimeoutException)
+                            .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
+                                        throw new ServerErrorException("Failed to connect to " + tokenEndpoint, (Throwable) null);
+                                    }
+                            )
+                    )
+                    .block();
+
+            if (accessToken == null) {
+                throw new RuntimeException("could not get access token");
+            }
+            // cache the gateway mesh token
+            tokenCache.saveToken(tokenKey, accessToken);
+
+        }
+
+        return accessToken;
+    }
+
+    public TokenInfo getAccessToken(String token_endpoint2, String tif_clientID2, String tif_clientSecret2, String scope, String subscriberClientId) {
+
+        // (cache) try to grab a valid gateway mesh token from cache
+        if (log.isDebugEnabled()) {
+            tokenCache.printCache();
+        }
+        final String tokenKey = token_endpoint2 + tif_clientID2 + subscriberClientId;
+
+        TokenInfo gwAccessToken = tokenCache.getToken(tokenKey);
 
 
-			//for autovent we do not throw exceptions
-			if (autoevent) {
-				try {
-					gwAccessToken = getTokenInfoMono(token_endpoint2, cc).toFuture().get(5, TimeUnit.SECONDS);
-				} catch (InterruptedException e) {
-					log.error("InterruptedException occured: {}", e.getMessage());
-				} catch (ExecutionException e) {
-					log.error("ExecutionException occured: {}", e.getMessage());
-				} catch (TimeoutException e) {
-					log.error("TimeoutException occured: {}", e.getMessage());
-				} catch (RuntimeException e) {
-					log.error("RuntimeException occured: {}", e.getMessage());
-				}
+        if (gwAccessToken == null) {
 
-				if (gwAccessToken == null) {
-					log.error("failed to get access token for {}", tif_clientID2);
-				} else {
-					// cache the gateway mesh token
-					tokenCache.saveToken(tokenKey, gwAccessToken);
-				}
+            MultiValueMap<String, String> cc = new LinkedMultiValueMap<>();
+            cc.add("client_id", tif_clientID2);
+            cc.add("client_secret", tif_clientSecret2);
+            cc.add("grant_type", AuthorizationGrantType.CLIENT_CREDENTIALS.getValue());
+            if (scope != null && !scope.isEmpty()) {
+                cc.add("scope", scope);
+            }
 
-			} else {
 
-				// get GW mesh token from remote IDP
-				gwAccessToken = webClient.post()
-						.uri(token_endpoint2)
-						.header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-						.body(BodyInserters.fromFormData(cc))
-						.retrieve()
-						.onStatus(HttpStatus::is4xxClientError,
-								response -> {
-									logClientErrorResponse(response, token_endpoint2, tif_clientID2);
-									return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to retrieve token from " + token_endpoint2 + " for client " + tif_clientID2));
-								})
-						.bodyToMono(TokenInfo.class)
-						.retryWhen(Retry.max(3)
-							.filter(throwable -> throwable instanceof ConnectTimeoutException)
-								.onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
-									throw new ServerErrorException("Failed to connect to " + token_endpoint2, (Throwable) null);
-								}
-							)
-						)
-						.block();
+            // get GW mesh token from remote IDP
+            gwAccessToken = webClient.post()
+                    .uri(token_endpoint2)
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+                    .body(BodyInserters.fromFormData(cc))
+                    .retrieve()
+                    .onStatus(HttpStatus::is4xxClientError,
+                            response -> {
+                                logClientErrorResponse(response, token_endpoint2, tif_clientID2);
+                                return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to retrieve token from " + token_endpoint2 + " for client " + tif_clientID2));
+                            })
+                    .bodyToMono(TokenInfo.class)
+                    .retryWhen(Retry.max(3)
+                            .filter(throwable -> throwable instanceof ConnectTimeoutException)
+                            .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
+                                        throw new ServerErrorException("Failed to connect to " + token_endpoint2, (Throwable) null);
+                                    }
+                            )
+                    )
+                    .block();
 /*
 				try {
 					gwAccessToken = getTokenInfoMono(token_endpoint2, cc).toFuture().thenApplyAsync(tokenInfo -> tokenInfo).get(30, TimeUnit.SECONDS);
@@ -425,43 +365,40 @@ public class OauthTokenUtil {
 				}
 */
 
-				if (gwAccessToken == null) {
-					throw new RuntimeException("could not get access token");
-				}
-				// cache the gateway mesh token
-				tokenCache.saveToken(tokenKey, gwAccessToken);
-			}
+            if (gwAccessToken == null) {
+                throw new RuntimeException("could not get access token");
+            }
+            // cache the gateway mesh token
+            tokenCache.saveToken(tokenKey, gwAccessToken);
 
-		}
+        }
+        return gwAccessToken;
+    }
 
-
-		return gwAccessToken;
-
-	}
-	public Mono<TokenInfo> getTokenInfoMono(final String _uri, MultiValueMap<String, String> cc) {
-		final Mono<TokenInfo> responseMono = webClient.post()
-				.uri(_uri)
-				.header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-				.body(BodyInserters.fromFormData(cc))
-				.retrieve()
-				.bodyToMono(TokenInfo.class)
-				.publishOn(Schedulers.single())
-				//.doOnNext(tokenInfo -> log.info("doOnNext {}", tokenInfo.getAccessToken()))
-				.onErrorMap(e -> new RuntimeException("message", e));
-		;
-		return responseMono.flatMap(response -> {
-			final String accessToken = response.getAccessToken();
-			// Use `field` to do something that would produce a log message
-			log.info("Got token: {}", accessToken);
-			return Mono.just(response);
-		});
-	}
-
-	private void logClientErrorResponse(ClientResponse response, String tokenEndopoint, String clientId) {
-			response.bodyToMono(String.class)
-					.publishOn(Schedulers.boundedElastic())
-					.subscribe(body -> log.warn("Client error occurred while getting token for issuer {} and client {}: {}", tokenEndopoint, clientId, body));
-		}
-
+    /*
+        public Mono<TokenInfo> getTokenInfoMono(final String _uri, MultiValueMap<String, String> cc) {
+            final Mono<TokenInfo> responseMono = webClient.post()
+                    .uri(_uri)
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+                    .body(BodyInserters.fromFormData(cc))
+                    .retrieve()
+                    .bodyToMono(TokenInfo.class)
+                    .publishOn(Schedulers.single())
+                    //.doOnNext(tokenInfo -> log.info("doOnNext {}", tokenInfo.getAccessToken()))
+                    .onErrorMap(e -> new RuntimeException("message", e));
+            ;
+            return responseMono.flatMap(response -> {
+                final String accessToken = response.getAccessToken();
+                // Use `field` to do something that would produce a log message
+                log.info("Got token: {}", accessToken);
+                return Mono.just(response);
+            });
+        }
+    */
+    private void logClientErrorResponse(ClientResponse response, String tokenEndopoint, String clientId) {
+        response.bodyToMono(String.class)
+                .publishOn(Schedulers.boundedElastic())
+                .subscribe(body -> log.warn("Client error occurred while getting token for issuer {} and client {}: {}", tokenEndopoint, clientId, body));
+    }
 
 }
