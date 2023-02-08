@@ -47,7 +47,7 @@ public class SpectreResponseFilter extends AbstractGatewayFilterFactory<SpectreR
             return chain.filter(exchange).then(Mono.fromRunnable(() -> {
 
                 String responseBody = exchange.getAttribute("cachedResponseBodyObject");
-                log.debug("Response: headers={}, payload={}", exchange.getResponse().getHeaders().toSingleValueMap(), responseBody);
+                log.debug("Response: status={}, headers={}, payload={}",exchange.getResponse().getStatusCode().value(), exchange.getResponse().getHeaders().toSingleValueMap(), responseBody);
 
 
                 //ServerHttpRequest request = exchange.getRequest();
