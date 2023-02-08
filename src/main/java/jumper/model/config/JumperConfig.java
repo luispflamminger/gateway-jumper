@@ -21,7 +21,6 @@ public class JumperConfig {
     private HashMap<String, OauthCredentials> oauth;
     private HashMap<String, RouteListener> routeListener;
     private GatewayClient gatewayClient;
-    private HashMap<String,OauthSecurity> oauthSecurity;
 
     String token_endpoint;
     String tif_remote_issuer;

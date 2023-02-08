@@ -1,7 +1,7 @@
 package jumper.util;
 
 import jumper.model.config.JumperConfig;
-import jumper.model.config.OauthSecurity;
+import jumper.model.config.OauthCredentials;
 
 import java.util.HashMap;
 
@@ -13,10 +13,12 @@ public class JumperConfigUtil{
 
 
     public static String getJcSecurity(){
-        HashMap<String, OauthSecurity> m = new HashMap<>();
-        m.put(CONSUMER, new OauthSecurity(SCOPES));
+        HashMap<String, OauthCredentials> oauth = new HashMap<>();
+        OauthCredentials oc = new OauthCredentials();
+        oc.setScopes(SCOPES);
+        oauth.put(CONSUMER, oc);
         JumperConfig jc = new JumperConfig();
-        jc.setOauthSecurity(m);
+        jc.setOauth(oauth);
         return toBase64(jc);
     }
 

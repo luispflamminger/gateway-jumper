@@ -24,7 +24,7 @@ public class ResponseTransformationFilter implements  GatewayFilter, Ordered{
             return modifyResponseBodyFilter
                     .apply(
                             new ModifyResponseBodyGatewayFilterFactory.Config()
-                                    .setRewriteFunction(String.class, String.class, responseBodyRewrite))
+                                    .setRewriteFunction(byte[].class, byte[].class, responseBodyRewrite))
                     .filter(exchange, chain);
         }
 
