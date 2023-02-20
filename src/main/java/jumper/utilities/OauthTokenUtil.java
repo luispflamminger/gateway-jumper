@@ -130,7 +130,7 @@ public class OauthTokenUtil {
             claims.put("subscriberId", subscriberId);
             claims.put("aud", subscriberId);
         }
-        if (!StringUtils.isEmpty(aud)) {
+        if (StringUtils.hasLength(aud)) {
             claims.put("aud", aud);
         }
 
@@ -166,7 +166,7 @@ public class OauthTokenUtil {
         claims.put("originZone", consumerOriginZone);
         claims.put("originStargate", consumerOriginStargate);
         claims.put("clientId", clientId);
-        if (!StringUtils.isEmpty(aud)) {
+        if (StringUtils.hasLength(aud)) {
             claims.put("aud", aud);
         }
 

@@ -1,4 +1,4 @@
-FROM azul/zulu-openjdk-alpine:17.0.4
+FROM azul/zulu-openjdk-alpine:11.0.16
 
 RUN apk add --update \
     curl \

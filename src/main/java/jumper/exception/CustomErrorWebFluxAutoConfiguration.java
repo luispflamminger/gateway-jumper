@@ -19,6 +19,8 @@ import org.springframework.http.codec.ServerCodecConfigurer;
 import org.springframework.web.reactive.config.WebFluxConfigurer;
 import org.springframework.web.reactive.result.view.ViewResolver;
 
+import java.util.stream.Collectors;
+
 import static org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication.Type.REACTIVE;
 
 @Configuration(proxyBeanMethods = false)
@@ -64,7 +66,8 @@ public class CustomErrorWebFluxAutoConfiguration {
                 webProperties.getResources(),
                 this.serverProperties.getError(),
                 applicationContext);
-        exceptionHandler.setViewResolvers(viewResolvers.orderedStream().toList());
+        //exceptionHandler.setViewResolvers(viewResolvers.orderedStream().toList());
+        exceptionHandler.setViewResolvers(viewResolvers.orderedStream().collect(Collectors.toList()));
         exceptionHandler.setMessageWriters(serverCodecConfigurer.getWriters());
         exceptionHandler.setMessageReaders(serverCodecConfigurer.getReaders());
         return exceptionHandler;
