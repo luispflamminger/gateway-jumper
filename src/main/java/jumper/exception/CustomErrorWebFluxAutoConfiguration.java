@@ -1,14 +1,12 @@
 package jumper.exception;
 
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.condition.SearchStrategy;
-import org.springframework.boot.autoconfigure.web.ResourceProperties;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
-import org.springframework.boot.autoconfigure.web.reactive.WebFluxAutoConfiguration;
+import org.springframework.boot.autoconfigure.web.WebProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.reactive.error.DefaultErrorAttributes;
 import org.springframework.boot.web.reactive.error.ErrorAttributes;
@@ -21,18 +19,16 @@ import org.springframework.http.codec.ServerCodecConfigurer;
 import org.springframework.web.reactive.config.WebFluxConfigurer;
 import org.springframework.web.reactive.result.view.ViewResolver;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import static org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication.Type.REACTIVE;
 
-@Configuration
-@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)
+@Configuration(proxyBeanMethods = false)
+@ConditionalOnWebApplication(type=REACTIVE)
 @ConditionalOnClass(WebFluxConfigurer.class)
-@AutoConfigureBefore(WebFluxAutoConfiguration.class)
-@EnableConfigurationProperties({ServerProperties.class, ResourceProperties.class})
+@EnableConfigurationProperties({ServerProperties.class, WebProperties.class})
 public class CustomErrorWebFluxAutoConfiguration {
 
     private final ServerProperties serverProperties;
-
+/*
     private final ApplicationContext applicationContext;
 
     private final ResourceProperties resourceProperties;
@@ -53,19 +49,24 @@ public class CustomErrorWebFluxAutoConfiguration {
                 .collect(Collectors.toList());
         this.serverCodecConfigurer = serverCodecConfigurer;
     }
+*/
+
+    public CustomErrorWebFluxAutoConfiguration(ServerProperties serverProperties) {
+        this.serverProperties = serverProperties;
+    }
 
     @Bean
-    @ConditionalOnMissingBean(value = ErrorWebExceptionHandler.class, search = SearchStrategy.CURRENT)
+    @ConditionalOnMissingBean(value=ErrorWebExceptionHandler.class, search=SearchStrategy.CURRENT)
     @Order(-1)
-    public ErrorWebExceptionHandler errorWebExceptionHandler(ErrorAttributes errorAttributes) {
+    public ErrorWebExceptionHandler errorWebExceptionHandler(ErrorAttributes errorAttributes, WebProperties webProperties, ObjectProvider<ViewResolver> viewResolvers, ServerCodecConfigurer serverCodecConfigurer, ApplicationContext applicationContext) {
         JsonErrorWebExceptionHandler exceptionHandler = new JsonErrorWebExceptionHandler(
                 errorAttributes,
-                resourceProperties,
+                webProperties.getResources(),
                 this.serverProperties.getError(),
                 applicationContext);
-        exceptionHandler.setViewResolvers(this.viewResolvers);
-        exceptionHandler.setMessageWriters(this.serverCodecConfigurer.getWriters());
-        exceptionHandler.setMessageReaders(this.serverCodecConfigurer.getReaders());
+        exceptionHandler.setViewResolvers(viewResolvers.orderedStream().toList());
+        exceptionHandler.setMessageWriters(serverCodecConfigurer.getWriters());
+        exceptionHandler.setMessageReaders(serverCodecConfigurer.getReaders());
         return exceptionHandler;
     }
 
