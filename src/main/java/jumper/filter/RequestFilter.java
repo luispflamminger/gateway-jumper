@@ -354,6 +354,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         {
             TokenInfo tokenInfo = oauthTokenUtil.getAccessToken(token_endpoint, tif_clientID, tif_clientSecret, client_scope, consumer);
             addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER+" "+tokenInfo.getAccessToken());
+
         }
         else
         {

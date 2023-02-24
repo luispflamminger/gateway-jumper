@@ -39,6 +39,7 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
@@ -278,8 +279,7 @@ public class OauthTokenUtil {
 
             cc.add("grant_type", oauthCredentials.getGrantType());
 
-            // get GW mesh token from remote IDP
-            accessToken = webClient.post()
+            Mono<TokenInfo> tokenInfoMono = webClient.post()
                     .uri(tokenEndpoint)
                     .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
                     .header(HttpHeaders.AUTHORIZATION, "Basic " + basicAuth)
@@ -297,17 +297,17 @@ public class OauthTokenUtil {
                                         throw new ServerErrorException("Failed to connect to " + tokenEndpoint, (Throwable) null);
                                     }
                             )
-                    )
-                    .block();
+                    );
 
+            CompletableFuture<TokenInfo> tokenInfoCompletableFuture = tokenInfoMono.toFuture();
+            accessToken = tokenInfoCompletableFuture.join();
+            tokenCache.saveToken(tokenKey, accessToken);
+/*
             if (accessToken == null) {
                 throw new RuntimeException("could not get access token");
             }
-            // cache the gateway mesh token
-            tokenCache.saveToken(tokenKey, accessToken);
-
+*/
         }
-
         return accessToken;
     }
 
@@ -332,9 +332,7 @@ public class OauthTokenUtil {
                 cc.add("scope", scope);
             }
 
-
-            // get GW mesh token from remote IDP
-            gwAccessToken = webClient.post()
+            Mono<TokenInfo> tokenInfoMono = webClient.post()
                     .uri(token_endpoint2)
                     .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
                     .body(BodyInserters.fromFormData(cc))
@@ -352,49 +350,84 @@ public class OauthTokenUtil {
                                     }
                             )
                     )
-                    .block();
-/*
-				try {
-					gwAccessToken = getTokenInfoMono(token_endpoint2, cc).toFuture().thenApplyAsync(tokenInfo -> tokenInfo).get(30, TimeUnit.SECONDS);
-				} catch (InterruptedException e) {
-					throw new RuntimeException("InterruptedException", e);
-				} catch (ExecutionException e) {
-					throw new RuntimeException("ExecutionException", e);
-				} catch (TimeoutException e) {
-					throw new RuntimeException("TimeoutException", e);
-				}
-*/
+                    .doOnSubscribe(s -> log.info("start1"))
+                    .doOnNext(res -> log.info("next1"));
 
-            if (gwAccessToken == null) {
-                throw new RuntimeException("could not get access token");
-            }
-            // cache the gateway mesh token
+            CompletableFuture<TokenInfo> tokenInfoCompletableFuture = tokenInfoMono.toFuture();
+            gwAccessToken = tokenInfoCompletableFuture.join();
             tokenCache.saveToken(tokenKey, gwAccessToken);
-
         }
         return gwAccessToken;
     }
 
-    /*
-        public Mono<TokenInfo> getTokenInfoMono(final String _uri, MultiValueMap<String, String> cc) {
-            final Mono<TokenInfo> responseMono = webClient.post()
-                    .uri(_uri)
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-                    .body(BodyInserters.fromFormData(cc))
-                    .retrieve()
-                    .bodyToMono(TokenInfo.class)
-                    .publishOn(Schedulers.single())
-                    //.doOnNext(tokenInfo -> log.info("doOnNext {}", tokenInfo.getAccessToken()))
-                    .onErrorMap(e -> new RuntimeException("message", e));
-            ;
-            return responseMono.flatMap(response -> {
-                final String accessToken = response.getAccessToken();
-                // Use `field` to do something that would produce a log message
-                log.info("Got token: {}", accessToken);
-                return Mono.just(response);
-            });
+    public Mono<TokenInfo> getAccessTokenImpl1(String token_endpoint2, String tif_clientID2, String tif_clientSecret2, String scope) {
+        MultiValueMap<String, String> cc = new LinkedMultiValueMap<>();
+        cc.add("client_id", tif_clientID2);
+        cc.add("client_secret", tif_clientSecret2);
+        cc.add("grant_type", AuthorizationGrantType.CLIENT_CREDENTIALS.getValue());
+        if (scope != null && !scope.isEmpty()) {
+            cc.add("scope", scope);
         }
-    */
+        return webClient.post()
+                .uri(token_endpoint2)
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+                .body(BodyInserters.fromFormData(cc))
+                .retrieve()
+                .onStatus(HttpStatus::is4xxClientError,
+                        response -> {
+                            logClientErrorResponse(response, token_endpoint2, tif_clientID2);
+                            return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to retrieve token from " + token_endpoint2 + " for client " + tif_clientID2));
+                        })
+                .bodyToMono(TokenInfo.class)
+                .retryWhen(Retry.max(3)
+                        .filter(throwable -> throwable instanceof ConnectTimeoutException)
+                        .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
+                                    throw new ServerErrorException("Failed to connect to " + token_endpoint2, (Throwable) null);
+                                }
+                        )
+                )
+                .doOnSubscribe(s -> log.info("start1"))
+                .doOnNext(res -> log.info("next1"));
+    }
+
+    public Mono<TokenInfo> getAccessTokenImpl2(String token_endpoint2, String tif_clientID2, String tif_clientSecret2, String scope, String subscriberClientId) {
+        final String tokenKey = token_endpoint2 + tif_clientID2 + subscriberClientId;
+        MultiValueMap<String, String> cc = new LinkedMultiValueMap<>();
+        cc.add("client_id", tif_clientID2);
+        cc.add("client_secret", tif_clientSecret2);
+        cc.add("grant_type", AuthorizationGrantType.CLIENT_CREDENTIALS.getValue());
+        if (scope != null && !scope.isEmpty()) {
+            cc.add("scope", scope);
+        }
+        return Mono.fromCallable(() -> {
+                    var res = webClient.post()
+                            .uri(token_endpoint2)
+                            .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+                            .body(BodyInserters.fromFormData(cc))
+                            .retrieve()
+                            .onStatus(HttpStatus::is4xxClientError,
+                                    response -> {
+                                        logClientErrorResponse(response, token_endpoint2, tif_clientID2);
+                                        return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to retrieve token from " + token_endpoint2 + " for client " + tif_clientID2));
+                                    })
+                            .bodyToMono(TokenInfo.class)
+                            .retryWhen(Retry.max(3)
+                                    .filter(throwable -> throwable instanceof ConnectTimeoutException)
+                                    .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
+                                                throw new ServerErrorException("Failed to connect to " + token_endpoint2, (Throwable) null);
+                                            }
+                                    )
+                            )
+                            .block();
+
+                    log.info("End2");
+
+                    return res;
+                })
+                .subscribeOn(Schedulers.boundedElastic())
+                .doOnSubscribe(s -> log.info("Start2"));
+    }
+
     private void logClientErrorResponse(ClientResponse response, String tokenEndopoint, String clientId) {
         response.bodyToMono(String.class)
                 .publishOn(Schedulers.boundedElastic())
