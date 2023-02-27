@@ -192,7 +192,7 @@ public class OauthTokenUtil {
         String privateKey = null;
         PrivateKey loadKey = null;
         try {
-            log.info("GatewayToken or OneToken: Loading privateKey");
+            log.debug("GatewayToken or OneToken: Loading privateKey");
             loadKey = loadPrivKey(privateKey);
         } catch (NoSuchAlgorithmException e1) {
             log.error("NoSuchAlgorithmException", e1);
@@ -350,8 +350,9 @@ public class OauthTokenUtil {
                                     }
                             )
                     )
-                    .doOnSubscribe(s -> log.info("start1"))
-                    .doOnNext(res -> log.info("next1"));
+                    //.doOnSubscribe(s -> log.debug("start1"))
+                    //.doOnNext(res -> log.debug("next1"))
+                    ;
 
             CompletableFuture<TokenInfo> tokenInfoCompletableFuture = tokenInfoMono.toFuture();
             gwAccessToken = tokenInfoCompletableFuture.join();
@@ -386,8 +387,9 @@ public class OauthTokenUtil {
                                 }
                         )
                 )
-                .doOnSubscribe(s -> log.info("start1"))
-                .doOnNext(res -> log.info("next1"));
+                //.doOnSubscribe(s -> log.debug("start1"))
+                //.doOnNext(res -> log.debug("next1"))
+                ;
     }
 
     public Mono<TokenInfo> getAccessTokenImpl2(String token_endpoint2, String tif_clientID2, String tif_clientSecret2, String scope, String subscriberClientId) {
@@ -420,12 +422,12 @@ public class OauthTokenUtil {
                             )
                             .block();
 
-                    log.info("End2");
+                    log.debug("End2");
 
                     return res;
                 })
                 .subscribeOn(Schedulers.boundedElastic())
-                .doOnSubscribe(s -> log.info("Start2"));
+                .doOnSubscribe(s -> log.debug("Start2"));
     }
 
     private void logClientErrorResponse(ClientResponse response, String tokenEndopoint, String clientId) {

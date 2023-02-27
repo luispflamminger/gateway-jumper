@@ -23,7 +23,7 @@ public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.
 
 	@Autowired
 	Tracer tracer;
-	
+
 	public ResponseFilter() {
         super(Config.class);
     }

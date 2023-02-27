@@ -11,7 +11,6 @@ management:
   endpoints:
     web:
       exposure.include: gateway, loggers, prometheus, health
-      #path-mapping.prometheus: prometheus
 
 spring:
   application:
@@ -56,6 +55,9 @@ spring:
     sampler.probability: 1
     propagation:
       tag.enabled: false
+      type: b3
+    reactor:
+      instrumentation-type: decorate_queues #https://docs.spring.io/spring-cloud-sleuth/docs/current-SNAPSHOT/reference/html/integrations.html
   codec:
     max-in-memory-size: 4194304
 
@@ -73,3 +75,4 @@ jumpercache.cleanCacheInSeconds: 3600
 ##############################
 horizon:
   publishEventUrl: ${PUBLISH_EVENT_URL:http://producer.stage:8080/v1/events}
+#logging.pattern.level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]" #https://github.com/micrometer-metrics/tracing/wiki/Spring-Cloud-Sleuth-3.1-Migration-Guide
