@@ -391,9 +391,59 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         String xBusinessContext = request.getHeaders().getFirst( Constants.HEADER_X_BUSINESS_CONTEXT);
         String xRequestId = request.getHeaders().getFirst( Constants.HEADER_X_REQUEST_ID);
         String xCorrelationId = request.getHeaders().getFirst( Constants.HEADER_X_CORRELATION_ID);
-        Long contentLength = request.getHeaders().getContentLength();
         String publisherId = request.getHeaders().getFirst(Constants.HEADER_X_PUBSUB_PUBLISHER_ID);
 
+        Span incomingRequestSpan = this.tracer.currentSpan();
+
+        if( xTardisTraceId != null){
+            incomingRequestSpan.tag( Constants.HEADER_X_TARDIS_TRACE_ID, xTardisTraceId);
+        }
+
+        if( consumerOriginStargate != null) {
+            incomingRequestSpan.tag("origin-stargate", consumerOriginStargate);
+        }
+
+        if( envName != null) {
+            incomingRequestSpan.tag("environment.info", envName);
+        }
+
+
+        if( xB3TraceId != null) {
+            incomingRequestSpan.tag(Constants.HEADER_X_B3_TRACE_ID, xB3TraceId);
+        }
+
+        if( xBusinessContext != null) {
+            incomingRequestSpan.tag(Constants.HEADER_X_BUSINESS_CONTEXT, xBusinessContext);
+        }
+
+        if( xRequestId != null) {
+            incomingRequestSpan.tag(Constants.HEADER_X_REQUEST_ID, xRequestId);
+        }
+
+        if( xCorrelationId != null) {
+            incomingRequestSpan.tag(Constants.HEADER_X_CORRELATION_ID, xCorrelationId);
+        }
+
+        //callback
+        if (publisherId != null){
+            incomingRequestSpan.tag("publisher", publisherId);
+
+            String subscriber = request.getHeaders().getFirst(Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID);
+            if (subscriber != null){
+                incomingRequestSpan.tag("subscriber", subscriber);
+            }
+        }
+        //not callback, assume request-response
+        else {
+            if (api_base_path != null) {
+                incomingRequestSpan.tag("peer.service", api_base_path.substring(1).replace("/", "-"));
+            }
+
+            if (consumer != null) {
+                incomingRequestSpan.tag("consumer", consumer);
+            }
+        }
+/*
         Span newSpan = this.tracer.nextSpan().name( "Request Filter");
         try( Tracer.SpanInScope ws = this.tracer.withSpanInScope( newSpan.start()))
         {
@@ -485,6 +535,8 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
             newSpan.finish();
         }
+
+ */
         // Tracing - End
     }
 

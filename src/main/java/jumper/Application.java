@@ -172,20 +172,18 @@ public class Application {
     HttpRequestParser sleuthHttpServerRequestParser() {
         return (req, context, span) -> {
             HttpRequestParser.DEFAULT.parse(req, context, span);
-            String xTardisTraceId = req.header(Constants.HEADER_X_TARDIS_TRACE_ID);
+            //String xTardisTraceId = req.header(Constants.HEADER_X_TARDIS_TRACE_ID);
             String contentLength = req.header("Content-Length");
 
             span.name("Incoming Request");
-
+/*
             if (xTardisTraceId != null) {
                 span.tag("x-tardis-traceid", xTardisTraceId);
             }
-
+*/
             if (contentLength == null) {
-
                 span.tag("message.size", "0");
             } else {
-
                 span.tag("message.size", contentLength);
             }
 
