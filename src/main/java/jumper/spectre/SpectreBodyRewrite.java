@@ -2,6 +2,7 @@ package jumper.spectre;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jumper.Constants;
 import jumper.model.config.Spectre;
 import lombok.extern.slf4j.Slf4j;
 import org.reactivestreams.Publisher;
@@ -16,16 +17,15 @@ import java.io.IOException;
 @Slf4j
 @Service
 public class SpectreBodyRewrite implements RewriteFunction<String, String> {
-    public final String listenerQueryParam = "listener";
 
     @Override
     public Publisher<String> apply(ServerWebExchange exchange, String body) {
         MultiValueMap<String, String> params = exchange.getRequest().getQueryParams();
 
         String id = null;
-        if(params.containsKey(listenerQueryParam))
+        if(params.containsKey(Constants.QUERY_PARAM_LISTENER))
         {
-            id = params.getFirst(listenerQueryParam);
+            id = params.getFirst(Constants.QUERY_PARAM_LISTENER);
         }
 
         log.debug("Spectre: payload={}", body);

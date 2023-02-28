@@ -2,8 +2,8 @@ package jumper.mocks;
 
 import jumper.Constants;
 import lombok.Getter;
-import org.mockserver.client.server.ForwardChainExpectation;
-import org.mockserver.client.server.MockServerClient;
+import org.mockserver.client.ForwardChainExpectation;
+import org.mockserver.client.MockServerClient;
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.model.Header;
 import org.mockserver.model.HttpError;
@@ -45,12 +45,22 @@ public class MockApiUpstreamServer {
         new MockServerClient(upstreamLocalHost, upstreamLocalPort)
                 .when(
                         request().withPath("/callback"))
-                .callback(
+                .respond(
                         callback()
                                 .withCallbackClass("jumper.mocks.TestExpectationCallback")
                 );
     }
-
+/*
+    public void callbackRequest() {
+        new MockServerClient(upstreamLocalHost, upstreamLocalPort)
+                .when(
+                        request().withPath("/callback"))
+                .respond(
+                        callback()
+                                .withCallbackClass("jumper.mocks.TestExpectationCallback")
+                );
+    }
+*/
 
     public void callbackRequestWithTimeout() {
         new MockServerClient(upstreamLocalHost, upstreamLocalPort)
@@ -95,7 +105,7 @@ public class MockApiUpstreamServer {
         headersList.add(new Header(Constants.HEADER_X_ORIGIN_ZONE, "aws"));
         headersList.add(new Header(Constants.HEADER_X_FORWARDED_PORT, Constants.HEADER_X_FORWARDED_PORT_PORT));
         headersList.add(new Header(Constants.HEADER_X_FORWARDED_PROTO, Constants.HEADER_X_FORWARDED_PROTO_HTTPS));
-        headersList.add(new Header(HttpHeaders.USER_AGENT, "ReactorNetty/0.9.20.RELEASE"));
+        headersList.add(new Header(HttpHeaders.USER_AGENT, "ReactorNetty/1.0.28"));
         headersList.add(new Header(HttpHeaders.HOST, upstreamLocalHost + ":" + upstreamLocalPort));
         headersList.add(new Header(HttpHeaders.ACCEPT, "*/*"));
         headersList.add(new Header(Constants.HEADER_X_B3_TRACE_ID, Pattern.compile("\\w+").pattern()));
@@ -190,7 +200,7 @@ public class MockApiUpstreamServer {
         headersList.add(new Header(Constants.HEADER_X_ORIGIN_STARGATE, "https://aws.local.de"));
         headersList.add(new Header(Constants.HEADER_X_ORIGIN_ZONE, "aws"));
         headersList.add(new Header(Constants.HEADER_X_FORWARDED_PORT, "80"));
-        headersList.add(new Header(HttpHeaders.USER_AGENT, "ReactorNetty/0.9.8.RELEASE"));
+        headersList.add(new Header(HttpHeaders.USER_AGENT, "ReactorNetty/1.0.28"));
         headersList.add(new Header(HttpHeaders.HOST, upstreamLocalHost + ":" + upstreamLocalPort));
         headersList.add(new Header(HttpHeaders.ACCEPT, "*/*"));
         headersList.add(new Header(Constants.HEADER_X_B3_TRACE_ID, Pattern.compile("\\w+").pattern()));
@@ -227,7 +237,7 @@ public class MockApiUpstreamServer {
         headersList.add(new Header(Constants.HEADER_X_ORIGIN_ZONE, "space"));
         headersList.add(new Header(Constants.HEADER_X_SPACEGATE_TOKEN, Pattern.compile("Bearer\\s\\w+.\\w+.+.\\w+").pattern()));
         headersList.add(new Header(Constants.HEADER_X_FORWARDED_PORT, "80"));
-        headersList.add(new Header(HttpHeaders.USER_AGENT, "ReactorNetty/0.9.8.RELEASE"));
+        headersList.add(new Header(HttpHeaders.USER_AGENT, "ReactorNetty/1.0.28"));
         headersList.add(new Header(HttpHeaders.HOST, upstreamLocalHost + ":" + upstreamLocalPort));
         headersList.add(new Header(HttpHeaders.ACCEPT, "*/*"));
         headersList.add(new Header(Constants.HEADER_X_B3_TRACE_ID, Pattern.compile("\\w+").pattern()));

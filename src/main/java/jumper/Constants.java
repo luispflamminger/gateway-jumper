@@ -32,29 +32,24 @@ public class Constants {
 	public final static String HEADER_X_REQUEST_ID = "x-request-id";
 	public final static String HEADER_X_CORRELATION_ID = "x-correlation-id";
 	public final static String HEADER_X_PUBSUB_PUBLISHER_ID = "x-pubsub-publisher-id";
-	public final static String HEADER_X_SUBSCRIPTION_ID = "x-subscription-id";
 	public final static String HEADER_X_PUBSUB_SUBSCRIBER_ID = "x-pubsub-subscriber-id";
-
 	public final static String HEADER_B3 = "b3";
-
+	public static final String HEADER_X_SPACEGATE_TOKEN = "X-Spacegate-Token";
+	public static final String HEADER_API_BASE_PATH = "api_base_path";
 	public final static String HEADER_X_FORWARDED_HOST = "X-Forwarded-Host";
 	public final static String HEADER_X_FORWARDED_PORT = "X-Forwarded-Port";
 	public final static String HEADER_X_FORWARDED_PROTO = "X-Forwarded-Proto";
-	
 	public final static String HEADER_X_FORWARDED_PORT_PORT = "443";
 	public final static String HEADER_X_FORWARDED_PROTO_HTTPS = "https";
+
+	public final static String QUERY_PARAM_LISTENER = "listener";
 	
 	public final static String ISSUER_SUFFIX = "/protocol/openid-connect/token";
-	public static final String HEADER_API_BASE_PATH = "api_base_path";
-
 	public final static String LOCALHOST_ISSUER_SERVICE = "http://localhost:8081/api/v1";
-
 	public final static String DEFAULT_REALM = "default";
-	
 	public final static String BEARER = "Bearer";
 
     public static final String SPACE = "space";
-    public static final String HEADER_X_SPACEGATE_TOKEN = "X-Spacegate-Token";
 
 	public static final String ENVIRONMENT_PLACEHOLDER = "ENVIRONMENT_PLACEHOLDER";
 }

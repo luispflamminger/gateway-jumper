@@ -302,11 +302,7 @@ public class OauthTokenUtil {
             CompletableFuture<TokenInfo> tokenInfoCompletableFuture = tokenInfoMono.toFuture();
             accessToken = tokenInfoCompletableFuture.join();
             tokenCache.saveToken(tokenKey, accessToken);
-/*
-            if (accessToken == null) {
-                throw new RuntimeException("could not get access token");
-            }
-*/
+
         }
         return accessToken;
     }

@@ -1,14 +1,11 @@
 package jumper;
 
-import io.cucumber.junit.Cucumber;
-import io.cucumber.junit.CucumberOptions;
-import org.junit.runner.RunWith;
+import org.junit.platform.suite.api.IncludeEngines;
+import org.junit.platform.suite.api.SelectClasspathResource;
+import org.junit.platform.suite.api.Suite;
 
-@RunWith(Cucumber.class)
-@CucumberOptions(
-        features = "src/test/resources/features",
-        plugin = {"html:target/cucumber-html-report.html","json:target/cucumber-html-report.json"},
-        glue = {"jumper"}
-)
+@Suite
+@IncludeEngines("cucumber")
+@SelectClasspathResource("features")
 public class RunCucumberTest {
 }

@@ -3,9 +3,10 @@ package jumper;
 import brave.http.HttpRequestParser;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import jumper.spectre.SpectreBodyRewrite;
 import jumper.filter.*;
+import jumper.spectre.SpectreBodyRewrite;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
@@ -22,8 +23,9 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
 
 import javax.net.ssl.SSLException;
-import java.util.LinkedList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @SpringBootApplication
 public class Application {
@@ -31,12 +33,9 @@ public class Application {
     @Value( "${horizon.publishEventUrl}")
     private String publishEventUrl;
 
-//    private  String publishEventUrlPath;
-
-    @Value("${CUSTOM_CIPHERS:#{null}}")
+    //@Value("${CUSTOM_CIPHERS:#{null}}")
+    @Value("${CUSTOM_CIPHERS:}")
     List<String> custom_ciphers;
-
-    public final String listenerQueryParam = "listener";
 
     @Autowired
     private SpectreBodyRewrite spectreBodyRewrite;
@@ -44,26 +43,13 @@ public class Application {
     public static void main(String[] args) {
         SpringApplication.run(Application.class, args);
     }
-/*
-    //todo how to normally?
-    @Bean
-    public void setPublishEventUrlPath(){
-        try{
-            URI uri = new URI(publishEventUrl);
-            publishEventUrlPath = uri.getPath();
-        }
-        catch (URISyntaxException ex){
-            ex.printStackTrace();
-        }
-    }
-*/
+
     @Bean
     public RouteLocator proxyRoute(RouteLocatorBuilder builder, RequestFilter requestFilter, RemoveHeaderFilter removeHeader, ResponseFilter responseFilter, SpectreRequestFilter spectreRequestFilter, SpectreResponseFilter spectreResponseFilter, RequestTransformationFilter requestTransformationFilter, ResponseTransformationFilter responseTransformationFilter, SetSpectreRoutingFilter setSpectreRoutingFilter) {
         return builder.routes()
                 .route("jumper_route", p -> p
                         .path("/proxy/**")
                         .filters(f -> f
-//                                .rewritePath("/proxy/?(?<segment>/?.*)", "/$\\{segment}")
                                 .filter(requestFilter.apply(new RequestFilter.Config(true, true)))
                                 .filter(removeHeader.apply(c -> c.setName("jumper_config")))
                                 .filter(removeHeader.apply(c -> c.setName("token_endpoint")))
@@ -85,33 +71,8 @@ public class Application {
                         .uri("no://op"))
                 .route("listener_route", p -> p
                         .path("/listener/**")
-                        //.and().method("POST")
-                        //.and().readBody(String.class, requestBody -> {return true;})
                         .filters(f -> f
-//                                        .rewritePath("/listener/?(?<segment>/?.*)", "/$\\{segment}")
                                         .filter(requestFilter.apply(new RequestFilter.Config(true, true)))
-/*
-                               .modifyResponseBody(String.class, String.class,
-                                		(webExchange, originalBody) -> {
-                                			if (originalBody != null) {
-                                				webExchange.getAttributes().put("cachedResponseBodyObject", originalBody);
-                                				return Mono.just(originalBody);
-                                			} else {
-                                				return Mono.empty();
-                                			}
-                                		})
-*/
-/*
-                                .modifyRequestBody(String.class, String.class,
-                                        (webExchange, originalBody) -> {
-                                            if (originalBody != null) {
-                                                webExchange.getAttributes().put("cachedRequestBodyObject", originalBody);
-                                                return Mono.just(originalBody);
-                                            } else {
-                                                return Mono.empty();
-                                            }
-                                        })
-*/
                                         .filter(requestTransformationFilter)
                                         .filter(responseTransformationFilter)
                                         .filter(spectreRequestFilter.apply(new SpectreRequestFilter.Config()))
@@ -139,16 +100,14 @@ public class Application {
                         .filters(f -> f
                                 .modifyRequestBody(String.class, String.class,
                                         spectreBodyRewrite)
-//                                .rewritePath("/autoevent", publishEventUrlPath)
-                                .removeRequestParameter(listenerQueryParam)
+                                .removeRequestParameter(Constants.QUERY_PARAM_LISTENER)
                                 .filter(setSpectreRoutingFilter.apply())
                         )
                         .uri(publishEventUrl))
                 .route("auto_event_route_head", p -> p
                         .path("/autoevent/**").and().method(HttpMethod.HEAD)
                         .filters(f -> f
-//                                .rewritePath("/autoevent", publishEventUrlPath)
-                                .removeRequestParameter(listenerQueryParam)
+                                .removeRequestParameter(Constants.QUERY_PARAM_LISTENER)
                                 .filter(setSpectreRoutingFilter.apply())
                         )
                         .uri(publishEventUrl))
@@ -221,21 +180,24 @@ public class Application {
                     ,"TLS_AES_128_GCM_SHA256"
                     //,"TLS_AES_128_CCM_SHA256"
             );
+            /*
             List<String> ciphers = new LinkedList<>(dt_ciphers);
             if (custom_ciphers != null){
                 for (String cipher: custom_ciphers){
                     if (!ciphers.contains(cipher)) ciphers.add(cipher);
                 }
             }
+             */
             SslContext s = SslContextBuilder
                     .forClient()
                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                    //missing
-                    //.ciphers(List.of("TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384"))
-                    //current list + missing
-                    //.ciphers(List.of("TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384", "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384", "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256", "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384", "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA", "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA", "TLS_RSA_WITH_AES_128_GCM_SHA256", "TLS_RSA_WITH_AES_128_CBC_SHA", "TLS_RSA_WITH_AES_256_CBC_SHA", "TLS_AES_128_GCM_SHA256", "TLS_AES_256_GCM_SHA384"))
                     .protocols("TLSv1.2","TLSv1.3")
-                    .ciphers(ciphers)
+                    .sslProvider(SslProvider.JDK)
+                    .ciphers((Iterable<String>) Stream.concat(dt_ciphers.stream(),
+                            custom_ciphers.stream())
+                            .distinct().collect(Collectors.toList())
+                    )
+//                    .ciphers(ciphers)
                     .build();
 
             return httpClient -> httpClient

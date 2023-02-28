@@ -21,7 +21,6 @@ import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.OrderedGatewayFilter;
 import org.springframework.cloud.gateway.filter.RouteToRequestUrlFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
-import org.springframework.cloud.gateway.route.Route;
 import org.springframework.cloud.gateway.support.ServerWebExchangeUtils;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
@@ -63,7 +62,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
             String client_scope = "";
 
-            //String routing_path = request.getURI().toString().replaceFirst(".*?:\\d+", "");
             String token_endpoint = getLastValueFromHeaderField( request, Constants.HEADER_TOKEN_ENDPOINT);
             String tif_remote_issuer = getLastValueFromHeaderField( request, Constants.HEADER_ISSUER);
             String tif_clientID = getLastValueFromHeaderField( request, Constants.HEADER_CLIENT_ID);
@@ -80,8 +78,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
             String envName = getLastValueFromHeaderField( request, Constants.HEADER_ENVIRONMENT);
 
-            //String api_resource = request.getPath().value();
-            //String requestPath = api_base_path + api_resource;
             String routing_path;
             String requestPath = api_base_path;
             String remote_api_url = getLastValueFromHeaderField( request, Constants.HEADER_REMOTE_API_URL);
@@ -126,24 +122,23 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
             JumperInfoRequest jumperInfoRequest = new JumperInfoRequest();
             jumperInfoRequest.setEnvironment( envName);
 
+            String finalApiUrl = "";
             try {
                 URI _uri = request.getURI();
                 String _query = _uri.getRawQuery();
                 String _fragment = _uri.getFragment();
-                //String routing_path = _uri.getPath().replaceFirst("^/$","");
-                //String routing_path = _uri.getRawPath().replaceFirst("^/$","");
                 routing_path = _uri.getRawPath().replaceFirst("^/(proxy|listener)", ""); //for token should be also decoded
                 requestPath += routing_path;
                 if (_query != null) routing_path = routing_path  + "?" + _query;
                 if (_fragment != null) routing_path = routing_path + "#" + _fragment;
 
-                String finalApiUrl = remote_api_url.replaceAll("/$", "") + routing_path;
+                finalApiUrl = remote_api_url.replaceAll("/$", "") + routing_path;
 
                 log.debug("Routing set to: " + finalApiUrl);
 
                 exchange.getAttributes().put(ServerWebExchangeUtils.GATEWAY_REQUEST_URL_ATTR, new URI(finalApiUrl));
             } catch (URISyntaxException e) {
-                 throw new RuntimeException("TardisException", e);//todo create proper fallback
+                 throw new RuntimeException("can not construct URL from " + finalApiUrl, e);
             }
 
             if( remote_api_url != null && !remote_api_url.startsWith( Constants.LOCALHOST_ISSUER_SERVICE))
@@ -374,14 +369,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
             addHeader(exchange, chain, Constants.HEADER_X_SPACEGATE_TOKEN, token);
         }
     }
-    //todo workaround for getting token, preferable to make it non-blocking
-    private void assureGatewayToken(ServerWebExchange exchange, JumperConfig jc){
-        Route r = exchange.getAttribute("org.springframework.cloud.gateway.support.ServerWebExchangeUtils.gatewayRoute");
-        if (r.getId().equals("listener_route") && jc.getGatewayClient() != null){
-            String local_issuer = jc.getGatewayClient().getIssuer() + Constants.ISSUER_SUFFIX;
-            oauthTokenUtil.getAccessToken(local_issuer, jc.getGatewayClient().getId(), jc.getGatewayClient().getSecret());
-        }
-    }
 
     private void addTracing(ServerHttpRequest request, String api_base_path, String envName, String consumer, String consumerOriginStargate) {
         // Tracing - Start
@@ -436,7 +423,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         //not callback, assume request-response
         else {
             if (api_base_path != null) {
-                incomingRequestSpan.tag("peer.service", api_base_path.substring(1).replace("/", "-"));
+                incomingRequestSpan.tag("service.name", api_base_path.substring(1).replace("/", "-"));
             }
 
             if (consumer != null) {
@@ -541,22 +528,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
     }
 
     private void rewriteXForwardedHeader( ServerWebExchange exchange, GatewayFilterChain chain) {
-
-//        String normalizedForwardedHost = "";
-
-//        ServerHttpRequest request = exchange.getRequest();
-
-//        String forwardedHost = request.getHeaders().getFirst( Constants.HEADER_X_FORWARDED_HOST);
-//
-//        /**
-//         * As we have to gateways (kong and spring cloud gateway) in place, the forwarded host is added twice to X-Forwarded-Host header
-//         */
-//        String[] splittedForwardedHost = StringUtils.split(forwardedHost, ",");
-//        if(splittedForwardedHost != null && splittedForwardedHost.length >= 1) {
-//            normalizedForwardedHost = StringUtils.removeEnd(splittedForwardedHost[0], ":");
-//        }
-
-//        addHeader(exchange, chain, Constants.HEADER_X_FORWARDED_HOST, normalizedForwardedHost);
         addHeader(exchange, chain, Constants.HEADER_X_FORWARDED_PORT, Constants.HEADER_X_FORWARDED_PORT_PORT);
         addHeader(exchange, chain, Constants.HEADER_X_FORWARDED_PROTO, Constants.HEADER_X_FORWARDED_PROTO_HTTPS);
 

@@ -1,7 +1,5 @@
 package jumper;
 
-import static org.junit.Assert.assertEquals;
-
 import io.cucumber.java.After;
 import io.cucumber.java.Before;
 import io.cucumber.java.en.And;
@@ -15,11 +13,8 @@ import jumper.mocks.MockIrisServer;
 import jumper.util.JumperConfigurator;
 import jumper.utilities.OauthTokenUtil;
 import lombok.RequiredArgsConstructor;
-import org.junit.Assert;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -29,11 +24,9 @@ import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 import static jumper.util.Config.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @RequiredArgsConstructor
-@AutoConfigureWebTestClient(timeout = "PT65S") // PT65S - PT = Period time, S = seconds
 public class EnhancedLastMileSecurity {
     private final BaseSteps baseSteps;
 
@@ -135,7 +128,7 @@ public class EnhancedLastMileSecurity {
         this.baseSteps.getRequestExchange().expectHeader().value(HttpHeaders.AUTHORIZATION, tokenWithScopes -> {
             String jwtToken = OauthTokenUtil.getTokenWithoutSignature(tokenWithScopes);
             Jwt<Header, Claims> allClaimsFromConsumerToken = OauthTokenUtil.getAllClaimsFromToken(jwtToken);
-            Assert.assertEquals(SCOPES, allClaimsFromConsumerToken.getBody().get( "scope", String.class));
+            assertEquals(SCOPES, allClaimsFromConsumerToken.getBody().get( "scope", String.class));
         });
     }
 }

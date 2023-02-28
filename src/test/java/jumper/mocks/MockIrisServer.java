@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jumper.model.TokenInfo;
 import jumper.util.AccessToken;
 import lombok.Getter;
-import org.mockserver.client.server.MockServerClient;
+import org.mockserver.client.MockServerClient;
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.model.Header;
 import org.springframework.http.HttpHeaders;
@@ -84,7 +84,7 @@ public class MockIrisServer {
 
     private List<Header> getHeaderList(String contentLength) {
         List<Header> headersList = new ArrayList<>();
-        headersList.add(new Header(HttpHeaders.USER_AGENT, "ReactorNetty/0.9.8.RELEASE"));
+        headersList.add(new Header(HttpHeaders.USER_AGENT, "ReactorNetty/1.0.28"));
         headersList.add(new Header(HttpHeaders.HOST, irisLocalHost+":"+irisLocalPort));
         headersList.add(new Header(HttpHeaders.ACCEPT, "*/*"));
         headersList.add(new Header(HttpHeaders.CONTENT_LENGTH, contentLength));
