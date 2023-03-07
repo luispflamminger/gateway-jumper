@@ -26,9 +26,9 @@ spring:
             methods: GET,POST,PUT,DELETE,PATCH,HEAD
       httpclient:
         pool:
-          type: FIXED
-          max-connections: 1000
-          acquire-timeout: 8000
+          type: ELASTIC
+          #max-connections: 1000 #Only for type FIXED
+          #acquire-timeout: 8000 #Only for type FIXED
           max-life-time: 300s
           max-idle-time: 2s
           #eviction-interval: 120s

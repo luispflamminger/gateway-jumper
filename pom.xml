@@ -6,7 +6,7 @@
 
 	<groupId>org.springframework</groupId>
 	<artifactId>jumper</artifactId>
-	<version>3.4.1</version>
+	<version>3.4.1-elastic</version>
 
 	<parent>
 		<groupId>org.springframework.boot</groupId>
