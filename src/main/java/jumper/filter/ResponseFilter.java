@@ -1,7 +1,7 @@
 package jumper.filter;
 
-import brave.Span;
-import brave.Tracer;
+//import brave.Span;
+//import brave.Tracer;
 import jumper.Constants;
 import jumper.model.response.IncomingResponse;
 import jumper.model.response.JumperInfoResponse;
@@ -10,6 +10,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.OrderedGatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
+import org.springframework.cloud.sleuth.CurrentTraceContext;
+import org.springframework.cloud.sleuth.Span;
+import org.springframework.cloud.sleuth.Tracer;
+import org.springframework.cloud.sleuth.instrument.web.WebFluxSleuthOperators;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
@@ -24,6 +28,9 @@ public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.
 	@Autowired
 	Tracer tracer;
 
+	@Autowired
+	CurrentTraceContext currentTraceContext;
+
 	public ResponseFilter() {
         super(Config.class);
     }
@@ -34,24 +41,39 @@ public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.
 
 			return chain.filter(exchange).then(Mono.fromRunnable(() -> {
 
-				ServerHttpResponse response = exchange.getResponse();
-				ServerHttpRequest request = exchange.getRequest();
+				WebFluxSleuthOperators.withSpanInScope(tracer, currentTraceContext, exchange, () -> {
 
-				Long contentLength = response.getHeaders().getContentLength();
+					ServerHttpResponse response = exchange.getResponse();
+					ServerHttpRequest request = exchange.getRequest();
 
-				JumperInfoResponse jumperInfoResponse = new JumperInfoResponse();
-				IncomingResponse incomingResponse = new IncomingResponse();
+					Long contentLength = response.getHeaders().getContentLength();
+
+					JumperInfoResponse jumperInfoResponse = new JumperInfoResponse();
+					IncomingResponse incomingResponse = new IncomingResponse();
 //				incomingResponse.setHost(response.getHeaders().getHost().toString());
-				incomingResponse.setPath(request.getPath().toString());
-				incomingResponse.setHttpStatusCode(response.getStatusCode().value());
+					incomingResponse.setPath(request.getPath().toString());
+					incomingResponse.setHttpStatusCode(response.getStatusCode().value());
 
-				jumperInfoResponse.setIncomingResponse(incomingResponse);
+					jumperInfoResponse.setIncomingResponse(incomingResponse);
 
-				log.info("response", value("jumperInfo", jumperInfoResponse));
+					log.info("response", value("jumperInfo", jumperInfoResponse));
 
-				// Tracing - Start
-				Span newSpan = this.tracer.nextSpan().name("Response Filter");
-				try (Tracer.SpanInScope ws = this.tracer.withSpanInScope(newSpan.start())) {
+					Span span = this.tracer.currentSpan();
+
+					span.tag("http.status_code",
+							jumperInfoResponse.getIncomingResponse().getHttpStatusCode().toString());
+
+					if (contentLength == null || contentLength.toString().equals("-1")) {
+						span.tag("response.message.size", "0");
+					} else {
+						span.tag("response.message.size", contentLength.toString());
+					}
+
+					span.event("jrpf");
+/*
+					// Tracing - Start
+					Span newSpan = this.tracer.nextSpan().name("Response Filter");
+
 
 					String xTardisTraceId = request.getHeaders().getFirst(Constants.HEADER_X_TARDIS_TRACE_ID);
 					String xCorrelationId = response.getHeaders().getFirst(Constants.HEADER_X_CORRELATION_ID);
@@ -65,7 +87,7 @@ public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.
 						newSpan.tag("x-tardis-traceid", xTardisTraceId);
 					}
 
-					if (xCorrelationId != null){
+					if (xCorrelationId != null) {
 						newSpan.tag("x-correlation-id", xCorrelationId);
 					}
 
@@ -77,11 +99,10 @@ public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.
 						newSpan.tag("message.size", contentLength.toString());
 					}
 
-				} finally {
-
 					newSpan.finish();
-				}
-				// Tracing - End
+					// Tracing - End
+*/
+				});
 
 			}));
 

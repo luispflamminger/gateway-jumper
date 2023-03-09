@@ -57,7 +57,7 @@ spring:
       tag.enabled: false
       type: b3
     reactor:
-      instrumentation-type: decorate_queues #https://docs.spring.io/spring-cloud-sleuth/docs/current-SNAPSHOT/reference/html/integrations.html
+      instrumentation-type: MANUAL #https://docs.spring.io/spring-cloud-sleuth/docs/current-SNAPSHOT/reference/html/integrations.html
   codec:
     max-in-memory-size: 4194304
 

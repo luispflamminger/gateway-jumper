@@ -1,7 +1,7 @@
 package jumper.filter;
 
-import brave.Span;
-import brave.Tracer;
+//import brave.Span;
+//import brave.Tracer;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Header;
 import io.jsonwebtoken.Jwt;
@@ -22,6 +22,10 @@ import org.springframework.cloud.gateway.filter.OrderedGatewayFilter;
 import org.springframework.cloud.gateway.filter.RouteToRequestUrlFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.cloud.gateway.support.ServerWebExchangeUtils;
+import org.springframework.cloud.sleuth.CurrentTraceContext;
+import org.springframework.cloud.sleuth.Span;
+import org.springframework.cloud.sleuth.Tracer;
+import org.springframework.cloud.sleuth.instrument.web.WebFluxSleuthOperators;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
@@ -48,6 +52,9 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
     Tracer tracer;
 
     @Autowired
+    CurrentTraceContext currentTraceContext;
+
+    @Autowired
     OauthTokenUtil oauthTokenUtil;
 
     public RequestFilter() {
@@ -57,224 +64,211 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
     @Override
     public GatewayFilter apply(Config config) {
         return new OrderedGatewayFilter((exchange, chain) -> {
+            WebFluxSleuthOperators.withSpanInScope(tracer, currentTraceContext, exchange, () -> {
+                this.tracer.currentSpan().event("jrqs");
 
-            ServerHttpRequest request = exchange.getRequest();
+                ServerHttpRequest request = exchange.getRequest();
 
-            String client_scope = "";
+                String client_scope = "";
 
-            String token_endpoint = getLastValueFromHeaderField( request, Constants.HEADER_TOKEN_ENDPOINT);
-            String tif_remote_issuer = getLastValueFromHeaderField( request, Constants.HEADER_ISSUER);
-            String tif_clientID = getLastValueFromHeaderField( request, Constants.HEADER_CLIENT_ID);
-            String tif_clientSecret = getLastValueFromHeaderField( request, Constants.HEADER_CLIENT_SECRET);
-            String consumerToken = request.getHeaders().getFirst( Constants.HEADER_AUTHORIZATION);
-            String api_base_path = getLastValueFromHeaderField( request, Constants.HEADER_API_BASE_PATH);
-            String access_token_forwarding = getLastValueFromHeaderField( request, Constants.HEADER_ACCESS_TOKEN_FORWARDING);
-            String realmName = getLastValueFromHeaderField( request, Constants.HEADER_REALM);
+                String token_endpoint = getLastValueFromHeaderField(request, Constants.HEADER_TOKEN_ENDPOINT);
+                String tif_remote_issuer = getLastValueFromHeaderField(request, Constants.HEADER_ISSUER);
+                String tif_clientID = getLastValueFromHeaderField(request, Constants.HEADER_CLIENT_ID);
+                String tif_clientSecret = getLastValueFromHeaderField(request, Constants.HEADER_CLIENT_SECRET);
+                String consumerToken = request.getHeaders().getFirst(Constants.HEADER_AUTHORIZATION);
+                String api_base_path = getLastValueFromHeaderField(request, Constants.HEADER_API_BASE_PATH);
+                String access_token_forwarding = getLastValueFromHeaderField(request, Constants.HEADER_ACCESS_TOKEN_FORWARDING);
+                String realmName = getLastValueFromHeaderField(request, Constants.HEADER_REALM);
 
-            if( StringUtils.isBlank(realmName))
-            {
-                realmName = Constants.DEFAULT_REALM;
-            }
-
-            String envName = getLastValueFromHeaderField( request, Constants.HEADER_ENVIRONMENT);
-
-            String routing_path;
-            String requestPath = api_base_path;
-            String remote_api_url = getLastValueFromHeaderField( request, Constants.HEADER_REMOTE_API_URL);
-            String lastmileSecurityToken = null;
-
-            String xSpacegateClientId = request.getHeaders().getFirst( Constants.HEADER_X_SPACEGATE_CLIENT_ID);
-            String xSpacegateClientSecret = request.getHeaders().getFirst( Constants.HEADER_X_SPACEGATE_CLIENT_SECRET);
-            String xSpacegateScope = request.getHeaders().getFirst( Constants.HEADER_X_SPACEGATE_SCOPE);
-
-            String jumper_config_Base64 = getLastValueFromHeaderField( request, Constants.HEADER_JUMPER_CONFIG);
-
-            String consumerTokenWithoutSignature  = OauthTokenUtil.getTokenWithoutSignature( consumerToken);
-            Jwt<Header, Claims> consumerTokenclaims = OauthTokenUtil.getAllClaimsFromToken( consumerTokenWithoutSignature);
-            String consumer = consumerTokenclaims.getBody().get( "clientId", String.class);
-            String consumerOriginStargate = consumerTokenclaims.getBody().get( "originStargate", String.class);
-            String consumerOriginZone = consumerTokenclaims.getBody().get( "originZone", String.class);
-
-            // jumper config
-            JumperConfig jc = null;
-            if (StringUtils.isNotBlank(jumper_config_Base64))
-            {
-                jc = JumperConfig.fromBase64( jumper_config_Base64);
-                jc.fillWithLegacyHeaders( request); // TODO: remove as soon we have completely shifted to json_config
-            }
-            else
-            {
-                jc = new JumperConfig();
-                jc.fillWithLegacyHeaders( request);
-            } // TODO: remove as soon we have completely shifted to json_config
-
-            log.debug( "JumperConfig encodedAsBase64: {}", JumperConfig.toBase64( jc));
-            log.debug( "JumperConfig decoded: {}", jc.toString());
-
-            //store enhanced jumper_config for usage in SpectreFilters
-            exchange.getAttributes().put(Constants.HEADER_JUMPER_CONFIG, JumperConfig.toBase64( jc));
-
-            // Pre-processing
-            if (config.isPreLogger()) {
-                log.debug("Pre GatewayFilter logging");
-            }
-
-            JumperInfoRequest jumperInfoRequest = new JumperInfoRequest();
-            jumperInfoRequest.setEnvironment( envName);
-
-            String finalApiUrl = "";
-            try {
-                URI _uri = request.getURI();
-                String _query = _uri.getRawQuery();
-                String _fragment = _uri.getFragment();
-                routing_path = _uri.getRawPath().replaceFirst("^/(proxy|listener)", ""); //for token should be also decoded
-                requestPath += routing_path;
-                if (_query != null) routing_path = routing_path  + "?" + _query;
-                if (_fragment != null) routing_path = routing_path + "#" + _fragment;
-
-                finalApiUrl = remote_api_url.replaceAll("/$", "") + routing_path;
-
-                log.debug("Routing set to: " + finalApiUrl);
-
-                exchange.getAttributes().put(ServerWebExchangeUtils.GATEWAY_REQUEST_URL_ATTR, new URI(finalApiUrl));
-            } catch (URISyntaxException e) {
-                 throw new RuntimeException("can not construct URL from " + finalApiUrl, e);
-            }
-
-            if( remote_api_url != null && !remote_api_url.startsWith( Constants.LOCALHOST_ISSUER_SERVICE))
-            {
-                if( tif_remote_issuer == null)
-                {
-                    /** LAST MILE SECURITY TOKEN GENERATION **/
-
-
-                    String lmsIssuer = localIssuerUrl+"/"+realmName;
-
-                    // Egress
-                    if( token_endpoint != null)
-                    {
-                        log.debug( "----------------EXTERNAL AUTHORIZATION-------------");
-                        jumperInfoRequest.setLastMileSecurity( false);
-                        jumperInfoRequest.setLastMileSecurityEnhanced( false);
-                        jumperInfoRequest.setMeshActivated( false);
-                        jumperInfoRequest.setExternalAuthorization( true);
-
-                        log.debug( "Remote TokenEndpoint is set to: %s", token_endpoint);
-                        log.debug( "Get token from external idp");
-
-                        if( jc.getOauth() != null && jc.getOauth().containsKey(consumer) && jc.getOauth().get(consumer).getGrantType() != null && !jc.getOauth().get(consumer).getGrantType().isBlank())
-                        {
-                            TokenInfo tokenInfo = oauthTokenUtil.getAccessToken(token_endpoint, jc.getOauth().get(consumer), consumer);
-                            addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER+" "+tokenInfo.getAccessToken());
-                        }
-                        else
-                        {
-                            clientCredentialsFlow_legacy(exchange, chain, client_scope, token_endpoint, tif_clientID, tif_clientSecret, xSpacegateClientId, xSpacegateClientSecret, xSpacegateScope, consumer, jc);
-                        }
-
-
-                    }
-                    else if( access_token_forwarding != null && access_token_forwarding.equals( "false"))
-                    {
-                        log.debug( "----------------LAST MILE SECURITY (ONE TOKEN)-------------");
-                        jumperInfoRequest.setLastMileSecurity( true);
-                        jumperInfoRequest.setLastMileSecurityEnhanced( true);
-                        jumperInfoRequest.setMeshActivated( false);
-                        jumperInfoRequest.setExternalAuthorization( false);
-
-                        log.info( "Generating OneToken...");
-
-                        lastmileSecurityToken = OauthTokenUtil.generateExtGatewayToken( envName,
-                                consumerToken,
-                                request.getMethod().toString(),
-                                requestPath,
-                                lmsIssuer,
-                                setSecurityScopes(jc, consumer),
-                                request.getHeaders().getFirst(Constants.HEADER_X_PUBSUB_PUBLISHER_ID),
-                                request.getHeaders().getFirst(Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID)
-                        );
-                        addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER+" "+lastmileSecurityToken);
-                    }
-                    else
-                    {
-                        log.debug( "----------------LAST MILE SECURITY (LEGACY)-------------");
-                        jumperInfoRequest.setLastMileSecurity( true);
-                        jumperInfoRequest.setLastMileSecurityEnhanced( false);
-                        jumperInfoRequest.setMeshActivated( false);
-                        jumperInfoRequest.setExternalAuthorization( false);
-
-                        log.info( "Generating GatewayToken...");
-
-                        lastmileSecurityToken = OauthTokenUtil.generateGatewayToken( envName, consumerToken, request.getMethod().toString(), requestPath, lmsIssuer);
-                        log.info("GatewayToken: Generating GatewayToken finished");
-                        addHeader(exchange, chain, Constants.HEADER_LASTMILE_SECURITY_TOKEN, Constants.BEARER+" "+lastmileSecurityToken);
-                        log.debug( "lastMileSecurityToken: "+lastmileSecurityToken);
-                    }
-
-                }
-                else
-                {
-                    /** GW-2-GW MESH TOKEN GENERATION **/
-                    log.debug( "----------------GATEWAY MESH-------------");
-
-                    jumperInfoRequest.setLastMileSecurity( false);
-                    jumperInfoRequest.setLastMileSecurityEnhanced( false);
-                    jumperInfoRequest.setMeshActivated( true);
-                    jumperInfoRequest.setExternalAuthorization( false);
-
-                    tif_remote_issuer = tif_remote_issuer + Constants.ISSUER_SUFFIX;
-
-                    TokenInfo meshTokenInfo = oauthTokenUtil.getAccessToken( tif_remote_issuer, tif_clientID, tif_clientSecret);
-
-                    // set gw and consumer tokens correctly
-                    addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, "Bearer "+meshTokenInfo.getAccessToken());
-                    addHeader(exchange, chain, Constants.HEADER_CONSUMER_TOKEN, consumerToken);
-
-                    checkForSpaceZone(exchange, chain, consumerOriginZone, consumerToken);
-
+                if (StringUtils.isBlank(realmName)) {
+                    realmName = Constants.DEFAULT_REALM;
                 }
 
-            }
+                String envName = getLastValueFromHeaderField(request, Constants.HEADER_ENVIRONMENT);
 
-            addHeader(exchange, chain, Constants.HEADER_X_ORIGIN_STARGATE, consumerOriginStargate);
-            addHeader(exchange, chain, Constants.HEADER_X_ORIGIN_ZONE, consumerOriginZone);
+                String routing_path;
+                String requestPath = api_base_path;
+                String remote_api_url = getLastValueFromHeaderField(request, Constants.HEADER_REMOTE_API_URL);
+                String lastmileSecurityToken = null;
 
-            if (consumerOriginStargate != null) {
-                String hostStargate = "";
+                String xSpacegateClientId = request.getHeaders().getFirst(Constants.HEADER_X_SPACEGATE_CLIENT_ID);
+                String xSpacegateClientSecret = request.getHeaders().getFirst(Constants.HEADER_X_SPACEGATE_CLIENT_SECRET);
+                String xSpacegateScope = request.getHeaders().getFirst(Constants.HEADER_X_SPACEGATE_SCOPE);
+
+                String jumper_config_Base64 = getLastValueFromHeaderField(request, Constants.HEADER_JUMPER_CONFIG);
+
+                String consumerTokenWithoutSignature = OauthTokenUtil.getTokenWithoutSignature(consumerToken);
+                Jwt<Header, Claims> consumerTokenclaims = OauthTokenUtil.getAllClaimsFromToken(consumerTokenWithoutSignature);
+                String consumer = consumerTokenclaims.getBody().get("clientId", String.class);
+                String consumerOriginStargate = consumerTokenclaims.getBody().get("originStargate", String.class);
+                String consumerOriginZone = consumerTokenclaims.getBody().get("originZone", String.class);
+
+                // jumper config
+                JumperConfig jc = null;
+                if (StringUtils.isNotBlank(jumper_config_Base64)) {
+                    jc = JumperConfig.fromBase64(jumper_config_Base64);
+                    jc.fillWithLegacyHeaders(request); // TODO: remove as soon we have completely shifted to json_config
+                } else {
+                    jc = new JumperConfig();
+                    jc.fillWithLegacyHeaders(request);
+                } // TODO: remove as soon we have completely shifted to json_config
+
+                log.debug("JumperConfig encodedAsBase64: {}", JumperConfig.toBase64(jc));
+                log.debug("JumperConfig decoded: {}", jc.toString());
+
+                //store enhanced jumper_config for usage in SpectreFilters
+                exchange.getAttributes().put(Constants.HEADER_JUMPER_CONFIG, JumperConfig.toBase64(jc));
+
+                // Pre-processing
+                if (config.isPreLogger()) {
+                    log.debug("Pre GatewayFilter logging");
+                }
+
+                JumperInfoRequest jumperInfoRequest = new JumperInfoRequest();
+                jumperInfoRequest.setEnvironment(envName);
+
+                String finalApiUrl = "";
                 try {
-                    URL url = new URL(consumerOriginStargate);
-                    hostStargate = url.getHost();
-                } catch (MalformedURLException e) {
-                    log.error(e.getMessage(), e);
+                    URI _uri = request.getURI();
+                    String _query = _uri.getRawQuery();
+                    String _fragment = _uri.getFragment();
+                    routing_path = _uri.getRawPath().replaceFirst("^/(proxy|listener)", ""); //for token should be also decoded
+                    requestPath += routing_path;
+                    if (_query != null) routing_path = routing_path + "?" + _query;
+                    if (_fragment != null) routing_path = routing_path + "#" + _fragment;
+
+                    finalApiUrl = remote_api_url.replaceAll("/$", "") + routing_path;
+
+                    log.debug("Routing set to: " + finalApiUrl);
+
+                    exchange.getAttributes().put(ServerWebExchangeUtils.GATEWAY_REQUEST_URL_ATTR, new URI(finalApiUrl));
+                } catch (URISyntaxException e) {
+                    throw new RuntimeException("can not construct URL from " + finalApiUrl, e);
                 }
-                addHeader(exchange, chain, Constants.HEADER_X_FORWARDED_HOST, hostStargate);
-            }
 
-            rewriteXForwardedHeader(exchange, chain);
+                if (remote_api_url != null && !remote_api_url.startsWith(Constants.LOCALHOST_ISSUER_SERVICE)) {
+                    if (tif_remote_issuer == null) {
+                        /** LAST MILE SECURITY TOKEN GENERATION **/
 
 
-            IncomingRequest incReq = new IncomingRequest();
-            incReq.setBasePath(api_base_path);
-            incReq.setHost(remote_api_url);
-            incReq.setMethod(request.getMethodValue());
-            incReq.setResource(routing_path);
+                        String lmsIssuer = localIssuerUrl + "/" + realmName;
 
-            OutgoingRequest outgoingRequest = new OutgoingRequest();
-            outgoingRequest.setHost( remote_api_url);
-            outgoingRequest.setBasePath( null);
-            outgoingRequest.setResource( routing_path);
-            outgoingRequest.setMethod( request.getMethod().toString());
+                        // Egress
+                        if (token_endpoint != null) {
+                            log.debug("----------------EXTERNAL AUTHORIZATION-------------");
+                            jumperInfoRequest.setLastMileSecurity(false);
+                            jumperInfoRequest.setLastMileSecurityEnhanced(false);
+                            jumperInfoRequest.setMeshActivated(false);
+                            jumperInfoRequest.setExternalAuthorization(true);
 
-            HashMap<String, String> logEntries = new HashMap<String, String>();
-            logEntries.put("Thread name", Thread.currentThread().getName());
+                            log.debug("Remote TokenEndpoint is set to: %s", token_endpoint);
+                            log.debug("Get token from external idp");
 
-            incReq.setLogEntries(logEntries);
-            jumperInfoRequest.setIncomingRequest(incReq);
+                            if (jc.getOauth() != null && jc.getOauth().containsKey(consumer) && jc.getOauth().get(consumer).getGrantType() != null && !jc.getOauth().get(consumer).getGrantType().isBlank()) {
+                                TokenInfo tokenInfo = oauthTokenUtil.getAccessToken(token_endpoint, jc.getOauth().get(consumer), consumer);
+                                addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER + " " + tokenInfo.getAccessToken());
+                            } else {
+                                clientCredentialsFlow_legacy(exchange, chain, client_scope, token_endpoint, tif_clientID, tif_clientSecret, xSpacegateClientId, xSpacegateClientSecret, xSpacegateScope, consumer, jc);
+                            }
 
-            log.info( "logging request", value( "jumperInfo", jumperInfoRequest));
 
-            addTracing(request, api_base_path, envName, consumer, consumerOriginStargate);
+                        } else if (access_token_forwarding != null && access_token_forwarding.equals("false")) {
+                            log.debug("----------------LAST MILE SECURITY (ONE TOKEN)-------------");
+                            jumperInfoRequest.setLastMileSecurity(true);
+                            jumperInfoRequest.setLastMileSecurityEnhanced(true);
+                            jumperInfoRequest.setMeshActivated(false);
+                            jumperInfoRequest.setExternalAuthorization(false);
 
+                            log.info("Generating OneToken...");
+
+                            lastmileSecurityToken = OauthTokenUtil.generateExtGatewayToken(envName,
+                                    consumerToken,
+                                    request.getMethod().toString(),
+                                    requestPath,
+                                    lmsIssuer,
+                                    setSecurityScopes(jc, consumer),
+                                    request.getHeaders().getFirst(Constants.HEADER_X_PUBSUB_PUBLISHER_ID),
+                                    request.getHeaders().getFirst(Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID)
+                            );
+                            addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER + " " + lastmileSecurityToken);
+                        } else {
+                            log.debug("----------------LAST MILE SECURITY (LEGACY)-------------");
+                            jumperInfoRequest.setLastMileSecurity(true);
+                            jumperInfoRequest.setLastMileSecurityEnhanced(false);
+                            jumperInfoRequest.setMeshActivated(false);
+                            jumperInfoRequest.setExternalAuthorization(false);
+
+                            log.info("Generating GatewayToken...");
+
+                            lastmileSecurityToken = OauthTokenUtil.generateGatewayToken(envName, consumerToken, request.getMethod().toString(), requestPath, lmsIssuer);
+                            log.info("GatewayToken: Generating GatewayToken finished");
+                            addHeader(exchange, chain, Constants.HEADER_LASTMILE_SECURITY_TOKEN, Constants.BEARER + " " + lastmileSecurityToken);
+                            log.debug("lastMileSecurityToken: " + lastmileSecurityToken);
+                        }
+
+                    } else {
+                        /** GW-2-GW MESH TOKEN GENERATION **/
+                        log.debug("----------------GATEWAY MESH-------------");
+
+                        jumperInfoRequest.setLastMileSecurity(false);
+                        jumperInfoRequest.setLastMileSecurityEnhanced(false);
+                        jumperInfoRequest.setMeshActivated(true);
+                        jumperInfoRequest.setExternalAuthorization(false);
+
+                        tif_remote_issuer = tif_remote_issuer + Constants.ISSUER_SUFFIX;
+
+                        TokenInfo meshTokenInfo = oauthTokenUtil.getAccessToken(tif_remote_issuer, tif_clientID, tif_clientSecret);
+
+                        // set gw and consumer tokens correctly
+                        addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, "Bearer " + meshTokenInfo.getAccessToken());
+                        addHeader(exchange, chain, Constants.HEADER_CONSUMER_TOKEN, consumerToken);
+
+                        checkForSpaceZone(exchange, chain, consumerOriginZone, consumerToken);
+
+                    }
+
+                }
+
+                addHeader(exchange, chain, Constants.HEADER_X_ORIGIN_STARGATE, consumerOriginStargate);
+                addHeader(exchange, chain, Constants.HEADER_X_ORIGIN_ZONE, consumerOriginZone);
+
+                if (consumerOriginStargate != null) {
+                    String hostStargate = "";
+                    try {
+                        URL url = new URL(consumerOriginStargate);
+                        hostStargate = url.getHost();
+                    } catch (MalformedURLException e) {
+                        log.error(e.getMessage(), e);
+                    }
+                    addHeader(exchange, chain, Constants.HEADER_X_FORWARDED_HOST, hostStargate);
+                }
+
+                rewriteXForwardedHeader(exchange, chain);
+
+
+                IncomingRequest incReq = new IncomingRequest();
+                incReq.setBasePath(api_base_path);
+                incReq.setHost(remote_api_url);
+                incReq.setMethod(request.getMethodValue());
+                incReq.setResource(routing_path);
+
+                OutgoingRequest outgoingRequest = new OutgoingRequest();
+                outgoingRequest.setHost(remote_api_url);
+                outgoingRequest.setBasePath(null);
+                outgoingRequest.setResource(routing_path);
+                outgoingRequest.setMethod(request.getMethod().toString());
+
+                HashMap<String, String> logEntries = new HashMap<String, String>();
+                logEntries.put("Thread name", Thread.currentThread().getName());
+
+                incReq.setLogEntries(logEntries);
+                jumperInfoRequest.setIncomingRequest(incReq);
+
+                log.info("logging request", value("jumperInfo", jumperInfoRequest));
+
+                addTracing(request, api_base_path, envName, consumer, consumerOriginStargate);
+
+            });
             return chain.filter(exchange)
                     .then(Mono.fromRunnable(() -> {
                         // Post-processing
@@ -430,6 +424,9 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                 incomingRequestSpan.tag("consumer", consumer);
             }
         }
+
+        incomingRequestSpan.event("jrqf");
+
 /*
         Span newSpan = this.tracer.nextSpan().name( "Request Filter");
         try( Tracer.SpanInScope ws = this.tracer.withSpanInScope( newSpan.start()))
