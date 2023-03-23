@@ -1,7 +1,5 @@
 package jumper.spectre;
 
-import brave.Span;
-import brave.Tracer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,6 +10,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.sleuth.CurrentTraceContext;
+import org.springframework.cloud.sleuth.Span;
+import org.springframework.cloud.sleuth.Tracer;
+import org.springframework.cloud.sleuth.instrument.web.WebFluxSleuthOperators;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -36,6 +38,9 @@ public class SpectreService
 {
     @Autowired
     Tracer tracer;
+
+    @Autowired
+    CurrentTraceContext currentTraceContext;
 
     @Value( "${jumper.stargate.url}")
     private String stargateUrl;
@@ -72,7 +77,14 @@ public class SpectreService
 
     }
 
-    public Spectre createEvent(JumperConfig jc, ServerWebExchange exchange, Object http, RouteListener listener, String payload) {
+    public void handleEvent(JumperConfig jc, ServerWebExchange exchange, Object http, RouteListener listener, String payload){
+        WebFluxSleuthOperators.withSpanInScope(tracer, currentTraceContext, exchange, () -> {
+            publishEvent(createEvent( jc,  exchange,  http,  listener,  payload), jc) ;
+        });
+
+    }
+
+    private Spectre createEvent(JumperConfig jc, ServerWebExchange exchange, Object http, RouteListener listener, String payload) {
 
         ServerHttpRequest rq = exchange.getRequest();
         ServerHttpResponse rs = exchange.getResponse();
@@ -119,11 +131,12 @@ public class SpectreService
 
         event.setData( data);
 
-        Span newSpan = this.tracer.nextSpan().name(spanName);
+        String finalSpanName = spanName;
 
-        try (Tracer.SpanInScope ws = this.tracer.withSpanInScope(newSpan.start())) {
-            newSpan.kind(Span.Kind.CLIENT);
-            event.setSpanId(newSpan.context().spanIdString());
+            Span newSpan = this.tracer.nextSpan().name(finalSpanName).start();
+            tracer.withSpan(newSpan);
+
+            event.setSpanId(newSpan.context().spanId());
 
             newSpan.tag("spectre.issue",
                     listener.getIssue());
@@ -131,10 +144,8 @@ public class SpectreService
                     listener.getServiceOwner());
             newSpan.tag("spectre.consumer",
                     jc.getConsumer());
-
-        } finally {
-            newSpan.finish();
-        }
+            //newSpan.tag("span.kind", "client");
+            newSpan.end();
 
         return event;
     }
@@ -144,7 +155,7 @@ public class SpectreService
      *
      * @param event
      */
-    public void publishEvent(Spectre event, JumperConfig jc) {
+    private void publishEvent(Spectre event, JumperConfig jc) {
         String eventJson = null;
         try {
             eventJson = new ObjectMapper().writeValueAsString(event);
@@ -172,26 +183,9 @@ public class SpectreService
                 OauthTokenUtil.generateGatewayTokenForPublisher(localIssuerUrl + "/" + envName), event.getSpanId()
         ).subscribe();
 
-        /*
-        if(jc != null) {
-            // get token with GatewayClient
-            String local_issuer = jc.getGatewayClient().getIssuer() + Constants.ISSUER_SUFFIX;
-            gwToken = oauthTokenUtil.getAccessToken(local_issuer, jc.getGatewayClient().getId(), jc.getGatewayClient().getSecret(), true, null);
-
-            log.debug("will publish event: {}", eventJson);
-            if (gwToken != null) {
-                lastmileSecurityToken = OauthTokenUtil.generateExtGatewayToken( envName, consumerToken, request.getMethod().toString(), requestPath, lmsIssuer);
-                publishEventMono(url, eventJson).subscribe();
-            }
-            else{
-                //just log error as we do not want to affect real message processing
-                log.error("did not get token for client: {} from {}, will not publish event", jc.getGatewayClient().getId(), local_issuer);
-            }
-
-             */
     }
 
-    public Mono<Void> publishEventMono(String url, String eventJson, String token, String spanId) {
+    private Mono<Void> publishEventMono(String url, String eventJson, String token, String spanId) {
         final Mono<Void> responseMono = webClient.post()
                 .uri(url)
                 .headers(new Consumer<HttpHeaders>() {
@@ -210,7 +204,7 @@ public class SpectreService
                             log.debug("set b3 : {} to created event", b3);
                             httpHeaders.set(Constants.HEADER_B3, b3);
                              */
-                            httpHeaders.set(Constants.HEADER_X_B3_TRACE_ID, currentSpan.context().traceIdString());
+                            httpHeaders.set(Constants.HEADER_X_B3_TRACE_ID, currentSpan.context().traceId());
                             httpHeaders.set(Constants.HEADER_X_B3_SPAN_ID, spanId);
                         }
                     }

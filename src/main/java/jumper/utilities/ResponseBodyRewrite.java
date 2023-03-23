@@ -18,9 +18,7 @@ public class ResponseBodyRewrite implements RewriteFunction<byte[], byte[]> {
     @Override
     public Publisher<byte[]> apply(ServerWebExchange exchange, byte[] originalBody) {
         if (originalBody != null) {
-
             exchange.getAttributes().put("cachedResponseBodyObject", jumperUtil.getBodyForContentType(exchange.getResponse().getHeaders().getContentType(), originalBody));
-
             return Mono.just(originalBody);
         } else {
             return Mono.empty();

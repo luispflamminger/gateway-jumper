@@ -44,7 +44,6 @@ public class TokenInfo {
     }
     
     public int getExpiresIn() {
-    	//return Long.valueOf((Long.valueOf(expiresIn) - System.currentTimeMillis()) / 1000L).intValue();
         return expiration != null ? Long.valueOf((expiration.getTime() - System.currentTimeMillis()) / 1000L)
                 .intValue() : 0;
     }

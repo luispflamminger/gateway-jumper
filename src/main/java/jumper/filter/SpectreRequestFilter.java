@@ -2,7 +2,6 @@ package jumper.filter;
 
 import jumper.model.config.JumperConfig;
 import jumper.model.config.RouteListener;
-import jumper.model.config.Spectre;
 import jumper.spectre.SpectreService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,13 +45,14 @@ public class SpectreRequestFilter extends AbstractGatewayFilterFactory<SpectreRe
             }
 
             RouteListener listener = jc.getRouteListener().get( jc.getConsumer());
-
+/*
             // Create Event with additional information
             Spectre eventReqMsg = aes.createEvent(jc, exchange, exchange.getRequest(), listener, requestBody);
 
             // publish event (route to local Horizon)
             aes.publishEvent(eventReqMsg, jc);
-
+*/
+            aes.handleEvent(jc, exchange, exchange.getRequest(), listener, requestBody);
             return chain.filter(exchange);
 
         }, AUTO_EVENT_REQUEST_FILTER_ORDER);

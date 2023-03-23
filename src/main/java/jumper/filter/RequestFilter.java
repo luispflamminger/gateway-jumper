@@ -1,7 +1,5 @@
 package jumper.filter;
 
-//import brave.Span;
-//import brave.Tracer;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Header;
 import io.jsonwebtoken.Jwt;
@@ -49,9 +47,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
     public static final int REQUEST_FILTER_ORDER = RouteToRequestUrlFilter.ROUTE_TO_URL_FILTER_ORDER + 1;
 
     @Autowired
-    Tracer tracer;
-
-    @Autowired
     CurrentTraceContext currentTraceContext;
 
     @Autowired
@@ -64,8 +59,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
     @Override
     public GatewayFilter apply(Config config) {
         return new OrderedGatewayFilter((exchange, chain) -> {
-            WebFluxSleuthOperators.withSpanInScope(tracer, currentTraceContext, exchange, () -> {
-                this.tracer.currentSpan().event("jrqs");
+            WebFluxSleuthOperators.withSpanInScope(config.tracer, currentTraceContext, exchange, () -> {
 
                 ServerHttpRequest request = exchange.getRequest();
 
@@ -107,11 +101,11 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                 JumperConfig jc = null;
                 if (StringUtils.isNotBlank(jumper_config_Base64)) {
                     jc = JumperConfig.fromBase64(jumper_config_Base64);
-                    jc.fillWithLegacyHeaders(request); // TODO: remove as soon we have completely shifted to json_config
                 } else {
                     jc = new JumperConfig();
-                    jc.fillWithLegacyHeaders(request);
-                } // TODO: remove as soon we have completely shifted to json_config
+                }
+                jc.fillWithLegacyHeaders(request);// TODO: remove as soon we have completely shifted to json_config
+                jc.setConsumer(consumer);
 
                 log.debug("JumperConfig encodedAsBase64: {}", JumperConfig.toBase64(jc));
                 log.debug("JumperConfig decoded: {}", jc.toString());
@@ -179,8 +173,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                             jumperInfoRequest.setMeshActivated(false);
                             jumperInfoRequest.setExternalAuthorization(false);
 
-                            log.info("Generating OneToken...");
-
                             lastmileSecurityToken = OauthTokenUtil.generateExtGatewayToken(envName,
                                     consumerToken,
                                     request.getMethod().toString(),
@@ -198,10 +190,8 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                             jumperInfoRequest.setMeshActivated(false);
                             jumperInfoRequest.setExternalAuthorization(false);
 
-                            log.info("Generating GatewayToken...");
-
                             lastmileSecurityToken = OauthTokenUtil.generateGatewayToken(envName, consumerToken, request.getMethod().toString(), requestPath, lmsIssuer);
-                            log.info("GatewayToken: Generating GatewayToken finished");
+
                             addHeader(exchange, chain, Constants.HEADER_LASTMILE_SECURITY_TOKEN, Constants.BEARER + " " + lastmileSecurityToken);
                             log.debug("lastMileSecurityToken: " + lastmileSecurityToken);
                         }
@@ -266,7 +256,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
                 log.info("logging request", value("jumperInfo", jumperInfoRequest));
 
-                addTracing(request, api_base_path, envName, consumer, consumerOriginStargate);
+                addTracingInfo(request, api_base_path, requestPath, envName, consumer, consumerOriginStargate, config.tracer);
 
             });
             return chain.filter(exchange)
@@ -364,17 +354,24 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         }
     }
 
-    private void addTracing(ServerHttpRequest request, String api_base_path, String envName, String consumer, String consumerOriginStargate) {
-        // Tracing - Start
+    private void addTracingInfo(ServerHttpRequest request, String api_base_path, String requestPath, String envName, String consumer, String consumerOriginStargate, Tracer tracer) {
 
-        String xB3TraceId = request.getHeaders().getFirst( Constants.HEADER_X_B3_TRACE_ID);
         String xTardisTraceId = request.getHeaders().getFirst( Constants.HEADER_X_TARDIS_TRACE_ID);
         String xBusinessContext = request.getHeaders().getFirst( Constants.HEADER_X_BUSINESS_CONTEXT);
         String xRequestId = request.getHeaders().getFirst( Constants.HEADER_X_REQUEST_ID);
         String xCorrelationId = request.getHeaders().getFirst( Constants.HEADER_X_CORRELATION_ID);
         String publisherId = request.getHeaders().getFirst(Constants.HEADER_X_PUBSUB_PUBLISHER_ID);
 
-        Span incomingRequestSpan = this.tracer.currentSpan();
+        String contentLength = request.getHeaders().getFirst("Content-Length");
+
+        Span incomingRequestSpan = tracer.currentSpan();
+        incomingRequestSpan.name("Incoming Request");
+
+        if (contentLength == null) {
+            incomingRequestSpan.tag("message.size", "0");
+        } else {
+            incomingRequestSpan.tag("message.size", contentLength);
+        }
 
         if( xTardisTraceId != null){
             incomingRequestSpan.tag( Constants.HEADER_X_TARDIS_TRACE_ID, xTardisTraceId);
@@ -385,12 +382,11 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         }
 
         if( envName != null) {
-            incomingRequestSpan.tag("environment.info", envName);
+            incomingRequestSpan.tag("environment", envName);
         }
 
-
-        if( xB3TraceId != null) {
-            incomingRequestSpan.tag(Constants.HEADER_X_B3_TRACE_ID, xB3TraceId);
+        if (requestPath != null){
+            incomingRequestSpan.tag("http.path",  requestPath);
         }
 
         if( xBusinessContext != null) {
@@ -417,7 +413,8 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         //not callback, assume request-response
         else {
             if (api_base_path != null) {
-                incomingRequestSpan.tag("service.name", api_base_path.substring(1).replace("/", "-"));
+                //incomingRequestSpan.tag("service.name", api_base_path.substring(1).replace("/", "-"));
+                incomingRequestSpan.remoteServiceName(api_base_path.substring(1).replace("/", "-"));
             }
 
             if (consumer != null) {
@@ -427,101 +424,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
         incomingRequestSpan.event("jrqf");
 
-/*
-        Span newSpan = this.tracer.nextSpan().name( "Request Filter");
-        try( Tracer.SpanInScope ws = this.tracer.withSpanInScope( newSpan.start()))
-        {
-
-            if( xTardisTraceId != null){
-
-                newSpan.tag( Constants.HEADER_X_TARDIS_TRACE_ID, xTardisTraceId);
-            }
-
-            if( consumerOriginStargate != null)
-            {
-
-                newSpan.tag( "origin-stargate", consumerOriginStargate);
-            }
-
-            if (contentLength == null || contentLength.toString().equals( "-1"))
-            {
-
-                newSpan.tag( "message.size", "0");
-            }
-            else
-            {
-
-                newSpan.tag( "message.size", contentLength.toString());
-            }
-
-
-            if( envName != null)
-            {
-
-                newSpan.tag( "environment.info", envName);
-            }
-
-
-            if( xB3TraceId != null)
-            {
-
-                newSpan.tag( Constants.HEADER_X_B3_TRACE_ID, xB3TraceId);
-            }
-
-            if( xBusinessContext != null)
-            {
-
-                newSpan.tag( Constants.HEADER_X_BUSINESS_CONTEXT, xBusinessContext);
-            }
-
-            if( xRequestId != null)
-            {
-
-                newSpan.tag( Constants.HEADER_X_REQUEST_ID, xRequestId);
-            }
-
-            if( xCorrelationId != null)
-            {
-
-                newSpan.tag( Constants.HEADER_X_CORRELATION_ID, xCorrelationId);
-            }
-
-            //callback
-            if (publisherId != null){
-                newSpan.tag("publisher", publisherId);
-
-                String subscriptionId = request.getHeaders().getFirst(Constants.HEADER_X_SUBSCRIPTION_ID);
-                if (subscriptionId != null){
-                    newSpan.tag("subscription-id", subscriptionId);
-                }
-
-                String subscriber = request.getHeaders().getFirst(Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID);
-                if (subscriber != null){
-                    newSpan.tag("subscriber", subscriber);
-                }
-            }
-            //not callback, assume request-response
-            else {
-
-                if (api_base_path != null) {
-
-                    newSpan.tag("peer.service", api_base_path.substring(1).replace("/", "-"));
-                }
-
-                if (consumer != null) {
-
-                    newSpan.tag("consumer", consumer);
-                }
-            }
-        }
-        finally
-        {
-
-            newSpan.finish();
-        }
-
- */
-        // Tracing - End
     }
 
     private void rewriteXForwardedHeader( ServerWebExchange exchange, GatewayFilterChain chain) {
@@ -559,10 +461,12 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
     public static class Config {
         private boolean preLogger;
         private boolean postLogger;
+        private Tracer tracer;
 
-        public Config(boolean preLogger, boolean postLogger) {
+        public Config(boolean preLogger, boolean postLogger, Tracer tracer) {
             this.preLogger = preLogger;
             this.postLogger = postLogger;
+            this.tracer = tracer;
         }
 
         public boolean isPreLogger() {

@@ -1,6 +1,5 @@
 package jumper;
 
-import brave.http.HttpRequestParser;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
@@ -14,6 +13,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.gateway.config.HttpClientCustomizer;
 import org.springframework.cloud.gateway.route.RouteLocator;
 import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
+import org.springframework.cloud.sleuth.Tracer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
@@ -33,7 +33,6 @@ public class Application {
     @Value( "${horizon.publishEventUrl}")
     private String publishEventUrl;
 
-    //@Value("${CUSTOM_CIPHERS:#{null}}")
     @Value("${CUSTOM_CIPHERS:}")
     List<String> custom_ciphers;
 
@@ -45,12 +44,12 @@ public class Application {
     }
 
     @Bean
-    public RouteLocator proxyRoute(RouteLocatorBuilder builder, RequestFilter requestFilter, RemoveHeaderFilter removeHeader, ResponseFilter responseFilter, SpectreRequestFilter spectreRequestFilter, SpectreResponseFilter spectreResponseFilter, RequestTransformationFilter requestTransformationFilter, ResponseTransformationFilter responseTransformationFilter, SetSpectreRoutingFilter setSpectreRoutingFilter) {
+    public RouteLocator proxyRoute(RouteLocatorBuilder builder, Tracer tracer, RequestFilter requestFilter, RemoveHeaderFilter removeHeader, ResponseFilter responseFilter, SpectreRequestFilter spectreRequestFilter, SpectreResponseFilter spectreResponseFilter, RequestTransformationFilter requestTransformationFilter, ResponseTransformationFilter responseTransformationFilter, SetSpectreRoutingFilter setSpectreRoutingFilter) {
         return builder.routes()
                 .route("jumper_route", p -> p
                         .path("/proxy/**")
                         .filters(f -> f
-                                .filter(requestFilter.apply(new RequestFilter.Config(true, true)))
+                                .filter(requestFilter.apply(new RequestFilter.Config(true, true, tracer)))
                                 .filter(removeHeader.apply(c -> c.setName("jumper_config")))
                                 .filter(removeHeader.apply(c -> c.setName("token_endpoint")))
                                 .filter(removeHeader.apply(c -> c.setName("remote_api_url")))
@@ -66,13 +65,13 @@ public class Application {
                                 .filter(removeHeader.apply(c -> c.setName("x-anonymous-groups")))
                                 .filter(removeHeader.apply(c -> c.setName("x-forwarded-prefix")))
                                 .filter(removeHeader.apply(c -> c.setName("access_token_forwarding")))
-                                .filter(responseFilter.apply(c -> c.setName("test")))
+                                .filter(responseFilter.apply(c -> c.setTracer(tracer)))
                         )
                         .uri("no://op"))
                 .route("listener_route", p -> p
                         .path("/listener/**")
                         .filters(f -> f
-                                        .filter(requestFilter.apply(new RequestFilter.Config(true, true)))
+                                        .filter(requestFilter.apply(new RequestFilter.Config(true, true, tracer)))
                                         .filter(requestTransformationFilter)
                                         .filter(responseTransformationFilter)
                                         .filter(spectreRequestFilter.apply(new SpectreRequestFilter.Config()))
@@ -92,7 +91,7 @@ public class Application {
                                         .filter(removeHeader.apply(c -> c.setName("x-anonymous-groups")))
                                         .filter(removeHeader.apply(c -> c.setName("x-forwarded-prefix")))
                                         .filter(removeHeader.apply(c -> c.setName("access_token_forwarding")))
-                                        .filter(responseFilter.apply(c -> c.setName("test")))
+                                        .filter(responseFilter.apply(c -> c.setTracer(tracer)))
                         )
                         .uri("no://op"))
                 .route("auto_event_route_post", p -> p
@@ -120,33 +119,11 @@ public class Application {
         http.httpBasic().disable()
                 .formLogin().disable()
                 .csrf().disable()
-                .logout().disable();
-
+                .logout().disable()
+//                .headers().cache().disable()
+        ;
 
         return http.build();
-    }
-
-    //  Customize sleuth HttpServer span
-    @Bean
-    HttpRequestParser sleuthHttpServerRequestParser() {
-        return (req, context, span) -> {
-            HttpRequestParser.DEFAULT.parse(req, context, span);
-            //String xTardisTraceId = req.header(Constants.HEADER_X_TARDIS_TRACE_ID);
-            String contentLength = req.header("Content-Length");
-
-            span.name("Incoming Request");
-/*
-            if (xTardisTraceId != null) {
-                span.tag("x-tardis-traceid", xTardisTraceId);
-            }
-*/
-            if (contentLength == null) {
-                span.tag("message.size", "0");
-            } else {
-                span.tag("message.size", contentLength);
-            }
-
-        };
     }
 
     @Bean
@@ -180,14 +157,7 @@ public class Application {
                     ,"TLS_AES_128_GCM_SHA256"
                     //,"TLS_AES_128_CCM_SHA256"
             );
-            /*
-            List<String> ciphers = new LinkedList<>(dt_ciphers);
-            if (custom_ciphers != null){
-                for (String cipher: custom_ciphers){
-                    if (!ciphers.contains(cipher)) ciphers.add(cipher);
-                }
-            }
-             */
+
             SslContext s = SslContextBuilder
                     .forClient()
                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
@@ -197,7 +167,6 @@ public class Application {
                             custom_ciphers.stream())
                             .distinct().collect(Collectors.toList())
                     )
-//                    .ciphers(ciphers)
                     .build();
 
             return httpClient -> httpClient
@@ -222,45 +191,5 @@ public class Application {
         return WebClient.builder().clientConnector(new ReactorClientHttpConnector(httpClient)).build();
     }
 
-    //  Customize sleuth HttpClient span
-    /*
-    @Bean
-    HttpRequestParser sleuthHttpClientRequestParser() {
-        return (req, context, span) -> {
-
-            String tif_remote_issuer = req.header(Constants.HEADER_ISSUER);
-            String url = req.url();
-            String xTardisTraceId = req.header(Constants.HEADER_X_TARDIS_TRACE_ID);
-            String contentLength = req.header("Content-Length");
-            String spanName = "Provider";
-
-            if (tif_remote_issuer != null) {
-                spanName = "Gateway";
-            }
-
-            if (xTardisTraceId != null) {
-                span.tag("x-tardis-traceid", xTardisTraceId);
-            }
-
-            span.name("Outgoing Request: " + spanName);
-            span.tag("http.method", req.method());
-            span.tag("http.path", req.path());
-
-            if (url != null) {
-
-                span.tag("http.url", url);
-            }
-
-            if (contentLength == null) {
-
-                span.tag("message.size", "0");
-            } else {
-
-                span.tag("message.size", contentLength);
-            }
-        };
-    }
-
-     */
 }
 

@@ -5,17 +5,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Base64Utils;
-/*
-import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.http.server.reactive.ServerHttpRequest;
-import org.springframework.web.server.ServerWebExchange;
-import reactor.core.publisher.Flux;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.channels.Channels;
-import java.nio.charset.StandardCharsets;
-*/
 @Slf4j
 @Service
 public class JumperUtil {
@@ -23,32 +13,6 @@ public class JumperUtil {
     @Value( "${spring.codec.max-in-memory-size}")
     private int limit;
 
-    /*
-    private String body;
-
-    public String getRequestBody(ServerWebExchange exchange) {
-        ServerHttpRequest request = exchange.getRequest();
-
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        Flux<DataBuffer> dataBufferFlux = request.getBody().doOnNext(dataBuffer -> {
-            try {
-                Channels.newChannel(baos).write(dataBuffer.asByteBuffer().asReadOnlyBuffer());
-                body = new String(baos.toByteArray(), StandardCharsets.UTF_8);
-                log.info("Request: payload={}", body);
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                try {
-                    baos.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-        return body;
-    }
-*/
     public String getBodyForContentType(MediaType mediaType, byte[] originalBody){
         String bodyToStore;
         if (mediaType != null &&

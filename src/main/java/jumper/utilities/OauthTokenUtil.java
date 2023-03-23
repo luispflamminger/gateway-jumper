@@ -44,7 +44,6 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 @Service
 public class OauthTokenUtil {
-    //WebClient webClient = WebClient.create();
 
     @Autowired
     private WebClient webClient;
@@ -106,8 +105,7 @@ public class OauthTokenUtil {
         Jwt<Header, Claims> gatewayTokenclaims = getAllClaimsFromToken(consumerTokenWithoutSignature);
 
         Date issuedAt = gatewayTokenclaims.getBody().getIssuedAt();
-//	        Date now = new Date();
-//	        Date expiration = new Date(now.getTime() + 3600_000L * 24 * 30);;
+
         Date expiration = gatewayTokenclaims.getBody().getExpiration();
         String clientId = gatewayTokenclaims.getBody().get("clientId", String.class);
         String consumerOriginZone = gatewayTokenclaims.getBody().get("originZone", String.class);
@@ -204,7 +202,7 @@ public class OauthTokenUtil {
             log.error("URISyntaxException", e1);
         }
 
-        log.info("GatewayToken or OneToken: Generating with all claims");
+        log.debug("GatewayToken or OneToken: Generating with all claims");
         return Jwts.builder().setClaims(claims).setIssuer(issuer).setExpiration(expiration).setIssuedAt(issuedAt).signWith(loadKey, SignatureAlgorithm.RS256).setHeaderParam("kid", keyId).setHeaderParam("typ", "JWT").compact();
     }
 
@@ -346,8 +344,6 @@ public class OauthTokenUtil {
                                     }
                             )
                     )
-                    //.doOnSubscribe(s -> log.debug("start1"))
-                    //.doOnNext(res -> log.debug("next1"))
                     ;
 
             CompletableFuture<TokenInfo> tokenInfoCompletableFuture = tokenInfoMono.toFuture();
@@ -383,8 +379,6 @@ public class OauthTokenUtil {
                                 }
                         )
                 )
-                //.doOnSubscribe(s -> log.debug("start1"))
-                //.doOnNext(res -> log.debug("next1"))
                 ;
     }
 

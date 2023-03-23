@@ -2,12 +2,16 @@ package jumper.exception;
 
 import jumper.Constants;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.web.ErrorProperties;
 import org.springframework.boot.autoconfigure.web.WebProperties.Resources;
 import org.springframework.boot.autoconfigure.web.reactive.error.DefaultErrorWebExceptionHandler;
 import org.springframework.boot.web.error.ErrorAttributeOptions;
 import org.springframework.boot.web.reactive.error.ErrorAttributes;
+import org.springframework.cloud.sleuth.CurrentTraceContext;
+import org.springframework.cloud.sleuth.Tracer;
+import org.springframework.cloud.sleuth.instrument.web.WebFluxSleuthOperators;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.MergedAnnotation;
 import org.springframework.core.annotation.MergedAnnotations;
@@ -25,6 +29,12 @@ import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 
 @Slf4j
 public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandler {
+
+    @Autowired
+    Tracer tracer;
+
+    @Autowired
+    CurrentTraceContext currentTraceContext;
 
     @Value( "${spring.application.name}")
     private String applicationName;
@@ -44,7 +54,6 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
         MergedAnnotation<ResponseStatus> responseStatusAnnotation = MergedAnnotations
                 .from(error.getClass(), MergedAnnotations.SearchStrategy.TYPE_HIERARCHY).get(ResponseStatus.class);
 
-        //HttpStatus errorStatus = findHttpStatus(error, responseStatusAnnotation);
         HttpStatus errorStatus = findHttpStatus(request, error, responseStatusAnnotation);
         Map<String, Object> errorAttributes = new HashMap<>(8);
 
@@ -58,8 +67,6 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
                 request.headers().firstHeader(Constants.HEADER_X_B3_TRACE_ID) : "");
         errorAttributes.put("tardisTraceId", (request.headers().firstHeader(Constants.HEADER_X_TARDIS_TRACE_ID) != null) ?
                 request.headers().firstHeader(Constants.HEADER_X_TARDIS_TRACE_ID) : "");
-        //for current jumper does not make sense
-        //errorAttributes.put("path", request.path());
 
         //should also evaluate include options (stacktrace, message, bindingErrors)
         return errorAttributes;
@@ -92,7 +99,6 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
         return code;
     }
 
-    //private HttpStatus findHttpStatus(Throwable error, MergedAnnotation<ResponseStatus> responseStatusAnnotation) {
     private HttpStatus findHttpStatus(ServerRequest request, Throwable error, MergedAnnotation<ResponseStatus> responseStatusAnnotation) {
         if (error instanceof ResponseStatusException) {
             return ((ResponseStatusException) error).getStatus();
@@ -108,12 +114,20 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
             return HttpStatus.GATEWAY_TIMEOUT;
         }
 
-
         return responseStatusAnnotation.getValue("code", HttpStatus.class).orElse(INTERNAL_SERVER_ERROR);
     }
 
+    @Override
+    protected void logError(ServerRequest request, ServerResponse response, Throwable throwable){
+        WebFluxSleuthOperators.withSpanInScope(tracer, currentTraceContext, request.exchange(), () -> {
+            super.logError(request, response, throwable);
+        });
+    }
+
     private void logError(ServerRequest request, Throwable throwable){
-       log.error(request.exchange().getLogPrefix() + this.formatError(throwable, request));
+        WebFluxSleuthOperators.withSpanInScope(tracer, currentTraceContext, request.exchange(), () -> {
+            log.error(request.exchange().getLogPrefix() + this.formatError(throwable, request));
+        });
     }
 
     private String formatError(Throwable ex, ServerRequest request) {

@@ -1,8 +1,5 @@
 package jumper.filter;
 
-//import brave.Span;
-//import brave.Tracer;
-import jumper.Constants;
 import jumper.model.response.IncomingResponse;
 import jumper.model.response.JumperInfoResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -26,9 +23,6 @@ import static net.logstash.logback.argument.StructuredArguments.value;
 public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.Config> {
 
 	@Autowired
-	Tracer tracer;
-
-	@Autowired
 	CurrentTraceContext currentTraceContext;
 
 	public ResponseFilter() {
@@ -41,7 +35,7 @@ public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.
 
 			return chain.filter(exchange).then(Mono.fromRunnable(() -> {
 
-				WebFluxSleuthOperators.withSpanInScope(tracer, currentTraceContext, exchange, () -> {
+				WebFluxSleuthOperators.withSpanInScope(config.tracer, currentTraceContext, exchange, () -> {
 
 					ServerHttpResponse response = exchange.getResponse();
 					ServerHttpRequest request = exchange.getRequest();
@@ -50,7 +44,7 @@ public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.
 
 					JumperInfoResponse jumperInfoResponse = new JumperInfoResponse();
 					IncomingResponse incomingResponse = new IncomingResponse();
-//				incomingResponse.setHost(response.getHeaders().getHost().toString());
+
 					incomingResponse.setPath(request.getPath().toString());
 					incomingResponse.setHttpStatusCode(response.getStatusCode().value());
 
@@ -58,50 +52,16 @@ public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.
 
 					log.info("response", value("jumperInfo", jumperInfoResponse));
 
-					Span span = this.tracer.currentSpan();
-
-					span.tag("http.status_code",
-							jumperInfoResponse.getIncomingResponse().getHttpStatusCode().toString());
+					Span span = config.tracer.currentSpan();
 
 					if (contentLength == null || contentLength.toString().equals("-1")) {
-						span.tag("response.message.size", "0");
+						span.tag("message.size_response", "0");
 					} else {
-						span.tag("response.message.size", contentLength.toString());
+						span.tag("message.size_response", contentLength.toString());
 					}
 
 					span.event("jrpf");
-/*
-					// Tracing - Start
-					Span newSpan = this.tracer.nextSpan().name("Response Filter");
 
-
-					String xTardisTraceId = request.getHeaders().getFirst(Constants.HEADER_X_TARDIS_TRACE_ID);
-					String xCorrelationId = response.getHeaders().getFirst(Constants.HEADER_X_CORRELATION_ID);
-
-
-					newSpan.tag("http.status_code",
-							jumperInfoResponse.getIncomingResponse().getHttpStatusCode().toString());
-
-					if (xTardisTraceId != null) {
-
-						newSpan.tag("x-tardis-traceid", xTardisTraceId);
-					}
-
-					if (xCorrelationId != null) {
-						newSpan.tag("x-correlation-id", xCorrelationId);
-					}
-
-					if (contentLength == null || contentLength.toString().equals("-1")) {
-
-						newSpan.tag("message.size", "0");
-					} else {
-
-						newSpan.tag("message.size", contentLength.toString());
-					}
-
-					newSpan.finish();
-					// Tracing - End
-*/
 				});
 
 			}));
@@ -115,14 +75,16 @@ public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.
 	 */
 	public static class Config {
 
-		private String name;
+		private Tracer tracer;
 
-		public String getName() {
-			return name;
+		public Config(){}
+
+		public Config(Tracer tracer) {
+			this.tracer = tracer;
 		}
 
-		public void setName(String name) {
-			this.name = name;
+		public void setTracer(Tracer tracer){
+			this.tracer = tracer;
 		}
 	}
 

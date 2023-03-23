@@ -15,10 +15,7 @@ public class JumperInfoRequest {
     private boolean lastMileSecurityEnhanced;
     private boolean externalAuthorization;
     
-//    private String correlationId;
     private String environment;
-//    private String zone;
-//    private String clientId;
 
     private IncomingRequest incomingRequest;
     private OutgoingRequest outgoingRequest;
