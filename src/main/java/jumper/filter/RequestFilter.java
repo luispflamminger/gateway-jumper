@@ -127,7 +127,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                     String _query = _uri.getRawQuery();
                     String _fragment = _uri.getFragment();
                     routing_path = _uri.getRawPath().replaceFirst("^/(proxy|listener)", ""); //for token should be also decoded
-                    requestPath += routing_path;
+                    if (requestPath != null) requestPath += routing_path;
                     if (_query != null) routing_path = routing_path + "?" + _query;
                     if (_fragment != null) routing_path = routing_path + "#" + _fragment;
 
