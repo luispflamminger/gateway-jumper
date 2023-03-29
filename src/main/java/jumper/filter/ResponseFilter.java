@@ -40,17 +40,19 @@ public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.
 					ServerHttpResponse response = exchange.getResponse();
 					ServerHttpRequest request = exchange.getRequest();
 
+					if(isLogLevelEnabled()) {
+						JumperInfoResponse jumperInfoResponse = new JumperInfoResponse();
+						IncomingResponse incomingResponse = new IncomingResponse();
+
+						incomingResponse.setPath(request.getPath().toString());
+						incomingResponse.setHttpStatusCode(response.getStatusCode().value());
+
+						jumperInfoResponse.setIncomingResponse(incomingResponse);
+
+						log.info("response", value("jumperInfo", jumperInfoResponse));
+					}
+
 					Long contentLength = response.getHeaders().getContentLength();
-
-					JumperInfoResponse jumperInfoResponse = new JumperInfoResponse();
-					IncomingResponse incomingResponse = new IncomingResponse();
-
-					incomingResponse.setPath(request.getPath().toString());
-					incomingResponse.setHttpStatusCode(response.getStatusCode().value());
-
-					jumperInfoResponse.setIncomingResponse(incomingResponse);
-
-					log.info("response", value("jumperInfo", jumperInfoResponse));
 
 					Span span = config.tracer.currentSpan();
 
@@ -67,6 +69,10 @@ public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.
 			}));
 
 		}, RequestFilter.REQUEST_FILTER_ORDER);
+	}
+
+	private boolean isLogLevelEnabled(){
+		return log.isInfoEnabled();
 	}
 
 	/**

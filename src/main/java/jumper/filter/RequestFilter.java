@@ -118,8 +118,11 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                     log.debug("Pre GatewayFilter logging");
                 }
 
-                JumperInfoRequest jumperInfoRequest = new JumperInfoRequest();
-                jumperInfoRequest.setEnvironment(envName);
+                JumperInfoRequest jumperInfoRequest = null;
+                if (isLogLevelEnabled()){
+                    jumperInfoRequest = new JumperInfoRequest();
+                    jumperInfoRequest.setEnvironment(envName);
+                }
 
                 String finalApiUrl = "";
                 try {
@@ -150,13 +153,14 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                         // Egress
                         if (token_endpoint != null) {
                             log.debug("----------------EXTERNAL AUTHORIZATION-------------");
-                            jumperInfoRequest.setLastMileSecurity(false);
-                            jumperInfoRequest.setLastMileSecurityEnhanced(false);
-                            jumperInfoRequest.setMeshActivated(false);
-                            jumperInfoRequest.setExternalAuthorization(true);
+                            if(isLogLevelEnabled()) {
+                                jumperInfoRequest.setLastMileSecurity(false);
+                                jumperInfoRequest.setLastMileSecurityEnhanced(false);
+                                jumperInfoRequest.setMeshActivated(false);
+                                jumperInfoRequest.setExternalAuthorization(true);
+                            }
 
                             log.debug("Remote TokenEndpoint is set to: %s", token_endpoint);
-                            log.debug("Get token from external idp");
 
                             if (jc.getOauth() != null && jc.getOauth().containsKey(consumer) && jc.getOauth().get(consumer).getGrantType() != null && !jc.getOauth().get(consumer).getGrantType().isBlank()) {
                                 TokenInfo tokenInfo = oauthTokenUtil.getAccessToken(token_endpoint, jc.getOauth().get(consumer), consumer);
@@ -168,10 +172,12 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
                         } else if (access_token_forwarding != null && access_token_forwarding.equals("false")) {
                             log.debug("----------------LAST MILE SECURITY (ONE TOKEN)-------------");
-                            jumperInfoRequest.setLastMileSecurity(true);
-                            jumperInfoRequest.setLastMileSecurityEnhanced(true);
-                            jumperInfoRequest.setMeshActivated(false);
-                            jumperInfoRequest.setExternalAuthorization(false);
+                            if(isLogLevelEnabled()) {
+                                jumperInfoRequest.setLastMileSecurity(true);
+                                jumperInfoRequest.setLastMileSecurityEnhanced(true);
+                                jumperInfoRequest.setMeshActivated(false);
+                                jumperInfoRequest.setExternalAuthorization(false);
+                            }
 
                             lastmileSecurityToken = OauthTokenUtil.generateExtGatewayToken(envName,
                                     consumerToken,
@@ -183,12 +189,15 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                                     request.getHeaders().getFirst(Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID)
                             );
                             addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER + " " + lastmileSecurityToken);
+                            log.debug("lastMileSecurityToken: " + lastmileSecurityToken);
                         } else {
                             log.debug("----------------LAST MILE SECURITY (LEGACY)-------------");
-                            jumperInfoRequest.setLastMileSecurity(true);
-                            jumperInfoRequest.setLastMileSecurityEnhanced(false);
-                            jumperInfoRequest.setMeshActivated(false);
-                            jumperInfoRequest.setExternalAuthorization(false);
+                            if(isLogLevelEnabled()) {
+                                jumperInfoRequest.setLastMileSecurity(true);
+                                jumperInfoRequest.setLastMileSecurityEnhanced(false);
+                                jumperInfoRequest.setMeshActivated(false);
+                                jumperInfoRequest.setExternalAuthorization(false);
+                            }
 
                             lastmileSecurityToken = OauthTokenUtil.generateGatewayToken(envName, consumerToken, request.getMethod().toString(), requestPath, lmsIssuer);
 
@@ -200,10 +209,12 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                         /** GW-2-GW MESH TOKEN GENERATION **/
                         log.debug("----------------GATEWAY MESH-------------");
 
-                        jumperInfoRequest.setLastMileSecurity(false);
-                        jumperInfoRequest.setLastMileSecurityEnhanced(false);
-                        jumperInfoRequest.setMeshActivated(true);
-                        jumperInfoRequest.setExternalAuthorization(false);
+                        if(isLogLevelEnabled()) {
+                            jumperInfoRequest.setLastMileSecurity(false);
+                            jumperInfoRequest.setLastMileSecurityEnhanced(false);
+                            jumperInfoRequest.setMeshActivated(true);
+                            jumperInfoRequest.setExternalAuthorization(false);
+                        }
 
                         tif_remote_issuer = tif_remote_issuer + Constants.ISSUER_SUFFIX;
 
@@ -235,28 +246,29 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
                 rewriteXForwardedHeader(exchange, chain);
 
+                if(isLogLevelEnabled()) {
+                    IncomingRequest incReq = new IncomingRequest();
+                    incReq.setBasePath(api_base_path);
+                    incReq.setHost(remote_api_url);
+                    incReq.setMethod(request.getMethodValue());
+                    incReq.setResource(routing_path);
 
-                IncomingRequest incReq = new IncomingRequest();
-                incReq.setBasePath(api_base_path);
-                incReq.setHost(remote_api_url);
-                incReq.setMethod(request.getMethodValue());
-                incReq.setResource(routing_path);
+                    OutgoingRequest outgoingRequest = new OutgoingRequest();
+                    outgoingRequest.setHost(remote_api_url);
+                    outgoingRequest.setBasePath(null);
+                    outgoingRequest.setResource(routing_path);
+                    outgoingRequest.setMethod(request.getMethod().toString());
 
-                OutgoingRequest outgoingRequest = new OutgoingRequest();
-                outgoingRequest.setHost(remote_api_url);
-                outgoingRequest.setBasePath(null);
-                outgoingRequest.setResource(routing_path);
-                outgoingRequest.setMethod(request.getMethod().toString());
+                    HashMap<String, String> logEntries = new HashMap<String, String>();
+                    logEntries.put("Thread name", Thread.currentThread().getName());
 
-                HashMap<String, String> logEntries = new HashMap<String, String>();
-                logEntries.put("Thread name", Thread.currentThread().getName());
+                    incReq.setLogEntries(logEntries);
+                    jumperInfoRequest.setIncomingRequest(incReq);
 
-                incReq.setLogEntries(logEntries);
-                jumperInfoRequest.setIncomingRequest(incReq);
+                    log.info("logging request", value("jumperInfo", jumperInfoRequest));
+                }
 
-                log.info("logging request", value("jumperInfo", jumperInfoRequest));
-
-                addTracingInfo(request, api_base_path, requestPath, envName, consumer, consumerOriginStargate, config.tracer);
+                addTracingInfo(request, config.tracer);
 
             });
             return chain.filter(exchange)
@@ -264,7 +276,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                         // Post-processing
 
                         // do something with the response
-
 
                         if (config.isPostLogger()) {
                             log.debug("Post GatewayFilter logging");
@@ -337,7 +348,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         }
         else
         {
-            log.info( "no specified oauth config credentials for consumer: {}", consumer);
+            log.warn( "no specified oauth config credentials for consumer: {}", consumer); //todo exception here?
         }
     }
 
@@ -354,13 +365,9 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         }
     }
 
-    private void addTracingInfo(ServerHttpRequest request, String api_base_path, String requestPath, String envName, String consumer, String consumerOriginStargate, Tracer tracer) {
+    private void addTracingInfo(ServerHttpRequest request, Tracer tracer) {
 
         String xTardisTraceId = request.getHeaders().getFirst( Constants.HEADER_X_TARDIS_TRACE_ID);
-        String xBusinessContext = request.getHeaders().getFirst( Constants.HEADER_X_BUSINESS_CONTEXT);
-        String xRequestId = request.getHeaders().getFirst( Constants.HEADER_X_REQUEST_ID);
-        String xCorrelationId = request.getHeaders().getFirst( Constants.HEADER_X_CORRELATION_ID);
-        String publisherId = request.getHeaders().getFirst(Constants.HEADER_X_PUBSUB_PUBLISHER_ID);
 
         String contentLength = request.getHeaders().getFirst("Content-Length");
 
@@ -368,7 +375,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         incomingRequestSpan.name("Incoming Request");
 
         if (contentLength == null) {
-            incomingRequestSpan.tag("message.size", "0");
+            incomingRequestSpan.tag("message.size", "0");//todo would prefer to set NA for this (chunked transfer?) scenario
         } else {
             incomingRequestSpan.tag("message.size", contentLength);
         }
@@ -377,53 +384,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
             incomingRequestSpan.tag( Constants.HEADER_X_TARDIS_TRACE_ID, xTardisTraceId);
         }
 
-        if( consumerOriginStargate != null) {
-            incomingRequestSpan.tag("origin-stargate", consumerOriginStargate);
-        }
-
-        if( envName != null) {
-            incomingRequestSpan.tag("environment", envName);
-        }
-
-        if (requestPath != null){
-            incomingRequestSpan.tag("http.path",  requestPath);
-        }
-
-        if( xBusinessContext != null) {
-            incomingRequestSpan.tag(Constants.HEADER_X_BUSINESS_CONTEXT, xBusinessContext);
-        }
-
-        if( xRequestId != null) {
-            incomingRequestSpan.tag(Constants.HEADER_X_REQUEST_ID, xRequestId);
-        }
-
-        if( xCorrelationId != null) {
-            incomingRequestSpan.tag(Constants.HEADER_X_CORRELATION_ID, xCorrelationId);
-        }
-
-        //callback
-        if (publisherId != null){
-            incomingRequestSpan.tag("publisher", publisherId);
-
-            String subscriber = request.getHeaders().getFirst(Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID);
-            if (subscriber != null){
-                incomingRequestSpan.tag("subscriber", subscriber);
-            }
-        }
-        //not callback, assume request-response
-        else {
-            if (api_base_path != null) {
-                //incomingRequestSpan.tag("service.name", api_base_path.substring(1).replace("/", "-"));
-                incomingRequestSpan.remoteServiceName(api_base_path.substring(1).replace("/", "-"));
-            }
-
-            if (consumer != null) {
-                incomingRequestSpan.tag("consumer", consumer);
-            }
-        }
-
         incomingRequestSpan.event("jrqf");
-
     }
 
     private void rewriteXForwardedHeader( ServerWebExchange exchange, GatewayFilterChain chain) {
@@ -456,6 +417,10 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
             return jumperConfig.getOauth().get(consumer).getScopes();
         }
         return null;
+    }
+
+    private boolean isLogLevelEnabled(){
+        return log.isInfoEnabled();
     }
 
     public static class Config {
