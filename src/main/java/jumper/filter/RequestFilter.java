@@ -44,6 +44,9 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
     @Value( "${jumper.issuer.url}")
     private String localIssuerUrl;
 
+    @Value( "${spring.application.name}")
+    private String applicationName;
+
     public static final int REQUEST_FILTER_ORDER = RouteToRequestUrlFilter.ROUTE_TO_URL_FILTER_ORDER + 1;
 
     @Autowired
@@ -384,6 +387,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
             incomingRequestSpan.tag( Constants.HEADER_X_TARDIS_TRACE_ID, xTardisTraceId);
         }
 
+        incomingRequestSpan.remoteServiceName(applicationName);
         incomingRequestSpan.event("jrqf");
     }
 

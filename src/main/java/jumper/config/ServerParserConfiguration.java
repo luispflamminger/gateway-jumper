@@ -23,6 +23,7 @@ public class ServerParserConfiguration {
     HttpRequestParser httpRequestParser() {
         return (req, context, span) -> {
             String url = req.url();
+            String xTardisTraceId = req.header(Constants.HEADER_X_TARDIS_TRACE_ID);
 
             String spanName = "Provider";
             if (req.header(Constants.HEADER_CONSUMER_TOKEN) != null) {
@@ -33,6 +34,10 @@ public class ServerParserConfiguration {
 
             if (url != null) {
                 span.tag("http.url", url);
+            }
+
+            if (xTardisTraceId != null) {
+                span.tag(Constants.HEADER_X_TARDIS_TRACE_ID, xTardisTraceId);
             }
         };
     }
