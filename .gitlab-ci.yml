@@ -1,18 +1,15 @@
 include:
-  - project: 'dhei/teams/hyperion/dev/src/foundation-build'
-    file: '/pipelines/java-maven-docker-pipeline.yaml'
-    ref: main
-
+- project: dhei/teams/hyperion/dev/src/foundation-build
+  file: /pipelines/java-maven-docker-pipeline.yaml
+  ref: 15.2.1
 variables:
   MTR_TARGET_IMAGE: ${CI_PROJECT_NAME}
-
+  MAVEN_ADD_OPTS: -DskipTests
 build docker image:
   extends: .build-docker-image-manual
-
 mtr to harbor:
   extends: .mtr_to_harbor
   needs:
-    - job: build_deploy
-      artifacts: true
-    - job: dockerize
-    
+  - job: build_deploy
+    artifacts: true
+  - job: dockerize
