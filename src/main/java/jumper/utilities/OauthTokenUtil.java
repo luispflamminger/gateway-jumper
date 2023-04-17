@@ -258,13 +258,13 @@ public class OauthTokenUtil {
             }
 
             if (oauthCredentials.getUsername() != null && !oauthCredentials.getUsername().isBlank() && oauthCredentials.getPassword() != null && !oauthCredentials.getPassword().isBlank()) {
-                if (clientCredentialsSet) {
+//                if (clientCredentialsSet) {
                     cc.add("username", oauthCredentials.getUsername());
                     cc.add("password", oauthCredentials.getPassword());
-                } else {
-                    String basicAuthPreparation = oauthCredentials.getUsername() + ":" + oauthCredentials.getPassword();
-                    basicAuth = Base64Utils.encodeToString(basicAuthPreparation.getBytes());
-                }
+//                } else {
+//                    String basicAuthPreparation = oauthCredentials.getUsername() + ":" + oauthCredentials.getPassword();
+//                    basicAuth = Base64Utils.encodeToString(basicAuthPreparation.getBytes());
+//                }
             }
 
             if (oauthCredentials.getRefreshToken() != null && !oauthCredentials.getRefreshToken().isBlank()) {
@@ -277,25 +277,48 @@ public class OauthTokenUtil {
 
             cc.add("grant_type", oauthCredentials.getGrantType());
 
-            Mono<TokenInfo> tokenInfoMono = webClient.post()
-                    .uri(tokenEndpoint)
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-                    .header(HttpHeaders.AUTHORIZATION, "Basic " + basicAuth)
-                    .body(BodyInserters.fromFormData(cc))
-                    .retrieve()
-                    .onStatus(HttpStatus::is4xxClientError,
-                            response -> {
-                                logClientErrorResponse(response, tokenEndpoint, id);
-                                return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to retrieve token from " + tokenEndpoint + " for client " + id));
-                            })
-                    .bodyToMono(TokenInfo.class)
-                    .retryWhen(Retry.max(3)
-                            .filter(throwable -> throwable instanceof ConnectTimeoutException)
-                            .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
-                                        throw new ServerErrorException("Failed to connect to " + tokenEndpoint, (Throwable) null);
-                                    }
-                            )
-                    );
+            Mono<TokenInfo> tokenInfoMono;
+            if(!clientCredentialsSet) {
+                tokenInfoMono = webClient.post()
+                        .uri(tokenEndpoint)
+                        .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+//                        .header(HttpHeaders.AUTHORIZATION, "Basic " + basicAuth)
+                        .body(BodyInserters.fromFormData(cc))
+                        .retrieve()
+                        .onStatus(HttpStatus::is4xxClientError,
+                                response -> {
+                                    logClientErrorResponse(response, tokenEndpoint, id);
+                                    return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to retrieve token from " + tokenEndpoint + " for client " + id));
+                                })
+                        .bodyToMono(TokenInfo.class)
+                        .retryWhen(Retry.max(3)
+                                .filter(throwable -> throwable instanceof ConnectTimeoutException)
+                                .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
+                                            throw new ServerErrorException("Failed to connect to " + tokenEndpoint, (Throwable) null);
+                                        }
+                                )
+                        );
+            } else {
+                tokenInfoMono = webClient.post()
+                        .uri(tokenEndpoint)
+                        .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+                        .header(HttpHeaders.AUTHORIZATION, "Basic " + basicAuth)
+                        .body(BodyInserters.fromFormData(cc))
+                        .retrieve()
+                        .onStatus(HttpStatus::is4xxClientError,
+                                response -> {
+                                    logClientErrorResponse(response, tokenEndpoint, id);
+                                    return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to retrieve token from " + tokenEndpoint + " for client " + id));
+                                })
+                        .bodyToMono(TokenInfo.class)
+                        .retryWhen(Retry.max(3)
+                                .filter(throwable -> throwable instanceof ConnectTimeoutException)
+                                .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
+                                            throw new ServerErrorException("Failed to connect to " + tokenEndpoint, (Throwable) null);
+                                        }
+                                )
+                        );
+            }
 
             CompletableFuture<TokenInfo> tokenInfoCompletableFuture = tokenInfoMono.toFuture();
             accessToken = tokenInfoCompletableFuture.join();
