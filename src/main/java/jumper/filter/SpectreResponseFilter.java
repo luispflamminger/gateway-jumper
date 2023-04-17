@@ -5,7 +5,6 @@ import jumper.model.config.RouteListener;
 import jumper.spectre.SpectreService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.NettyWriteResponseFilter;
 import org.springframework.cloud.gateway.filter.OrderedGatewayFilter;
@@ -16,9 +15,6 @@ import reactor.core.publisher.Mono;
 @Component
 @Slf4j
 public class SpectreResponseFilter extends AbstractGatewayFilterFactory<SpectreResponseFilter.Config> {
-
-    @Value( "${horizon.publishEventUrl}")
-    private String publishEventUrl;
 
     @Autowired
     SpectreService aes;
