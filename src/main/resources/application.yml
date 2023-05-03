@@ -34,6 +34,8 @@ spring:
           #eviction-interval: 120s
         connect-timeout: 10000
         response-timeout: 61s # ingress 60s
+        max-initial-line-length: ${MAX_INITIAL_LINE_LENGTH:8192} #default 4096
+        max-initial-line-length-tardis: ${MAX_INITIAL_LINE_LENGTH:8192} #available scg parameter does not have effect, so we add custom one
         #ssl:
           #useInsecureTrustManager: true # routing to a https backend, Gateway will trust all downstream certificates
       x-forwarded:

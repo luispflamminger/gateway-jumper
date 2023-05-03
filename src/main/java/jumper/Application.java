@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.web.embedded.netty.NettyReactiveWebServerFactory;
+import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.cloud.gateway.config.HttpClientCustomizer;
 import org.springframework.cloud.gateway.route.RouteLocator;
 import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
@@ -30,7 +32,7 @@ import java.util.stream.Stream;
 @SpringBootApplication
 public class Application {
 
-    @Value( "${horizon.publishEventUrl}")
+    @Value("${horizon.publishEventUrl}")
     private String publishEventUrl;
 
     @Value("${CUSTOM_CIPHERS:}")
@@ -71,27 +73,27 @@ public class Application {
                 .route("listener_route", p -> p
                         .path("/listener/**")
                         .filters(f -> f
-                                        .filter(requestFilter.apply(new RequestFilter.Config(true, true, tracer)))
-                                        .filter(requestTransformationFilter)
-                                        .filter(responseTransformationFilter)
-                                        .filter(spectreRequestFilter.apply(new SpectreRequestFilter.Config()))
-                                        .filter(spectreResponseFilter.apply(new SpectreResponseFilter.Config()))
-                                        .filter(removeHeader.apply(c -> c.setName("jumper_config")))
-                                        .filter(removeHeader.apply(c -> c.setName("token_endpoint")))
-                                        .filter(removeHeader.apply(c -> c.setName("remote_api_url")))
-                                        .filter(removeHeader.apply(c -> c.setName("issuer")))
-                                        .filter(removeHeader.apply(c -> c.setName("client_id")))
-                                        .filter(removeHeader.apply(c -> c.setName("client_secret")))
-                                        .filter(removeHeader.apply(c -> c.setName("api_base_path")))
-                                        .filter(removeHeader.apply(c -> c.setName("x-consumer-id")))
-                                        .filter(removeHeader.apply(c -> c.setName("x-consumer-custom-id")))
-                                        .filter(removeHeader.apply(c -> c.setName("x-consumer-groups")))
-                                        .filter(removeHeader.apply(c -> c.setName("x-consumer-username")))
-                                        .filter(removeHeader.apply(c -> c.setName("x-anonymous-consumer")))
-                                        .filter(removeHeader.apply(c -> c.setName("x-anonymous-groups")))
-                                        .filter(removeHeader.apply(c -> c.setName("x-forwarded-prefix")))
-                                        .filter(removeHeader.apply(c -> c.setName("access_token_forwarding")))
-                                        .filter(responseFilter.apply(c -> c.setTracer(tracer)))
+                                .filter(requestFilter.apply(new RequestFilter.Config(true, true, tracer)))
+                                .filter(requestTransformationFilter)
+                                .filter(responseTransformationFilter)
+                                .filter(spectreRequestFilter.apply(new SpectreRequestFilter.Config()))
+                                .filter(spectreResponseFilter.apply(new SpectreResponseFilter.Config()))
+                                .filter(removeHeader.apply(c -> c.setName("jumper_config")))
+                                .filter(removeHeader.apply(c -> c.setName("token_endpoint")))
+                                .filter(removeHeader.apply(c -> c.setName("remote_api_url")))
+                                .filter(removeHeader.apply(c -> c.setName("issuer")))
+                                .filter(removeHeader.apply(c -> c.setName("client_id")))
+                                .filter(removeHeader.apply(c -> c.setName("client_secret")))
+                                .filter(removeHeader.apply(c -> c.setName("api_base_path")))
+                                .filter(removeHeader.apply(c -> c.setName("x-consumer-id")))
+                                .filter(removeHeader.apply(c -> c.setName("x-consumer-custom-id")))
+                                .filter(removeHeader.apply(c -> c.setName("x-consumer-groups")))
+                                .filter(removeHeader.apply(c -> c.setName("x-consumer-username")))
+                                .filter(removeHeader.apply(c -> c.setName("x-anonymous-consumer")))
+                                .filter(removeHeader.apply(c -> c.setName("x-anonymous-groups")))
+                                .filter(removeHeader.apply(c -> c.setName("x-forwarded-prefix")))
+                                .filter(removeHeader.apply(c -> c.setName("access_token_forwarding")))
+                                .filter(responseFilter.apply(c -> c.setTracer(tracer)))
                         )
                         .uri("no://op"))
                 .route("auto_event_route_post", p -> p
@@ -129,42 +131,42 @@ public class Application {
     @Bean
     public HttpClientCustomizer httpClientCustomizer() {
         try {
-            List dt_ciphers =  List.of("TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"
-                    ,"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
-                    ,"TLS_DHE_DSS_WITH_AES_256_GCM_SHA384"
-                    ,"TLS_DHE_RSA_WITH_AES_256_GCM_SHA384"
-                    ,"TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256"
-                    ,"TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256"
-                    ,"TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256"
+            List dt_ciphers = List.of("TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"
+                    , "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+                    , "TLS_DHE_DSS_WITH_AES_256_GCM_SHA384"
+                    , "TLS_DHE_RSA_WITH_AES_256_GCM_SHA384"
+                    , "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256"
+                    , "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256"
+                    , "TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256"
                     //,"TLS_ECDHE_ECDSA_WITH_AES_256_CCM"
                     //,"TLS_DHE_RSA_WITH_AES_256_CCM"
-                    ,"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"
-                    ,"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
-                    ,"TLS_DHE_DSS_WITH_AES_128_GCM_SHA256"
-                    ,"TLS_DHE_RSA_WITH_AES_128_GCM_SHA256"
+                    , "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"
+                    , "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+                    , "TLS_DHE_DSS_WITH_AES_128_GCM_SHA256"
+                    , "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256"
                     //,"TLS_ECDHE_ECDSA_WITH_AES_128_CCM"
                     //,"TLS_DHE_RSA_WITH_AES_128_CCM"
-                    ,"TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384"
-                    ,"TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384"
-                    ,"TLS_DHE_DSS_WITH_AES_256_CBC_SHA256"
-                    ,"TLS_DHE_RSA_WITH_AES_256_CBC_SHA256"
-                    ,"TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256"
-                    ,"TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256"
-                    ,"TLS_DHE_DSS_WITH_AES_128_CBC_SHA256"
-                    ,"TLS_DHE_RSA_WITH_AES_128_CBC_SHA256"
-                    ,"TLS_AES_256_GCM_SHA384"
-                    ,"TLS_CHACHA20_POLY1305_SHA256"
-                    ,"TLS_AES_128_GCM_SHA256"
+                    , "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384"
+                    , "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384"
+                    , "TLS_DHE_DSS_WITH_AES_256_CBC_SHA256"
+                    , "TLS_DHE_RSA_WITH_AES_256_CBC_SHA256"
+                    , "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256"
+                    , "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256"
+                    , "TLS_DHE_DSS_WITH_AES_128_CBC_SHA256"
+                    , "TLS_DHE_RSA_WITH_AES_128_CBC_SHA256"
+                    , "TLS_AES_256_GCM_SHA384"
+                    , "TLS_CHACHA20_POLY1305_SHA256"
+                    , "TLS_AES_128_GCM_SHA256"
                     //,"TLS_AES_128_CCM_SHA256"
             );
 
             SslContext s = SslContextBuilder
                     .forClient()
                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                    .protocols("TLSv1.2","TLSv1.3")
+                    .protocols("TLSv1.2", "TLSv1.3")
                     .sslProvider(SslProvider.JDK)
                     .ciphers((Iterable<String>) Stream.concat(dt_ciphers.stream(),
-                            custom_ciphers.stream())
+                                    custom_ciphers.stream())
                             .distinct().collect(Collectors.toList())
                     )
                     .build();
@@ -172,15 +174,14 @@ public class Application {
             return httpClient -> httpClient
                     .secure(t -> t.sslContext(s));
 
-        }
-        catch (SSLException e){
+        } catch (SSLException e) {
             e.printStackTrace();
         }
 
         return httpClient -> httpClient;
     }
 
-    
+
     @Bean
     public WebClient createWebClient() throws SSLException {
         SslContext sslContext = SslContextBuilder
@@ -191,5 +192,18 @@ public class Application {
         return WebClient.builder().clientConnector(new ReactorClientHttpConnector(httpClient)).build();
     }
 
+    @Bean
+    public WebServerFactoryCustomizer<NettyReactiveWebServerFactory> customizer(@Value("${spring.cloud.gateway.httpclient.max-initial-line-length-tardis}") int maxInitialLineLength) {
+        return new WebServerFactoryCustomizer<NettyReactiveWebServerFactory>() {
+            @Override
+            public void customize(NettyReactiveWebServerFactory factory) {
+                factory.addServerCustomizers(server ->
+                        server.httpRequestDecoder(dec ->
+                                dec.maxInitialLineLength(maxInitialLineLength)
+                        )
+                );
+            }
+        };
+    }
 }
 
