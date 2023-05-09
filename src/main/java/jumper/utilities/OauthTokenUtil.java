@@ -8,7 +8,6 @@ import jumper.model.TokenInfo;
 import jumper.model.config.OauthCredentials;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
@@ -40,6 +39,7 @@ import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -50,6 +50,8 @@ public class OauthTokenUtil {
 
     @Autowired
     JumperCache tokenCache;
+
+    private static String delimiter = ".";
 
     private static String keyId = "74f16025-ff3d-453b-a917-eca975423dea";
 
@@ -202,7 +204,6 @@ public class OauthTokenUtil {
             log.error("URISyntaxException", e1);
         }
 
-        log.debug("GatewayToken or OneToken: Generating with all claims");
         return Jwts.builder().setClaims(claims).setIssuer(issuer).setExpiration(expiration).setIssuedAt(issuedAt).signWith(loadKey, SignatureAlgorithm.RS256).setHeaderParam("kid", keyId).setHeaderParam("typ", "JWT").compact();
     }
 
@@ -227,226 +228,98 @@ public class OauthTokenUtil {
         return privKey;
     }
 
-    public TokenInfo getAccessToken(String token_endpoint2, String tif_clientID2, String tif_clientSecret2) {
-        return getAccessToken(token_endpoint2, tif_clientID2, tif_clientSecret2, null, "");
+    public TokenInfo getAccessToken(String tokenEndpoint, String clientID, String clientSecret) {
+        return getAccessToken(tokenEndpoint, clientID, clientSecret, null, "");
+    }
+
+    public TokenInfo getAccessToken(String tokenEndpoint, String clientID, String clientSecret, String scope, String subscriberClientId) {
+
+        final String tokenKey = tokenEndpoint + delimiter + clientID + delimiter + subscriberClientId;
+
+        TokenInfo cachedAccessToken = tokenCache.getToken(tokenKey);
+        if (cachedAccessToken != null) return cachedAccessToken;
+
+        MultiValueMap<String, String> cc = new LinkedMultiValueMap<>();
+        cc.add("client_id", clientID);
+        cc.add("client_secret", clientSecret);
+        cc.add("grant_type", AuthorizationGrantType.CLIENT_CREDENTIALS.getValue());
+        if (scope != null && !scope.isEmpty()) {
+            cc.add("scope", scope);
+        }
+
+        return getAccessTokenQuery(tokenEndpoint, tokenKey, cc, null);
     }
 
     public TokenInfo getAccessToken(String tokenEndpoint, OauthCredentials oauthCredentials, String subscriberClientId) {
 
-        String id;
+        final String tokenKey = tokenEndpoint + delimiter + oauthCredentials.getId() + delimiter + subscriberClientId;
 
-        if (oauthCredentials.getClientId() != null && !oauthCredentials.getClientId().isBlank()) {
-            id = oauthCredentials.getClientId();
-        } else {
-            id = oauthCredentials.getUsername();
-        }
+        TokenInfo cachedAccessToken = tokenCache.getToken(tokenKey);
+        if (cachedAccessToken != null) return cachedAccessToken;
 
-        final String tokenKey = tokenEndpoint + id + subscriberClientId;
-
-        TokenInfo accessToken = tokenCache.getToken(tokenKey);
-
-        if (accessToken == null) {
-
-            MultiValueMap<String, String> cc = new LinkedMultiValueMap<>();
-            String basicAuth = "";
-
-            boolean clientCredentialsSet = false;
-            if (oauthCredentials.getClientId() != null && !oauthCredentials.getClientId().isBlank() && oauthCredentials.getClientSecret() != null && !oauthCredentials.getClientSecret().isBlank()) {
-                String basicAuthPreparation = oauthCredentials.getClientId() + ":" + oauthCredentials.getClientSecret();
-                basicAuth = Base64Utils.encodeToString(basicAuthPreparation.getBytes());
-                clientCredentialsSet = true;
-            }
-
-            if (oauthCredentials.getUsername() != null && !oauthCredentials.getUsername().isBlank() && oauthCredentials.getPassword() != null && !oauthCredentials.getPassword().isBlank()) {
-//                if (clientCredentialsSet) {
-                    cc.add("username", oauthCredentials.getUsername());
-                    cc.add("password", oauthCredentials.getPassword());
-//                } else {
-//                    String basicAuthPreparation = oauthCredentials.getUsername() + ":" + oauthCredentials.getPassword();
-//                    basicAuth = Base64Utils.encodeToString(basicAuthPreparation.getBytes());
-//                }
-            }
-
-            if (oauthCredentials.getRefreshToken() != null && !oauthCredentials.getRefreshToken().isBlank()) {
-                cc.add("refresh_token", oauthCredentials.getRefreshToken());
-            }
-
-            if (oauthCredentials.getScopes() != null && !oauthCredentials.getScopes().isEmpty()) {
-                cc.add("scope", oauthCredentials.getScopes());
-            }
-
-            cc.add("grant_type", oauthCredentials.getGrantType());
-
-            Mono<TokenInfo> tokenInfoMono;
-            if(!clientCredentialsSet) {
-                tokenInfoMono = webClient.post()
-                        .uri(tokenEndpoint)
-                        .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-//                        .header(HttpHeaders.AUTHORIZATION, "Basic " + basicAuth)
-                        .body(BodyInserters.fromFormData(cc))
-                        .retrieve()
-                        .onStatus(HttpStatus::is4xxClientError,
-                                response -> {
-                                    logClientErrorResponse(response, tokenEndpoint, id);
-                                    return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to retrieve token from " + tokenEndpoint + " for client " + id));
-                                })
-                        .bodyToMono(TokenInfo.class)
-                        .retryWhen(Retry.max(3)
-                                .filter(throwable -> throwable instanceof ConnectTimeoutException)
-                                .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
-                                            throw new ServerErrorException("Failed to connect to " + tokenEndpoint, (Throwable) null);
-                                        }
-                                )
-                        );
-            } else {
-                tokenInfoMono = webClient.post()
-                        .uri(tokenEndpoint)
-                        .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-                        .header(HttpHeaders.AUTHORIZATION, "Basic " + basicAuth)
-                        .body(BodyInserters.fromFormData(cc))
-                        .retrieve()
-                        .onStatus(HttpStatus::is4xxClientError,
-                                response -> {
-                                    logClientErrorResponse(response, tokenEndpoint, id);
-                                    return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to retrieve token from " + tokenEndpoint + " for client " + id));
-                                })
-                        .bodyToMono(TokenInfo.class)
-                        .retryWhen(Retry.max(3)
-                                .filter(throwable -> throwable instanceof ConnectTimeoutException)
-                                .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
-                                            throw new ServerErrorException("Failed to connect to " + tokenEndpoint, (Throwable) null);
-                                        }
-                                )
-                        );
-            }
-
-            CompletableFuture<TokenInfo> tokenInfoCompletableFuture = tokenInfoMono.toFuture();
-            accessToken = tokenInfoCompletableFuture.join();
-            tokenCache.saveToken(tokenKey, accessToken);
-
-        }
-        return accessToken;
-    }
-
-    public TokenInfo getAccessToken(String token_endpoint2, String tif_clientID2, String tif_clientSecret2, String scope, String subscriberClientId) {
-
-        // (cache) try to grab a valid gateway mesh token from cache
-        if (log.isDebugEnabled()) {
-            tokenCache.printCache();
-        }
-        final String tokenKey = token_endpoint2 + tif_clientID2 + subscriberClientId;
-
-        TokenInfo gwAccessToken = tokenCache.getToken(tokenKey);
-
-
-        if (gwAccessToken == null) {
-
-            MultiValueMap<String, String> cc = new LinkedMultiValueMap<>();
-            cc.add("client_id", tif_clientID2);
-            cc.add("client_secret", tif_clientSecret2);
-            cc.add("grant_type", AuthorizationGrantType.CLIENT_CREDENTIALS.getValue());
-            if (scope != null && !scope.isEmpty()) {
-                cc.add("scope", scope);
-            }
-
-            Mono<TokenInfo> tokenInfoMono = webClient.post()
-                    .uri(token_endpoint2)
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-                    .body(BodyInserters.fromFormData(cc))
-                    .retrieve()
-                    .onStatus(HttpStatus::is4xxClientError,
-                            response -> {
-                                logClientErrorResponse(response, token_endpoint2, tif_clientID2);
-                                return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to retrieve token from " + token_endpoint2 + " for client " + tif_clientID2));
-                            })
-                    .bodyToMono(TokenInfo.class)
-                    .retryWhen(Retry.max(3)
-                            .filter(throwable -> throwable instanceof ConnectTimeoutException)
-                            .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
-                                        throw new ServerErrorException("Failed to connect to " + token_endpoint2, (Throwable) null);
-                                    }
-                            )
-                    )
-                    ;
-
-            CompletableFuture<TokenInfo> tokenInfoCompletableFuture = tokenInfoMono.toFuture();
-            gwAccessToken = tokenInfoCompletableFuture.join();
-            tokenCache.saveToken(tokenKey, gwAccessToken);
-        }
-        return gwAccessToken;
-    }
-
-    public Mono<TokenInfo> getAccessTokenImpl1(String token_endpoint2, String tif_clientID2, String tif_clientSecret2, String scope) {
         MultiValueMap<String, String> cc = new LinkedMultiValueMap<>();
-        cc.add("client_id", tif_clientID2);
-        cc.add("client_secret", tif_clientSecret2);
-        cc.add("grant_type", AuthorizationGrantType.CLIENT_CREDENTIALS.getValue());
-        if (scope != null && !scope.isEmpty()) {
-            cc.add("scope", scope);
+        String basicAuth = null;
+
+        if (oauthCredentials.getClientId() != null && !oauthCredentials.getClientId().isBlank() && oauthCredentials.getClientSecret() != null && !oauthCredentials.getClientSecret().isBlank()) {
+            String basicAuthPreparation = oauthCredentials.getClientId() + ":" + oauthCredentials.getClientSecret();
+            basicAuth = Base64Utils.encodeToString(basicAuthPreparation.getBytes());
         }
-        return webClient.post()
-                .uri(token_endpoint2)
-                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+
+        if (oauthCredentials.getUsername() != null && !oauthCredentials.getUsername().isBlank() && oauthCredentials.getPassword() != null && !oauthCredentials.getPassword().isBlank()) {
+            cc.add("username", oauthCredentials.getUsername());
+            cc.add("password", oauthCredentials.getPassword());
+        }
+
+        if (oauthCredentials.getRefreshToken() != null && !oauthCredentials.getRefreshToken().isBlank()) {
+            cc.add("refresh_token", oauthCredentials.getRefreshToken());
+        }
+
+        if (oauthCredentials.getScopes() != null && !oauthCredentials.getScopes().isEmpty()) {
+            cc.add("scope", oauthCredentials.getScopes());
+        }
+
+        cc.add("grant_type", oauthCredentials.getGrantType());
+
+        return getAccessTokenQuery(tokenEndpoint, tokenKey, cc, basicAuth);
+    }
+
+    public TokenInfo getAccessTokenQuery(String tokenEndpoint, String tokenKey, MultiValueMap cc, String basicAuthHeader) {
+
+        Mono<TokenInfo> tokenInfoMono = webClient.post()
+                .uri(tokenEndpoint)
+                .headers(
+                        httpHeaders -> {
+                            httpHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+                            if (basicAuthHeader != null) httpHeaders.setBasicAuth(basicAuthHeader);
+                        }
+                )
                 .body(BodyInserters.fromFormData(cc))
                 .retrieve()
                 .onStatus(HttpStatus::is4xxClientError,
                         response -> {
-                            logClientErrorResponse(response, token_endpoint2, tif_clientID2);
-                            return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to retrieve token from " + token_endpoint2 + " for client " + tif_clientID2));
+                            logClientErrorResponse(response, tokenKey);
+                            return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to retrieve token from " + tokenEndpoint));
                         })
                 .bodyToMono(TokenInfo.class)
-                .retryWhen(Retry.max(3)
+                .retryWhen(Retry.max(2)
                         .filter(throwable -> throwable instanceof ConnectTimeoutException)
                         .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
-                                    throw new ServerErrorException("Failed to connect to " + token_endpoint2, (Throwable) null);
+                                    throw new ServerErrorException("Failed to connect to " + tokenEndpoint, (Throwable) null);
                                 }
                         )
-                )
-                ;
+                );
+
+        CompletableFuture<TokenInfo> tokenInfoCompletableFuture = tokenInfoMono.toFuture().orTimeout(15, TimeUnit.SECONDS);
+        TokenInfo accessToken = tokenInfoCompletableFuture.join();
+        tokenCache.saveToken(tokenKey, accessToken);
+
+        return accessToken;
     }
 
-    public Mono<TokenInfo> getAccessTokenImpl2(String token_endpoint2, String tif_clientID2, String tif_clientSecret2, String scope, String subscriberClientId) {
-        final String tokenKey = token_endpoint2 + tif_clientID2 + subscriberClientId;
-        MultiValueMap<String, String> cc = new LinkedMultiValueMap<>();
-        cc.add("client_id", tif_clientID2);
-        cc.add("client_secret", tif_clientSecret2);
-        cc.add("grant_type", AuthorizationGrantType.CLIENT_CREDENTIALS.getValue());
-        if (scope != null && !scope.isEmpty()) {
-            cc.add("scope", scope);
-        }
-        return Mono.fromCallable(() -> {
-                    var res = webClient.post()
-                            .uri(token_endpoint2)
-                            .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-                            .body(BodyInserters.fromFormData(cc))
-                            .retrieve()
-                            .onStatus(HttpStatus::is4xxClientError,
-                                    response -> {
-                                        logClientErrorResponse(response, token_endpoint2, tif_clientID2);
-                                        return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to retrieve token from " + token_endpoint2 + " for client " + tif_clientID2));
-                                    })
-                            .bodyToMono(TokenInfo.class)
-                            .retryWhen(Retry.max(3)
-                                    .filter(throwable -> throwable instanceof ConnectTimeoutException)
-                                    .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
-                                                throw new ServerErrorException("Failed to connect to " + token_endpoint2, (Throwable) null);
-                                            }
-                                    )
-                            )
-                            .block();
-
-                    log.debug("End2");
-
-                    return res;
-                })
-                .subscribeOn(Schedulers.boundedElastic())
-                .doOnSubscribe(s -> log.debug("Start2"));
-    }
-
-    private void logClientErrorResponse(ClientResponse response, String tokenEndopoint, String clientId) {
+    private void logClientErrorResponse(ClientResponse response, String tokenKey) {
         response.bodyToMono(String.class)
                 .publishOn(Schedulers.boundedElastic())
-                .subscribe(body -> log.warn("Client error occurred while getting token for issuer {} and client {}: {}", tokenEndopoint, clientId, body));
+                .subscribe(body -> log.warn("Client error occurred while getting token for tokenKey {}: {}", tokenKey, body));
     }
 
 }

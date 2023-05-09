@@ -14,4 +14,12 @@ public class OauthCredentials
     private String password;
     private String refreshToken;
     private String grantType;
+
+    public String getId(){
+        if (this.clientId != null && !this.clientId.isBlank()) {
+            return this.clientId;
+        } else {
+            return this.username;
+        }
+    }
 }
