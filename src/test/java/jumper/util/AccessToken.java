@@ -6,7 +6,6 @@ import jumper.utilities.OauthTokenUtil;
 import lombok.Builder;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.spec.InvalidKeySpecException;
@@ -58,8 +57,8 @@ public class AccessToken {
         Date expiration = new Date(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(5));
         PrivateKey privateKey = null;
         try {
-            privateKey = OauthTokenUtil.loadPrivKey(null);
-        } catch (IOException | URISyntaxException | NoSuchAlgorithmException | InvalidKeySpecException e) {
+            privateKey = OauthTokenUtil.loadPrivKey();
+        } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException e) {
             e.getStackTrace();
         }
 

@@ -8,6 +8,7 @@ import jumper.model.TokenInfo;
 import jumper.model.config.OauthCredentials;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
@@ -27,7 +28,6 @@ import reactor.util.retry.Retry;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyFactory;
@@ -53,7 +53,13 @@ public class OauthTokenUtil {
 
     private static String delimiter = ".";
 
-    private static String keyId = "74f16025-ff3d-453b-a917-eca975423dea";
+    private static String SECURITY_PATH;
+
+    @Value("${jumper.security.dir:keypair}")
+    public void setSecurityPath(String name){
+        OauthTokenUtil.SECURITY_PATH = name;
+    }
+
 
     public static String getTokenWithoutSignature(String consumerToken) {
 
@@ -66,10 +72,6 @@ public class OauthTokenUtil {
         String consumerTokenWithoutSignature = splitToken[0] + "." + splitToken[1] + ".";
 
         return consumerTokenWithoutSignature;
-    }
-
-    public static String getConsumerFromToken(String consumerToken) {
-        return getClaimFromToken(consumerToken, "clientId");
     }
 
     public static String getClaimFromToken(String consumerToken, String claimName) {
@@ -189,36 +191,41 @@ public class OauthTokenUtil {
 
 
     private static String generateToken(HashMap<String, String> claims, String issuer, Date expiration, Date issuedAt) {
-        String privateKey = null;
-        PrivateKey loadKey = null;
+        String kid = null;
+        PrivateKey privateKey = null;
         try {
             log.debug("GatewayToken or OneToken: Loading privateKey");
-            loadKey = loadPrivKey(privateKey);
+            privateKey = loadPrivKey();
+            kid = loadKid();
         } catch (NoSuchAlgorithmException e1) {
             log.error("NoSuchAlgorithmException", e1);
+            throw new RuntimeException("Error while generating LMS token, private key missing");
         } catch (InvalidKeySpecException e1) {
             log.error("InvalidKeySpecException", e1);
+            throw new RuntimeException("Error while generating LMS token, private key missing");
         } catch (IOException e1) {
             log.error("IOException", e1);
-        } catch (URISyntaxException e1) {
-            log.error("URISyntaxException", e1);
+            throw new RuntimeException("Error while generating LMS token, private key missing");
         }
 
-        return Jwts.builder().setClaims(claims).setIssuer(issuer).setExpiration(expiration).setIssuedAt(issuedAt).signWith(loadKey, SignatureAlgorithm.RS256).setHeaderParam("kid", keyId).setHeaderParam("typ", "JWT").compact();
+        return Jwts.builder().setClaims(claims).setIssuer(issuer).setExpiration(expiration).setIssuedAt(issuedAt).signWith(privateKey, SignatureAlgorithm.RS256).setHeaderParam("kid", kid).setHeaderParam("typ", "JWT").compact();
     }
 
+    public static String loadKid() throws IOException {
+        Path kidFile = Path.of(System.getProperty("user.dir")  + File.separator + SECURITY_PATH + File.separator+ "kid");
+        return Files.readString(kidFile);
+    }
 
-    public static PrivateKey loadPrivKey(String key) throws IOException, URISyntaxException, NoSuchAlgorithmException, InvalidKeySpecException {
+    public static PrivateKey loadPrivKey() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
 
         String privateKeyContent;
-        if (key == null) {
-            File projectDir = new File(System.getProperty("user.dir") + "/keypair/app.pem");
 
-            privateKeyContent = new String(Files.readAllBytes(Path.of(projectDir.toURI())));
-            privateKeyContent = privateKeyContent.replaceAll("(\\r|\\n)", "").replace("-----BEGIN PRIVATE KEY-----", "").replace("-----END PRIVATE KEY-----", "");
-        } else {
-            privateKeyContent = key;
-        }
+        Path privateKeyFile = Path.of(System.getProperty("user.dir") + File.separator + SECURITY_PATH + File.separator + "app.pem");
+
+        privateKeyContent = Files.readString(privateKeyFile)
+                .replaceAll("(\\r|\\n)", "")
+                .replace("-----BEGIN PRIVATE KEY-----", "")
+                .replace("-----END PRIVATE KEY-----", "");
 
         KeyFactory kf = KeyFactory.getInstance("RSA");
 
