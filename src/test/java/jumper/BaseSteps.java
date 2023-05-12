@@ -11,6 +11,8 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 
 import java.util.function.Consumer;
 
+import static org.junit.jupiter.api.Assertions.fail;
+
 @Getter
 @Setter
 public class BaseSteps {
@@ -18,13 +20,14 @@ public class BaseSteps {
     private MockApiUpstreamServer mockUpstreamServer;
     private MockIrisServer mockIrisServer;
 
-    private Consumer<HttpHeaders> httpHeadersOfRequest;
+    protected Consumer<HttpHeaders> httpHeadersOfRequest;
 
+    protected String authHeader;
     private String responseStatusCode;
     private WebTestClient webTestClient;
     private WebTestClient.ResponseSpec requestExchange;
 
-    @And("API provider will respond with a {int} status code")
+    @And("API provider set to respond with a {int} status code")
     public void apiProviderWillRespondWithAStatusCode(int statusCode) {
         responseStatusCode = String.valueOf(statusCode);
     }
@@ -45,6 +48,23 @@ public class BaseSteps {
                         }
                 )
         );
+    }
+
+    @And("IDP set to provide {word} token")
+    public void apiProviderWillRespondWithAStatusCode(String tokenType) {
+        switch (tokenType){
+            case "internal": mockIrisServer.createExpectationInternalToken();
+            break;
+            case "external": mockIrisServer.createExpectationExternalToken();
+            break;
+            case "externalScoped": mockIrisServer.createExpectationExternalTokenScoped();
+            break;
+            case "externalHeader": mockIrisServer.createExpectationExternalTokenHeaderClient();
+            break;
+            case "externalHeaderScoped": mockIrisServer.createExpectationExternalTokenHeaderScopedClient();
+            break;
+            default: fail("expected tokenType not configured");
+        }
     }
 
     @When("consumer calls the API")

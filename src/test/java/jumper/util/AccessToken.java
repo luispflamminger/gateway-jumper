@@ -15,6 +15,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import static jumper.util.Config.LOCAL_ISSUER;
+import static jumper.util.Config.REMOTE_ISSUER;
+
 @Builder
 public class AccessToken {
 
@@ -22,6 +25,7 @@ public class AccessToken {
     private String env;
     private String originZone;
     private String originStargate;
+    private String audience;
 
     public String getConsumerAccessToken() {
         HashMap<String, String> claims = new HashMap<String, String>();
@@ -31,27 +35,26 @@ public class AccessToken {
         claims.put( "originZone", originZone);
         claims.put( "originStargate", originStargate);
         claims.put( "clientId", clientId);
+        if (audience != null) claims.put("aud", audience);
 
-        return buildAccessToken(claims);
+        return buildAccessToken(claims, LOCAL_ISSUER);
     }
 
-    public String getGwMeshToken() {
+    public String getIdpToken() {
         HashMap<String, String> claims = new HashMap<String, String>();
         claims.put( "typ", "Bearer");
-        claims.put( "azp", "stargate");
+        claims.put( "azp", clientId);
         claims.put( "sub", UUID.randomUUID().toString());
         claims.put( "clientId", clientId);
         claims.put( "env", env);
         claims.put( "originZone", originZone);
         claims.put( "originStargate", originStargate);
 
-        return buildAccessToken(claims);
+        return buildAccessToken(claims, REMOTE_ISSUER);
     }
 
 
-    private String buildAccessToken(Map<String, String> claims) {
-        String issuer = "https://iris.remote:1234/auth/realms/default";
-
+    private String buildAccessToken(Map<String, String> claims, String issuer) {
 
         Date issuedAt = new Date(System.currentTimeMillis());
         Date expiration = new Date(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(5));

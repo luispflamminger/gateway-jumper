@@ -63,7 +63,7 @@ spring:
 
 jumper:
   issuer:
-    url: ${JUMPER_ISSUER_URL:https://stargate-integration.test.dhei.telekom.de/auth/realms}
+    url: ${JUMPER_ISSUER_URL:https://stargate-test.de/auth/realms}
   stargate:
     url: ${STARGATE_URL:https://stargate-integration.test.dhei.telekom.de}
   security.dir: src/test/resources/keypair
