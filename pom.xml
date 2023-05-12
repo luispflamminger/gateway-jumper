@@ -6,7 +6,7 @@
 
 	<groupId>org.springframework</groupId>
 	<artifactId>jumper</artifactId>
-	<version>3.5.0</version>
+	<version>3.6.0</version>
 
 	<parent>
 		<groupId>org.springframework.boot</groupId>
@@ -16,7 +16,7 @@
 
 	<properties>
 		<java.version>11</java.version>
-		<spring-cloud.version>2021.0.5</spring-cloud.version>
+		<spring-cloud.version>2021.0.7</spring-cloud.version>
 		<micrometer-tracing.version>1.0.2</micrometer-tracing.version>
 		<jacoco.plugin.version>0.8.5</jacoco.plugin.version>
 		<sonar.projectKey>${project.name}</sonar.projectKey>
