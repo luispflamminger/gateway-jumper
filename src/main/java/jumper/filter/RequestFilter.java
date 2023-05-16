@@ -363,7 +363,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
     }
 
     private void checkForSpaceZone(ServerWebExchange exchange, GatewayFilterChain chain, String zone, String token ) {
-        if(zone != null && zone.equals(Constants.SPACE)) {
+        if(zone != null && Constants.SPACE_ZONES.contains(zone)) {
             addHeader(exchange, chain, Constants.HEADER_X_SPACEGATE_TOKEN, token);
         }
     }
