@@ -65,7 +65,7 @@ Feature: expected authorization token created
   Scenario: Consumer calls jumper route using configured oauth, external authorization scenario
     Given RealRoute headers are set
     And oauth tokenEndpoint set
-    And jumperConfig with oauth set
+    And jumperConfig oauth "default" set
     And IDP set to provide external token
     And API provider set to respond with a 200 status code
     When consumer calls the API
@@ -75,7 +75,7 @@ Feature: expected authorization token created
   Scenario: Consumer calls jumper route using header oauth, external authorization scenario
     Given RealRoute headers are set
     And oauth tokenEndpoint set
-    And spacegate oauth set
+    And spacegate oauth headers set
     And IDP set to provide externalHeader token
     And API provider set to respond with a 200 status code
     When consumer calls the API
@@ -85,7 +85,7 @@ Feature: expected authorization token created
   Scenario: Consumer calls jumper route using configured oauth with scope, external authorization scenario
     Given RealRoute headers are set
     And oauth tokenEndpoint set
-    And jumperConfig with oauth scope set
+    And jumperConfig oauth "scoped" set
     And IDP set to provide externalScoped token
     And API provider set to respond with a 200 status code
     When consumer calls the API
@@ -95,10 +95,30 @@ Feature: expected authorization token created
   Scenario: Consumer calls jumper route using configured and header oauth with scope, external authorization scenario with header precedence
     Given RealRoute headers are set
     And oauth tokenEndpoint set
-    And jumperConfig with oauth scope set
-    And spacegate oauth scoped set
+    And jumperConfig oauth "scoped" set
+    And spacegate oauth scoped headers set
     And IDP set to provide externalHeaderScoped token
     And API provider set to respond with a 200 status code
     When consumer calls the API
     Then API Provider receives token ExternalHeader
+    And API consumer receives a 200 status code
+
+  Scenario: Consumer calls jumper route using configured oauth including explicit grant type, external authorization scenario with basic auth
+    Given RealRoute headers are set
+    And oauth tokenEndpoint set
+    And jumperConfig oauth "grant_type client_credentials" set
+    And IDP set to provide externalBasicAuthCredentials token
+    And API provider set to respond with a 200 status code
+    When consumer calls the API
+    Then API Provider receives token ExternalConfigured
+    And API consumer receives a 200 status code
+
+  Scenario: Consumer calls jumper route using configured oauth including explicit grant type, external authorization scenario with username/password TODO going to legacy
+    Given RealRoute headers are set
+    And oauth tokenEndpoint set
+    And jumperConfig oauth "grant_type password" set
+    And IDP set to provide externalUsernamePasswordCredentials token
+    And API provider set to respond with a 200 status code
+    When consumer calls the API
+    Then API Provider receives token ExternalConfigured
     And API consumer receives a 200 status code

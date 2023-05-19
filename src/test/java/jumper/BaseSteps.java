@@ -26,6 +26,7 @@ public class BaseSteps {
     private String responseStatusCode;
     private WebTestClient webTestClient;
     private WebTestClient.ResponseSpec requestExchange;
+    private String id;
 
     @And("API provider set to respond with a {int} status code")
     public void apiProviderWillRespondWithAStatusCode(int statusCode) {
@@ -53,15 +54,19 @@ public class BaseSteps {
     @And("IDP set to provide {word} token")
     public void apiProviderWillRespondWithAStatusCode(String tokenType) {
         switch (tokenType){
-            case "internal": mockIrisServer.createExpectationInternalToken();
+            case "internal": mockIrisServer.createExpectationInternalToken(id);
             break;
-            case "external": mockIrisServer.createExpectationExternalToken();
+            case "external": mockIrisServer.createExpectationExternalToken(id);
             break;
-            case "externalScoped": mockIrisServer.createExpectationExternalTokenScoped();
+            case "externalScoped": mockIrisServer.createExpectationExternalTokenScoped(id);
             break;
-            case "externalHeader": mockIrisServer.createExpectationExternalTokenHeaderClient();
+            case "externalHeader": mockIrisServer.createExpectationExternalTokenHeaderClient(id);
             break;
-            case "externalHeaderScoped": mockIrisServer.createExpectationExternalTokenHeaderScopedClient();
+            case "externalHeaderScoped": mockIrisServer.createExpectationExternalTokenHeaderScopedClient(id);
+            break;
+            case "externalBasicAuthCredentials": mockIrisServer.createExpectationExternalBasicAuthCredentials(id);
+            break;
+            case "externalUsernamePasswordCredentials": mockIrisServer.createExpectationExternalTokenFromUsernamePassword(id);
             break;
             default: fail("expected tokenType not configured");
         }

@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 import static jumper.util.Config.*;
@@ -49,6 +50,8 @@ public class TokenHandling{
         this.baseSteps.setMockIrisServer(mockIrisServer);
 
         this.baseSteps.setWebTestClient(webTestClient);
+
+        this.baseSteps.setId(UUID.randomUUID().toString());
     }
 
     @After("@default")
@@ -60,7 +63,7 @@ public class TokenHandling{
     @Given("ProxyRoute headers are set")
     public void proxyRouteHeadersSet() {
         baseSteps.authHeader = JumperConfigurator.getConsumerAccessToken();
-        baseSteps.setHttpHeadersOfRequest(JumperConfigurator.getProxyRouteHeaders(baseSteps.authHeader));
+        baseSteps.setHttpHeadersOfRequest(JumperConfigurator.getProxyRouteHeaders(baseSteps));
     }
 
     @Given("RealRoute headers are set")
@@ -91,28 +94,28 @@ public class TokenHandling{
         );
     }
 
-    @And("jumperConfig with oauth scope set")
-    public void setJumperConfigOauthScope() {
+    @And("jumperConfig oauth {string} set")
+    public void setJumperConfigOauth(String jc_case) {
         baseSteps.setHttpHeadersOfRequest(
                 baseSteps.httpHeadersOfRequest.andThen(
                         httpHeaders -> {
-                            httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcOauthWithScope());
+                            switch (jc_case) {
+                                case "grant_type password":
+                                    httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcOauthGrantTypePassword(baseSteps.getId()));
+                                    break;
+                                case "grant_type client_credentials":
+                                    httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcOauthGrantType(baseSteps.getId()));
+                                    break;
+                                case "scoped":
+                                    httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcOauthWithScope(baseSteps.getId()));
+                                    break;
+                                default:
+                                    httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcOauth(baseSteps.getId()));
+                            }
                         }
                 )
         );
     }
-
-    @And("jumperConfig with oauth set")
-    public void setJumperConfigOauth() {
-        baseSteps.setHttpHeadersOfRequest(
-                baseSteps.httpHeadersOfRequest.andThen(
-                        httpHeaders -> {
-                            httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcOauth());
-                        }
-                )
-        );
-    }
-
     @And("oauth tokenEndpoint set")
     public void setOauthTokenEnpoint() {
         baseSteps.setHttpHeadersOfRequest(
@@ -124,24 +127,24 @@ public class TokenHandling{
         );
     }
 
-    @And("spacegate oauth set")
+    @And("spacegate oauth headers set")
     public void setSpacegateOauthHeaders() {
         baseSteps.setHttpHeadersOfRequest(
                 baseSteps.httpHeadersOfRequest.andThen(
                         httpHeaders -> {
-                            httpHeaders.set(Constants.HEADER_X_SPACEGATE_CLIENT_ID, CONSUMER_EXTERNAL_HEADER);
+                            httpHeaders.set(Constants.HEADER_X_SPACEGATE_CLIENT_ID, addIdSuffix(CONSUMER_EXTERNAL_HEADER, baseSteps.getId()));
                             httpHeaders.set(Constants.HEADER_X_SPACEGATE_CLIENT_SECRET, "secret");
                         }
                 )
         );
     }
 
-    @And("spacegate oauth scoped set")
+    @And("spacegate oauth scoped headers set")
     public void setSpacegateOauthScopedHeaders() {
         baseSteps.setHttpHeadersOfRequest(
                 baseSteps.httpHeadersOfRequest.andThen(
                         httpHeaders -> {
-                            httpHeaders.set(Constants.HEADER_X_SPACEGATE_CLIENT_ID, CONSUMER_EXTERNAL_HEADER);
+                            httpHeaders.set(Constants.HEADER_X_SPACEGATE_CLIENT_ID, addIdSuffix(CONSUMER_EXTERNAL_HEADER, baseSteps.getId()));
                             httpHeaders.set(Constants.HEADER_X_SPACEGATE_CLIENT_SECRET, "secret");
                             httpHeaders.set(Constants.HEADER_X_SPACEGATE_SCOPE, OAUTH_SCOPE_HEADER);
                         }
