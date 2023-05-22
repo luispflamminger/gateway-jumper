@@ -68,6 +68,8 @@ public class BaseSteps {
             break;
             case "externalUsernamePasswordCredentials": mockIrisServer.createExpectationExternalTokenFromUsernamePassword(id);
             break;
+            case "externalUsernamePasswordCredentialsOnly": mockIrisServer.createExpectationExternalTokenFromUsernamePasswordOnly(id);
+            break;
             default: fail("expected tokenType not configured");
         }
     }

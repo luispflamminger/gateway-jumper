@@ -197,6 +197,28 @@ public class MockIrisServer {
                 );
     }
 
+    public void createExpectationExternalTokenFromUsernamePasswordOnly(String id) {
+
+        String tokenInfoJson = getTokenInfoJson(CONSUMER_EXTERNAL_CONFIGURED);
+
+        new MockServerClient(irisLocalHost, irisLocalPort)
+                .when(
+                        request()
+                                .withMethod("POST")
+                                .withPath("/external")
+                                .withBody(addIdSuffix("username=username", id) + "&password=geheim&grant_type=password"),
+                        exactly(1))
+                .respond(
+                        response()
+                                .withStatusCode(200)
+                                .withHeaders(
+                                        new Header("Content-Type", "application/json; charset=utf-8"),
+                                        new Header("Cache-Control", "no-store"))
+                                .withBody(tokenInfoJson)
+                                .withDelay(TimeUnit.SECONDS, 1)
+                );
+    }
+
     public void createExpectationForInvalidAuth() {
         List<Header> headersList = getHeaderList("64");
 

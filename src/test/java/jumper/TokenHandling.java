@@ -103,6 +103,9 @@ public class TokenHandling{
                                 case "grant_type password":
                                     httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcOauthGrantTypePassword(baseSteps.getId()));
                                     break;
+                                case "grant_type password only":
+                                    httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcOauthGrantTypePasswordOnly(baseSteps.getId()));
+                                    break;
                                 case "grant_type client_credentials":
                                     httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcOauthGrantType(baseSteps.getId()));
                                     break;

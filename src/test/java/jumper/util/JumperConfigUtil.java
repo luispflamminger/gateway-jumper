@@ -70,6 +70,18 @@ public class JumperConfigUtil{
         return toBase64(jc);
     }
 
+    public static String getJcOauthGrantTypePasswordOnly(String id){
+        HashMap<String, OauthCredentials> oauth = new HashMap<>();
+        OauthCredentials oc = new OauthCredentials();
+        oc.setUsername(addIdSuffix("username", id));
+        oc.setPassword("geheim");
+        oc.setGrantType("password");
+        oauth.put(CONSUMER, oc);
+        JumperConfig jc = new JumperConfig();
+        jc.setOauth(oauth);
+        return toBase64(jc);
+    }
+
     public static String addIdSuffix (String from,  String id){
         return from + "_" + id;
     }

@@ -54,13 +54,12 @@ Feature: expected authorization token created
     And API consumer receives a 200 status code
 
   ################ external ################
-  Scenario: Consumer calls jumper route using oauth, external authorization scenario MISSING OAUTH, see todo
+  Scenario: Consumer calls jumper route using oauth, but client credentials not defined
     Given RealRoute headers are set
     And oauth tokenEndpoint set
     And API provider set to respond with a 200 status code
     When consumer calls the API
-    Then API Provider receives token ExternalToken
-    And API consumer receives a 200 status code
+    And API consumer receives a 401 status code
 
   Scenario: Consumer calls jumper route using configured oauth, external authorization scenario
     Given RealRoute headers are set
@@ -113,11 +112,21 @@ Feature: expected authorization token created
     Then API Provider receives token ExternalConfigured
     And API consumer receives a 200 status code
 
-  Scenario: Consumer calls jumper route using configured oauth including explicit grant type, external authorization scenario with username/password TODO going to legacy
+  Scenario: Consumer calls jumper route using configured oauth including password grant type, external authorization scenario with username/password
     Given RealRoute headers are set
     And oauth tokenEndpoint set
     And jumperConfig oauth "grant_type password" set
     And IDP set to provide externalUsernamePasswordCredentials token
+    And API provider set to respond with a 200 status code
+    When consumer calls the API
+    Then API Provider receives token ExternalConfigured
+    And API consumer receives a 200 status code
+
+  Scenario: Consumer calls jumper route using configured oauth including password grant type, external authorization scenario with username/password only
+    Given RealRoute headers are set
+    And oauth tokenEndpoint set
+    And jumperConfig oauth "grant_type password only" set
+    And IDP set to provide externalUsernamePasswordCredentialsOnly token
     And API provider set to respond with a 200 status code
     When consumer calls the API
     Then API Provider receives token ExternalConfigured

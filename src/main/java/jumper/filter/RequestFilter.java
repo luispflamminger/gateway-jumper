@@ -24,8 +24,10 @@ import org.springframework.cloud.sleuth.CurrentTraceContext;
 import org.springframework.cloud.sleuth.Span;
 import org.springframework.cloud.sleuth.Tracer;
 import org.springframework.cloud.sleuth.instrument.web.WebFluxSleuthOperators;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
@@ -351,7 +353,8 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         }
         else
         {
-            log.warn( "no specified oauth config credentials for consumer: {}", consumer); //todo exception here?
+            log.warn( "not specified oauth config credentials for consumer: {}", consumer);
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing oauth config credentials for consumer " + consumer);
         }
     }
 
