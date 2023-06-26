@@ -1,10 +1,13 @@
 package jumper.utilities;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.SignatureException;
 import io.netty.channel.ConnectTimeoutException;
 import jumper.JumperCache;
 import jumper.model.TokenInfo;
+import jumper.model.config.KeyInfo;
 import jumper.model.config.OauthCredentials;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,10 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.stereotype.Service;
-import org.springframework.util.Base64Utils;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.util.StringUtils;
+import org.springframework.util.*;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -30,12 +30,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.KeyFactory;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
@@ -54,10 +48,16 @@ public class OauthTokenUtil {
     private static String delimiter = ".";
 
     private static String SECURITY_PATH;
+    private static String SECURITY_FILE;
 
     @Value("${jumper.security.dir:keypair}")
     public void setSecurityPath(String name){
         OauthTokenUtil.SECURITY_PATH = name;
+    }
+
+    @Value("${jumper.security.file:key.json}")
+    public void setSecurityFile(String name){
+        OauthTokenUtil.SECURITY_FILE = name;
     }
 
 
@@ -191,26 +191,26 @@ public class OauthTokenUtil {
 
 
     private static String generateToken(HashMap<String, String> claims, String issuer, Date expiration, Date issuedAt) {
-        String kid = null;
-        PrivateKey privateKey = null;
+        KeyInfo keyInfo = null;
+
         try {
-            log.debug("GatewayToken or OneToken: Loading privateKey");
-            privateKey = loadPrivKey();
-            kid = loadKid();
-        } catch (NoSuchAlgorithmException e1) {
-            log.error("NoSuchAlgorithmException", e1);
-            throw new RuntimeException("Error while generating LMS token, private key missing");
-        } catch (InvalidKeySpecException e1) {
-            log.error("InvalidKeySpecException", e1);
-            throw new RuntimeException("Error while generating LMS token, private key missing");
+            log.debug("GatewayToken or OneToken: Loading keyInfo");
+            keyInfo = loadKeyinfo();
+
         } catch (IOException e1) {
             log.error("IOException", e1);
-            throw new RuntimeException("Error while generating LMS token, private key missing");
+            throw new RuntimeException("Error while generating LMS token, key info missing");
         }
 
-        return Jwts.builder().setClaims(claims).setIssuer(issuer).setExpiration(expiration).setIssuedAt(issuedAt).signWith(privateKey, SignatureAlgorithm.RS256).setHeaderParam("kid", kid).setHeaderParam("typ", "JWT").compact();
+        return Jwts.builder().setClaims(claims).setIssuer(issuer).setExpiration(expiration).setIssuedAt(issuedAt).signWith(keyInfo.getPk(), SignatureAlgorithm.RS256).setHeaderParam("kid", keyInfo.getKid()).setHeaderParam("typ", "JWT").compact();
     }
 
+    public static KeyInfo loadKeyinfo() throws IOException {
+        Path kidFile = Path.of(System.getProperty("user.dir")  + File.separator + SECURITY_PATH + File.separator + SECURITY_FILE);
+        KeyInfo keyInfo = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false).readValue( Files.readString(kidFile), KeyInfo.class);
+        return keyInfo;
+    }
+    /*
     public static String loadKid() throws IOException {
         Path kidFile = Path.of(System.getProperty("user.dir")  + File.separator + SECURITY_PATH + File.separator+ "kid");
         return Files.readString(kidFile);
@@ -234,6 +234,7 @@ public class OauthTokenUtil {
 
         return privKey;
     }
+    */
 
     public TokenInfo getAccessToken(String tokenEndpoint, String clientID, String clientSecret) {
         return getAccessToken(tokenEndpoint, clientID, clientSecret, null, "");
@@ -268,8 +269,7 @@ public class OauthTokenUtil {
         String basicAuth = null;
 
         if (oauthCredentials.getClientId() != null && !oauthCredentials.getClientId().isBlank() && oauthCredentials.getClientSecret() != null && !oauthCredentials.getClientSecret().isBlank()) {
-            String basicAuthPreparation = oauthCredentials.getClientId() + ":" + oauthCredentials.getClientSecret();
-            basicAuth = Base64Utils.encodeToString(basicAuthPreparation.getBytes());
+            basicAuth = encodeBasicAuth(oauthCredentials.getClientId(), oauthCredentials.getClientSecret());
         }
 
         if (oauthCredentials.getUsername() != null && !oauthCredentials.getUsername().isBlank() && oauthCredentials.getPassword() != null && !oauthCredentials.getPassword().isBlank()) {
@@ -321,6 +321,15 @@ public class OauthTokenUtil {
         tokenCache.saveToken(tokenKey, accessToken);
 
         return accessToken;
+    }
+
+    public static String encodeBasicAuth(String username, String password){
+        Assert.notNull(username, "Username must not be null");
+        Assert.doesNotContain(username, ":", "Username must not contain a colon");
+        Assert.notNull(password, "Password must not be null");
+
+        String basicAuthPreparation = username + ":" + password;
+        return Base64Utils.encodeToString(basicAuthPreparation.getBytes());
     }
 
     private void logClientErrorResponse(ClientResponse response, String tokenKey) {

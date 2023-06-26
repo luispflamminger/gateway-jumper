@@ -2,13 +2,11 @@ package jumper.util;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import jumper.model.config.KeyInfo;
 import jumper.utilities.OauthTokenUtil;
 import lombok.Builder;
 
 import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.spec.InvalidKeySpecException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -58,16 +56,16 @@ public class AccessToken {
 
         Date issuedAt = new Date(System.currentTimeMillis());
         Date expiration = new Date(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(5));
-        PrivateKey privateKey = null;
+        KeyInfo keyInfo = null;
         try {
-            privateKey = OauthTokenUtil.loadPrivKey();
-        } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException e) {
+            keyInfo = OauthTokenUtil.loadKeyinfo();
+        } catch (IOException e) {
             e.getStackTrace();
         }
 
         String keyId = "123456";
 
-        return Jwts.builder().setClaims(claims).setIssuer(issuer).setExpiration(expiration).setIssuedAt(issuedAt).signWith(privateKey, SignatureAlgorithm.RS256).setHeaderParam("kid", keyId).setHeaderParam("typ", "JWT").compact();
+        return Jwts.builder().setClaims(claims).setIssuer(issuer).setExpiration(expiration).setIssuedAt(issuedAt).signWith(keyInfo.getPk(), SignatureAlgorithm.RS256).setHeaderParam("kid", keyId).setHeaderParam("typ", "JWT").compact();
 
     }
 

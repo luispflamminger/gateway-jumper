@@ -1,5 +1,7 @@
 package jumper.util;
 
+import jumper.Constants;
+import jumper.model.config.BasicAuthCredentials;
 import jumper.model.config.JumperConfig;
 import jumper.model.config.OauthCredentials;
 
@@ -41,6 +43,54 @@ public class JumperConfigUtil{
         oauth.put(CONSUMER, oc);
         JumperConfig jc = new JumperConfig();
         jc.setOauth(oauth);
+        return toBase64(jc);
+    }
+
+    public static String getJcBasicAuthConsumer(String id){
+        HashMap<String, BasicAuthCredentials> basicAuthCredentialsHashMap = new HashMap<>();
+        BasicAuthCredentials ba = new BasicAuthCredentials();
+        ba.setUsername(addIdSuffix(CONSUMER, id));
+        ba.setPassword("password");
+        basicAuthCredentialsHashMap.put(CONSUMER, ba);
+        JumperConfig jc = new JumperConfig();
+        jc.setBasicAuth(basicAuthCredentialsHashMap);
+        return toBase64(jc);
+    }
+
+    public static String getJcBasicAuthProvider(String id){
+        HashMap<String, BasicAuthCredentials> basicAuthCredentialsHashMap = new HashMap<>();
+        BasicAuthCredentials ba = new BasicAuthCredentials();
+        ba.setUsername(addIdSuffix(CONSUMER_GATEWAY, id));
+        ba.setPassword("geheim");
+        basicAuthCredentialsHashMap.put(Constants.BASIC_AUTH_PROVIDER_KEY, ba);
+        JumperConfig jc = new JumperConfig();
+        jc.setBasicAuth(basicAuthCredentialsHashMap);
+        return toBase64(jc);
+    }
+
+    public static String getJcBasicAuthConsumerAndProvider(String id){
+        HashMap<String, BasicAuthCredentials> basicAuthCredentialsHashMap = new HashMap<>();
+        BasicAuthCredentials baConsumer = new BasicAuthCredentials();
+        baConsumer.setUsername(addIdSuffix(CONSUMER, id));
+        baConsumer.setPassword("password");
+        BasicAuthCredentials baProvider = new BasicAuthCredentials();
+        baProvider.setUsername(addIdSuffix(CONSUMER_GATEWAY, id));
+        baProvider.setPassword("geheim");
+        basicAuthCredentialsHashMap.put(CONSUMER, baConsumer);
+        basicAuthCredentialsHashMap.put(Constants.BASIC_AUTH_PROVIDER_KEY, baProvider);
+        JumperConfig jc = new JumperConfig();
+        jc.setBasicAuth(basicAuthCredentialsHashMap);
+        return toBase64(jc);
+    }
+
+    public static String getJcBasicAuthOtherConsumer(String id){
+        HashMap<String, BasicAuthCredentials> basicAuthCredentialsHashMap = new HashMap<>();
+        BasicAuthCredentials ba = new BasicAuthCredentials();
+        ba.setUsername(addIdSuffix(CONSUMER, id));
+        ba.setPassword("password");
+        basicAuthCredentialsHashMap.put(CONSUMER_GATEWAY, ba);
+        JumperConfig jc = new JumperConfig();
+        jc.setBasicAuth(basicAuthCredentialsHashMap);
         return toBase64(jc);
     }
 

@@ -14,6 +14,7 @@ public class JumperInfoRequest {
     private boolean lastMileSecurity;
     private boolean lastMileSecurityEnhanced;
     private boolean externalAuthorization;
+	private boolean basicAuth;
     
     private String environment;
 

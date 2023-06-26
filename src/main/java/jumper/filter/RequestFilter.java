@@ -5,6 +5,7 @@ import io.jsonwebtoken.Header;
 import io.jsonwebtoken.Jwt;
 import jumper.Constants;
 import jumper.model.TokenInfo;
+import jumper.model.config.BasicAuthCredentials;
 import jumper.model.config.JumperConfig;
 import jumper.model.request.IncomingRequest;
 import jumper.model.request.JumperInfoRequest;
@@ -90,6 +91,11 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                 String remote_api_url = getLastValueFromHeaderField(request, Constants.HEADER_REMOTE_API_URL);
                 String lastmileSecurityToken = null;
 
+                //to prevent later nullPointer on inconsistent state from Kong
+                if (remote_api_url == null){
+                    throw new RuntimeException("missing mandatory header remote_api_url");
+                }
+
                 String xSpacegateClientId = request.getHeaders().getFirst(Constants.HEADER_X_SPACEGATE_CLIENT_ID);
                 String xSpacegateClientSecret = request.getHeaders().getFirst(Constants.HEADER_X_SPACEGATE_CLIENT_SECRET);
                 String xSpacegateScope = request.getHeaders().getFirst(Constants.HEADER_X_SPACEGATE_SCOPE);
@@ -150,88 +156,108 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
                 if (remote_api_url != null && !remote_api_url.startsWith(Constants.LOCALHOST_ISSUER_SERVICE)) {
                     if (tif_remote_issuer == null) {
-                        /** LAST MILE SECURITY TOKEN GENERATION **/
+                        /** ALL NON MESH SCENARIOS **/
 
-
-                        String lmsIssuer = localIssuerUrl + "/" + realmName;
-
-                        // Egress
-                        if (token_endpoint != null) {
-                            log.debug("----------------EXTERNAL AUTHORIZATION-------------");
-                            if(isLogLevelEnabled()) {
+                        if (jc.getBasicAuth() != null && (jc.getBasicAuth().containsKey(consumer) || jc.getBasicAuth().containsKey(Constants.BASIC_AUTH_PROVIDER_KEY))) {
+                            log.debug("----------------BASIC AUTH HEADER-------------");
+                            if (isLogLevelEnabled()) {
                                 jumperInfoRequest.setLastMileSecurity(false);
                                 jumperInfoRequest.setLastMileSecurityEnhanced(false);
                                 jumperInfoRequest.setMeshActivated(false);
-                                jumperInfoRequest.setExternalAuthorization(true);
-                            }
-
-                            log.debug("Remote TokenEndpoint is set to: %s", token_endpoint);
-
-                            if (jc.getOauth() != null && jc.getOauth().containsKey(consumer) && jc.getOauth().get(consumer).getGrantType() != null && !jc.getOauth().get(consumer).getGrantType().isBlank()) {
-                                TokenInfo tokenInfo = oauthTokenUtil.getAccessToken(token_endpoint, jc.getOauth().get(consumer), consumer);
-                                addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER + " " + tokenInfo.getAccessToken());
-                            } else {
-                                clientCredentialsFlow_legacy(exchange, chain, client_scope, token_endpoint, tif_clientID, tif_clientSecret, xSpacegateClientId, xSpacegateClientSecret, xSpacegateScope, consumer, jc);
-                            }
-
-
-                        } else if (access_token_forwarding != null && access_token_forwarding.equals("false")) {
-                            log.debug("----------------LAST MILE SECURITY (ONE TOKEN)-------------");
-                            if(isLogLevelEnabled()) {
-                                jumperInfoRequest.setLastMileSecurity(true);
-                                jumperInfoRequest.setLastMileSecurityEnhanced(true);
-                                jumperInfoRequest.setMeshActivated(false);
                                 jumperInfoRequest.setExternalAuthorization(false);
+                                jumperInfoRequest.setBasicAuth(true);
                             }
 
-                            lastmileSecurityToken = OauthTokenUtil.generateExtGatewayToken(envName,
-                                    consumerToken,
-                                    request.getMethod().toString(),
-                                    requestPath,
-                                    lmsIssuer,
-                                    setSecurityScopes(jc, consumer),
-                                    request.getHeaders().getFirst(Constants.HEADER_X_PUBSUB_PUBLISHER_ID),
-                                    request.getHeaders().getFirst(Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID)
-                            );
-                            addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER + " " + lastmileSecurityToken);
-                            log.debug("lastMileSecurityToken: " + lastmileSecurityToken);
+                            BasicAuthCredentials basicAuthCredentials = jc.getBasicAuth().containsKey(consumer) ? jc.getBasicAuth().get(consumer) : jc.getBasicAuth().get(Constants.BASIC_AUTH_PROVIDER_KEY);
+                            addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BASIC + " " + OauthTokenUtil.encodeBasicAuth(basicAuthCredentials.getUsername(), basicAuthCredentials.getPassword()));
                         } else {
-                            log.debug("----------------LAST MILE SECURITY (LEGACY)-------------");
-                            if(isLogLevelEnabled()) {
-                                jumperInfoRequest.setLastMileSecurity(true);
-                                jumperInfoRequest.setLastMileSecurityEnhanced(false);
-                                jumperInfoRequest.setMeshActivated(false);
-                                jumperInfoRequest.setExternalAuthorization(false);
+
+
+                            String lmsIssuer = localIssuerUrl + "/" + realmName;
+
+                            // Egress
+                            if (token_endpoint != null) {
+                                log.debug("----------------EXTERNAL AUTHORIZATION-------------");
+                                if (isLogLevelEnabled()) {
+                                    jumperInfoRequest.setLastMileSecurity(false);
+                                    jumperInfoRequest.setLastMileSecurityEnhanced(false);
+                                    jumperInfoRequest.setMeshActivated(false);
+                                    jumperInfoRequest.setExternalAuthorization(true);
+                                    jumperInfoRequest.setBasicAuth(false);
+                                }
+
+                                log.debug("Remote TokenEndpoint is set to: %s", token_endpoint);
+
+                                if (jc.getOauth() != null && jc.getOauth().containsKey(consumer) && jc.getOauth().get(consumer).getGrantType() != null && !jc.getOauth().get(consumer).getGrantType().isBlank()) {
+                                    TokenInfo tokenInfo = oauthTokenUtil.getAccessToken(token_endpoint, jc.getOauth().get(consumer), consumer);
+                                    addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER + " " + tokenInfo.getAccessToken());
+                                } else {
+                                    clientCredentialsFlow_legacy(exchange, chain, client_scope, token_endpoint, tif_clientID, tif_clientSecret, xSpacegateClientId, xSpacegateClientSecret, xSpacegateScope, consumer, jc);
+                                }
+
+
+                            } else if (access_token_forwarding != null && access_token_forwarding.equals("false")) {
+                                log.debug("----------------LAST MILE SECURITY (ONE TOKEN)-------------");
+                                if (isLogLevelEnabled()) {
+                                    jumperInfoRequest.setLastMileSecurity(true);
+                                    jumperInfoRequest.setLastMileSecurityEnhanced(true);
+                                    jumperInfoRequest.setMeshActivated(false);
+                                    jumperInfoRequest.setExternalAuthorization(false);
+                                    jumperInfoRequest.setBasicAuth(false);
+                                }
+
+                                lastmileSecurityToken = OauthTokenUtil.generateExtGatewayToken(envName,
+                                        consumerToken,
+                                        request.getMethod().toString(),
+                                        requestPath,
+                                        lmsIssuer,
+                                        setSecurityScopes(jc, consumer),
+                                        request.getHeaders().getFirst(Constants.HEADER_X_PUBSUB_PUBLISHER_ID),
+                                        request.getHeaders().getFirst(Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID)
+                                );
+                                addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER + " " + lastmileSecurityToken);
+                                log.debug("lastMileSecurityToken: " + lastmileSecurityToken);
+                            } else {
+                                log.debug("----------------LAST MILE SECURITY (LEGACY)-------------");
+                                if (isLogLevelEnabled()) {
+                                    jumperInfoRequest.setLastMileSecurity(true);
+                                    jumperInfoRequest.setLastMileSecurityEnhanced(false);
+                                    jumperInfoRequest.setMeshActivated(false);
+                                    jumperInfoRequest.setExternalAuthorization(false);
+                                    jumperInfoRequest.setBasicAuth(false);
+                                }
+
+                                lastmileSecurityToken = OauthTokenUtil.generateGatewayToken(envName, consumerToken, request.getMethod().toString(), requestPath, lmsIssuer);
+
+                                addHeader(exchange, chain, Constants.HEADER_LASTMILE_SECURITY_TOKEN, Constants.BEARER + " " + lastmileSecurityToken);
+                                log.debug("lastMileSecurityToken: " + lastmileSecurityToken);
                             }
 
-                            lastmileSecurityToken = OauthTokenUtil.generateGatewayToken(envName, consumerToken, request.getMethod().toString(), requestPath, lmsIssuer);
-
-                            addHeader(exchange, chain, Constants.HEADER_LASTMILE_SECURITY_TOKEN, Constants.BEARER + " " + lastmileSecurityToken);
-                            log.debug("lastMileSecurityToken: " + lastmileSecurityToken);
                         }
 
-                    } else {
-                        /** GW-2-GW MESH TOKEN GENERATION **/
-                        log.debug("----------------GATEWAY MESH-------------");
+                    } else{
+                            /** GW-2-GW MESH TOKEN GENERATION **/
+                            log.debug("----------------GATEWAY MESH-------------");
 
-                        if(isLogLevelEnabled()) {
-                            jumperInfoRequest.setLastMileSecurity(false);
-                            jumperInfoRequest.setLastMileSecurityEnhanced(false);
-                            jumperInfoRequest.setMeshActivated(true);
-                            jumperInfoRequest.setExternalAuthorization(false);
+                            if (isLogLevelEnabled()) {
+                                jumperInfoRequest.setLastMileSecurity(false);
+                                jumperInfoRequest.setLastMileSecurityEnhanced(false);
+                                jumperInfoRequest.setMeshActivated(true);
+                                jumperInfoRequest.setExternalAuthorization(false);
+                                jumperInfoRequest.setBasicAuth(false);
+                            }
+
+                            tif_remote_issuer = tif_remote_issuer + Constants.ISSUER_SUFFIX;
+
+                            TokenInfo meshTokenInfo = oauthTokenUtil.getAccessToken(tif_remote_issuer, tif_clientID, tif_clientSecret);
+
+                            // set gw and consumer tokens correctly
+                            addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, "Bearer " + meshTokenInfo.getAccessToken());
+                            addHeader(exchange, chain, Constants.HEADER_CONSUMER_TOKEN, consumerToken);
+
+                            checkForSpaceZone(exchange, chain, consumerOriginZone, consumerToken);
+
                         }
-
-                        tif_remote_issuer = tif_remote_issuer + Constants.ISSUER_SUFFIX;
-
-                        TokenInfo meshTokenInfo = oauthTokenUtil.getAccessToken(tif_remote_issuer, tif_clientID, tif_clientSecret);
-
-                        // set gw and consumer tokens correctly
-                        addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, "Bearer " + meshTokenInfo.getAccessToken());
-                        addHeader(exchange, chain, Constants.HEADER_CONSUMER_TOKEN, consumerToken);
-
-                        checkForSpaceZone(exchange, chain, consumerOriginZone, consumerToken);
-
-                    }
 
                 }
 

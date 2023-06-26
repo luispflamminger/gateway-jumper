@@ -16,10 +16,13 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.MergedAnnotation;
 import org.springframework.core.annotation.MergedAnnotations;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.server.*;
 import org.springframework.web.server.ResponseStatusException;
+import reactor.core.publisher.Mono;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -38,6 +41,8 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
 
     @Value( "${spring.application.name}")
     private String applicationName;
+
+    private Map<String,String> customResponseHeaders;
 
     public JsonErrorWebExceptionHandler(ErrorAttributes errorAttributes,
                                         Resources resources,
@@ -76,6 +81,17 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
     protected RouterFunction<ServerResponse> getRoutingFunction(ErrorAttributes errorAttributes) {
         return RouterFunctions.route(RequestPredicates.all(), this::renderErrorResponse);
     }
+    @Override
+    protected Mono<ServerResponse> renderErrorResponse(ServerRequest request) {
+        Map<String, Object> error = this.getErrorAttributes(request, this.getErrorAttributeOptions(request, MediaType.ALL));
+        ServerResponse.BodyBuilder responseBuilder = ServerResponse.status(this.getHttpStatus(error)).contentType(MediaType.APPLICATION_JSON);
+
+        if (!customResponseHeaders.isEmpty()){
+            customResponseHeaders.forEach((k,v) -> responseBuilder.header(k,v));
+        }
+
+        return responseBuilder.body(BodyInserters.fromValue(error));
+    }
 
     @Override
     protected int getHttpStatus(Map<String, Object> errorAttributes) {
@@ -100,6 +116,8 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
     }
 
     private HttpStatus findHttpStatus(ServerRequest request, Throwable error, MergedAnnotation<ResponseStatus> responseStatusAnnotation) {
+         customResponseHeaders = new HashMap();
+
         if (error instanceof ResponseStatusException) {
             return ((ResponseStatusException) error).getStatus();
         }
@@ -112,6 +130,12 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
         if (error instanceof java.net.ConnectException) {
             logError(request, error);
             return HttpStatus.GATEWAY_TIMEOUT;
+        }
+
+        if (error instanceof java.net.UnknownHostException) {
+            logError(request, error);
+            customResponseHeaders.put("Retry-After", "30");
+            return HttpStatus.SERVICE_UNAVAILABLE;
         }
 
         return responseStatusAnnotation.getValue("code", HttpStatus.class).orElse(INTERNAL_SERVER_ERROR);

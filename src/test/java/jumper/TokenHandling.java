@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
+import java.util.Base64;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -119,6 +120,32 @@ public class TokenHandling{
                 )
         );
     }
+
+    @And("jumperConfig basic auth {string} set")
+    public void setJumperConfigBasicAuth(String jc_case) {
+        baseSteps.setHttpHeadersOfRequest(
+                baseSteps.httpHeadersOfRequest.andThen(
+                        httpHeaders -> {
+                            switch (jc_case) {
+                                case "consumer key only":
+                                    httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcBasicAuthConsumer(baseSteps.getId()));
+                                    break;
+                                case "provider key only":
+                                    httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcBasicAuthProvider(baseSteps.getId()));
+                                    break;
+                                case "consumer and provider":
+                                    httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcBasicAuthConsumerAndProvider(baseSteps.getId()));
+                                    break;
+                                case "other consumer present":
+                                    httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcBasicAuthOtherConsumer(baseSteps.getId()));
+                                    break;
+                                default:
+                                    httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcOauth(baseSteps.getId()));
+                            }
+                        }
+                )
+        );
+    }
     @And("oauth tokenEndpoint set")
     public void setOauthTokenEnpoint() {
         baseSteps.setHttpHeadersOfRequest(
@@ -166,10 +193,22 @@ public class TokenHandling{
         );
     }
 
-    @Then("API Provider receives default headers")
+    @Then("API Provider receives default bearer authorization headers")
+    public void apiProvidersReceivesDefaultTokenHeaders(){
+        this.baseSteps.getRequestExchange()
+                .expectHeader().valueMatches(HttpHeaders.AUTHORIZATION, Pattern.compile("Bearer\\s\\w+.\\w+.+.\\w+").pattern());
+        apiProvidersReceivesDefaultHeaders();
+    }
+
+    @Then("API Provider receives default basic authorization headers")
+    public void apiProvidersReceivesDefaultBasicAuthHeaders(){
+        this.baseSteps.getRequestExchange()
+                .expectHeader().valueMatches(HttpHeaders.AUTHORIZATION, Pattern.compile("Basic\\s\\w+").pattern());
+        apiProvidersReceivesDefaultHeaders();
+    }
+
     public void apiProvidersReceivesDefaultHeaders(){
         this.baseSteps.getRequestExchange()
-                .expectHeader().valueMatches(HttpHeaders.AUTHORIZATION, Pattern.compile("Bearer\\s\\w+.\\w+.+.\\w+").pattern())
                 .expectHeader().valueMatches(Constants.HEADER_X_B3_TRACE_ID, Pattern.compile("\\w+").pattern())
                 .expectHeader().valueMatches(Constants.HEADER_X_B3_SPAN_ID, Pattern.compile("\\w+").pattern())
                 .expectHeader().valueMatches(Constants.HEADER_X_B3_PARENT_SPAN_ID, Pattern.compile("\\w+").pattern())
@@ -182,7 +221,7 @@ public class TokenHandling{
                 ;
     }
 
-    @Then("API Provider receives token {word}")
+    @Then("API Provider receives authorization {word}")
     public void apiProviderReceivesToken(String tokenType) {
         if (tokenType.equalsIgnoreCase("OneToken")){
             this.baseSteps.getRequestExchange()
@@ -216,8 +255,16 @@ public class TokenHandling{
             this.baseSteps.getRequestExchange()
                     .expectHeader().value(HttpHeaders.AUTHORIZATION, this::checkExternalHeader);
         }
+        else if (tokenType.equalsIgnoreCase("BasicAuthConsumer")){
+            this.baseSteps.getRequestExchange()
+                    .expectHeader().value(HttpHeaders.AUTHORIZATION, this::checkBasicAuthConsumer);
+        }
+        else if (tokenType.equalsIgnoreCase("BasicAuthProvider")){
+            this.baseSteps.getRequestExchange()
+                    .expectHeader().value(HttpHeaders.AUTHORIZATION, this::checkBasicAuthProvider);
+        }
         else {
-            fail("unknown token received");
+            fail("unknown authorization received");
         }
     }
 
@@ -284,6 +331,20 @@ public class TokenHandling{
 
         assertEquals(CONSUMER_EXTERNAL_HEADER, claimsFromToken.getBody().get("clientId", String.class));
         assertEquals(REMOTE_ISSUER, claimsFromToken.getBody().getIssuer());
+    }
+
+    private void checkBasicAuthConsumer(String basicAuthEncoded) {
+        String basicAuthDecoded = new String(Base64.getDecoder().decode( basicAuthEncoded.replaceFirst("Basic ", "").getBytes()));
+        String[] basicAuthSplitted = basicAuthDecoded.split(":");
+        assertEquals(addIdSuffix(CONSUMER, this.baseSteps.getId()), basicAuthSplitted[0]);
+        assertEquals("password", basicAuthSplitted[1]);
+    }
+
+    private void checkBasicAuthProvider(String basicAuthEncoded) {
+        String basicAuthDecoded = new String(Base64.getDecoder().decode( basicAuthEncoded.replaceFirst("Basic ", "").getBytes()));
+        String[] basicAuthSplitted = basicAuthDecoded.split(":");
+        assertEquals(addIdSuffix(CONSUMER_GATEWAY, this.baseSteps.getId()), basicAuthSplitted[0]);
+        assertEquals("geheim", basicAuthSplitted[1]);
     }
 
 }

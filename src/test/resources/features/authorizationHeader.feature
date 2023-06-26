@@ -6,8 +6,17 @@ Feature: expected authorization token created
     Given RealRoute headers are set
     And API provider set to respond with a 200 status code
     When consumer calls the API
-    Then API Provider receives default headers
-    Then API Provider receives token OneToken
+    Then API Provider receives default bearer authorization headers
+    Then API Provider receives authorization OneToken
+    And API consumer receives a 200 status code
+
+  Scenario: Consumer calls jumper with real route headers, jc with BasicAuth for other consumer present, OneToken scenario
+    Given RealRoute headers are set
+    And jumperConfig basic auth "other consumer present" set
+    And API provider set to respond with a 200 status code
+    When consumer calls the API
+    Then API Provider receives default bearer authorization headers
+    Then API Provider receives authorization OneToken
     And API consumer receives a 200 status code
 
   Scenario: Horizon calls jumper with pub/sub info, OneToken contains pub/sub info
@@ -15,7 +24,7 @@ Feature: expected authorization token created
     And pub sub contained in the header
     And API provider set to respond with a 200 status code
     When consumer calls the API
-    Then API Provider receives token OneTokenWithPubSub
+    Then API Provider receives authorization OneTokenWithPubSub
     And API consumer receives a 200 status code
 
   Scenario: Consumer calls jumper with security scopes, OneToken contains scopes
@@ -23,7 +32,7 @@ Feature: expected authorization token created
     And jumperConfig with scopes set
     And API provider set to respond with a 200 status code
     When consumer calls the API
-    Then API Provider receives token OneTokenWithScopes
+    Then API Provider receives authorization OneTokenWithScopes
     And API consumer receives a 200 status code
 
   Scenario: Consumer calls jumper with iris token containing aud, OneToken contains audience
@@ -31,7 +40,7 @@ Feature: expected authorization token created
     And authorization token with aud set
     And API provider set to respond with a 200 status code
     When consumer calls the API
-    Then API Provider receives token OneTokenWithAud
+    Then API Provider receives authorization OneTokenWithAud
     And API consumer receives a 200 status code
 
   Scenario: Consumer calls jumper with real route headers and realm header contains several values, correct issuer in OneToken
@@ -39,8 +48,8 @@ Feature: expected authorization token created
     And several realm fields are contained in the header
     And API provider set to respond with a 200 status code
     When consumer calls the API
-    Then API Provider receives default headers
-    Then API Provider receives token OneToken
+    Then API Provider receives default bearer authorization headers
+    Then API Provider receives authorization OneToken
     And API consumer receives a 200 status code
 
   ################ mesh ################
@@ -49,8 +58,8 @@ Feature: expected authorization token created
     And IDP set to provide internal token
     And API provider set to respond with a 200 status code
     When consumer calls the API
-    Then API Provider receives default headers
-    Then API Provider receives token MeshToken
+    Then API Provider receives default bearer authorization headers
+    Then API Provider receives authorization MeshToken
     And API consumer receives a 200 status code
 
   ################ external ################
@@ -68,7 +77,7 @@ Feature: expected authorization token created
     And IDP set to provide external token
     And API provider set to respond with a 200 status code
     When consumer calls the API
-    Then API Provider receives token ExternalConfigured
+    Then API Provider receives authorization ExternalConfigured
     And API consumer receives a 200 status code
 
   Scenario: Consumer calls jumper route using header oauth, external authorization scenario
@@ -78,7 +87,7 @@ Feature: expected authorization token created
     And IDP set to provide externalHeader token
     And API provider set to respond with a 200 status code
     When consumer calls the API
-    Then API Provider receives token ExternalHeader
+    Then API Provider receives authorization ExternalHeader
     And API consumer receives a 200 status code
 
   Scenario: Consumer calls jumper route using configured oauth with scope, external authorization scenario
@@ -88,7 +97,7 @@ Feature: expected authorization token created
     And IDP set to provide externalScoped token
     And API provider set to respond with a 200 status code
     When consumer calls the API
-    Then API Provider receives token ExternalConfigured
+    Then API Provider receives authorization ExternalConfigured
     And API consumer receives a 200 status code
 
   Scenario: Consumer calls jumper route using configured and header oauth with scope, external authorization scenario with header precedence
@@ -99,7 +108,7 @@ Feature: expected authorization token created
     And IDP set to provide externalHeaderScoped token
     And API provider set to respond with a 200 status code
     When consumer calls the API
-    Then API Provider receives token ExternalHeader
+    Then API Provider receives authorization ExternalHeader
     And API consumer receives a 200 status code
 
   Scenario: Consumer calls jumper route using configured oauth including explicit grant type, external authorization scenario with basic auth
@@ -109,7 +118,7 @@ Feature: expected authorization token created
     And IDP set to provide externalBasicAuthCredentials token
     And API provider set to respond with a 200 status code
     When consumer calls the API
-    Then API Provider receives token ExternalConfigured
+    Then API Provider receives authorization ExternalConfigured
     And API consumer receives a 200 status code
 
   Scenario: Consumer calls jumper route using configured oauth including password grant type, external authorization scenario with username/password
@@ -119,7 +128,7 @@ Feature: expected authorization token created
     And IDP set to provide externalUsernamePasswordCredentials token
     And API provider set to respond with a 200 status code
     When consumer calls the API
-    Then API Provider receives token ExternalConfigured
+    Then API Provider receives authorization ExternalConfigured
     And API consumer receives a 200 status code
 
   Scenario: Consumer calls jumper route using configured oauth including password grant type, external authorization scenario with username/password only
@@ -129,5 +138,33 @@ Feature: expected authorization token created
     And IDP set to provide externalUsernamePasswordCredentialsOnly token
     And API provider set to respond with a 200 status code
     When consumer calls the API
-    Then API Provider receives token ExternalConfigured
+    Then API Provider receives authorization ExternalConfigured
+    And API consumer receives a 200 status code
+
+    ################ basic auth ################
+  Scenario: Consumer calls jumper with real route headers, Basic auth for consumer
+    Given RealRoute headers are set
+    And API provider set to respond with a 200 status code
+    And jumperConfig basic auth "consumer key only" set
+    When consumer calls the API
+    Then API Provider receives default basic authorization headers
+    Then API Provider receives authorization BasicAuthConsumer
+    And API consumer receives a 200 status code
+
+  Scenario: Consumer calls jumper with real route headers, Basic auth for consumer
+    Given RealRoute headers are set
+    And API provider set to respond with a 200 status code
+    And jumperConfig basic auth "provider key only" set
+    When consumer calls the API
+    Then API Provider receives default basic authorization headers
+    Then API Provider receives authorization BasicAuthProvider
+    And API consumer receives a 200 status code
+
+  Scenario: Consumer calls jumper with real route headers, Basic auth for consumer
+    Given RealRoute headers are set
+    And API provider set to respond with a 200 status code
+    And jumperConfig basic auth "consumer and provider" set
+    When consumer calls the API
+    Then API Provider receives default basic authorization headers
+    Then API Provider receives authorization BasicAuthConsumer
     And API consumer receives a 200 status code
