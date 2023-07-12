@@ -18,6 +18,7 @@ import java.util.HashMap;
 public class JumperConfig {
 
     private HashMap<String, OauthCredentials> oauth;
+    private HashMap<String, BasicAuthCredentials> basicAuth;
     private HashMap<String, RouteListener> routeListener;
     private GatewayClient gatewayClient;
 

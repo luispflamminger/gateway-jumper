@@ -9,11 +9,14 @@ import org.mockserver.client.MockServerClient;
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.model.Header;
 import org.springframework.http.HttpHeaders;
+import org.springframework.util.Base64Utils;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static jumper.util.Config.*;
+import static jumper.util.JumperConfigUtil.addIdSuffix;
 import static org.mockserver.integration.ClientAndServer.startClientAndServer;
 import static org.mockserver.matchers.Times.exactly;
 import static org.mockserver.model.HttpRequest.request;
@@ -36,10 +39,10 @@ public class MockIrisServer {
         mockServer.stop();
     }
 
-    public void gwMeshTokenRequest() {
+    public void createExpectationInternalToken(String id) {
 
-        String tokenInfoJson = getTokenInfoJson();
-        List<Header> headersList = getHeaderList("69");
+        String tokenInfoJson = getTokenInfoJson(CONSUMER_GATEWAY);
+        List<Header> headersList = getHeaderList("106");
 
         new MockServerClient(irisLocalHost, irisLocalPort)
                 .when(
@@ -47,7 +50,163 @@ public class MockIrisServer {
                                 .withHeaders(headersList)
                                 .withMethod("POST")
                                 .withPath("/auth/realms/default/protocol/openid-connect/token")
-                                .withBody("client_id=stargate&client_secret=secret&grant_type=client_credentials"),
+                                .withBody(addIdSuffix("client_id=stargate", id) + "&client_secret=secret&grant_type=client_credentials"),
+                        exactly(1))
+                .respond(
+                        response()
+                                .withStatusCode(200)
+                                .withHeaders(
+                                        new Header("Content-Type", "application/json; charset=utf-8"),
+                                        new Header("Cache-Control", "no-store"))
+                                .withBody(tokenInfoJson)
+                                .withDelay(TimeUnit.SECONDS, 1)
+                );
+    }
+
+    public void createExpectationExternalToken(String id) {
+
+        String tokenInfoJson = getTokenInfoJson(CONSUMER_EXTERNAL_CONFIGURED);
+
+        new MockServerClient(irisLocalHost, irisLocalPort)
+                .when(
+                        request()
+                                .withMethod("POST")
+                                .withPath("/external")
+                                .withBody(addIdSuffix("client_id=external_configured", id) + "&client_secret=secret&grant_type=client_credentials"),
+                        exactly(1))
+                .respond(
+                        response()
+                                .withStatusCode(200)
+                                .withHeaders(
+                                        new Header("Content-Type", "application/json; charset=utf-8"),
+                                        new Header("Cache-Control", "no-store"))
+                                .withBody(tokenInfoJson)
+                                .withDelay(TimeUnit.SECONDS, 1)
+                );
+    }
+
+    public void createExpectationExternalTokenScoped(String id) {
+
+        String tokenInfoJson = getTokenInfoJson(CONSUMER_EXTERNAL_CONFIGURED);
+
+        new MockServerClient(irisLocalHost, irisLocalPort)
+                .when(
+                        request()
+                                .withMethod("POST")
+                                .withPath("/external")
+                                .withBody(addIdSuffix("client_id=external_configured", id) + "&client_secret=secret&grant_type=client_credentials&scope=scope_configured"),
+                        exactly(1))
+                .respond(
+                        response()
+                                .withStatusCode(200)
+                                .withHeaders(
+                                        new Header("Content-Type", "application/json; charset=utf-8"),
+                                        new Header("Cache-Control", "no-store"))
+                                .withBody(tokenInfoJson)
+                                .withDelay(TimeUnit.SECONDS, 1)
+                );
+    }
+
+    public void createExpectationExternalTokenHeaderClient(String id) {
+
+        String tokenInfoJson = getTokenInfoJson(CONSUMER_EXTERNAL_HEADER);
+
+        new MockServerClient(irisLocalHost, irisLocalPort)
+                .when(
+                        request()
+                                .withMethod("POST")
+                                .withPath("/external")
+                                .withBody(addIdSuffix("client_id=external_header",id) + "&client_secret=secret&grant_type=client_credentials"),
+                        exactly(1))
+                .respond(
+                        response()
+                                .withStatusCode(200)
+                                .withHeaders(
+                                        new Header("Content-Type", "application/json; charset=utf-8"),
+                                        new Header("Cache-Control", "no-store"))
+                                .withBody(tokenInfoJson)
+                                .withDelay(TimeUnit.SECONDS, 1)
+                );
+    }
+
+    public void createExpectationExternalTokenHeaderScopedClient(String id) {
+
+        String tokenInfoJson = getTokenInfoJson(CONSUMER_EXTERNAL_HEADER);
+
+        new MockServerClient(irisLocalHost, irisLocalPort)
+                .when(
+                        request()
+                                .withMethod("POST")
+                                .withPath("/external")
+                                .withBody(addIdSuffix("client_id=external_header", id) + "&client_secret=secret&grant_type=client_credentials&scope=scope_header"),
+                        exactly(1))
+                .respond(
+                        response()
+                                .withStatusCode(200)
+                                .withHeaders(
+                                        new Header("Content-Type", "application/json; charset=utf-8"),
+                                        new Header("Cache-Control", "no-store"))
+                                .withBody(tokenInfoJson)
+                                .withDelay(TimeUnit.SECONDS, 1)
+                );
+    }
+
+    public void createExpectationExternalBasicAuthCredentials(String id) {
+
+        String tokenInfoJson = getTokenInfoJson(CONSUMER_EXTERNAL_CONFIGURED);
+
+        new MockServerClient(irisLocalHost, irisLocalPort)
+                .when(
+                        request()
+                                .withMethod("POST")
+                                .withPath("/external")
+                                .withBody("grant_type=client_credentials")
+                                .withHeader("Authorization", "Basic " + Base64Utils.encodeToString((addIdSuffix("external_configured", id) + ":" + "secret").getBytes())),
+                        exactly(1))
+                .respond(
+                        response()
+                                .withStatusCode(200)
+                                .withHeaders(
+                                        new Header("Content-Type", "application/json; charset=utf-8"),
+                                        new Header("Cache-Control", "no-store"))
+                                .withBody(tokenInfoJson)
+                                .withDelay(TimeUnit.SECONDS, 1)
+                );
+    }
+
+    public void createExpectationExternalTokenFromUsernamePassword(String id) {
+
+        String tokenInfoJson = getTokenInfoJson(CONSUMER_EXTERNAL_CONFIGURED);
+
+        new MockServerClient(irisLocalHost, irisLocalPort)
+                .when(
+                        request()
+                                .withMethod("POST")
+                                .withPath("/external")
+                                .withHeader("Authorization", "Basic " + Base64Utils.encodeToString((addIdSuffix("external_configured", id) + ":" + "secret").getBytes()))
+                                .withBody("username=username&password=geheim&grant_type=password"),
+                        exactly(1))
+                .respond(
+                        response()
+                                .withStatusCode(200)
+                                .withHeaders(
+                                        new Header("Content-Type", "application/json; charset=utf-8"),
+                                        new Header("Cache-Control", "no-store"))
+                                .withBody(tokenInfoJson)
+                                .withDelay(TimeUnit.SECONDS, 1)
+                );
+    }
+
+    public void createExpectationExternalTokenFromUsernamePasswordOnly(String id) {
+
+        String tokenInfoJson = getTokenInfoJson(CONSUMER_EXTERNAL_CONFIGURED);
+
+        new MockServerClient(irisLocalHost, irisLocalPort)
+                .when(
+                        request()
+                                .withMethod("POST")
+                                .withPath("/external")
+                                .withBody(addIdSuffix("username=username", id) + "&password=geheim&grant_type=password"),
                         exactly(1))
                 .respond(
                         response()
@@ -88,14 +247,13 @@ public class MockIrisServer {
         headersList.add(new Header(HttpHeaders.HOST, irisLocalHost+":"+irisLocalPort));
         headersList.add(new Header(HttpHeaders.ACCEPT, "*/*"));
         headersList.add(new Header(HttpHeaders.CONTENT_LENGTH, contentLength));
-        headersList.add(new Header(HttpHeaders.ACCEPT_ENCODING, "gzip"));
         headersList.add(new Header(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded;charset=UTF-8"));
         return headersList;
     }
 
-    private String getTokenInfoJson() {
+    private String getTokenInfoJson(String client) {
         TokenInfo tokenInfo = new TokenInfo();
-        tokenInfo.setAccessToken(getMeshToken());
+        tokenInfo.setAccessToken(getToken(client));
         tokenInfo.setRefreshToken("asd");
         tokenInfo.setExpiresIn(300);
         tokenInfo.setRefreshExpiresIn(1800);
@@ -114,14 +272,14 @@ public class MockIrisServer {
         return tokenInfoJson;
     }
 
-    private String getMeshToken() {
-        AccessToken meshToken = AccessToken.builder()
-                .env("local")
-                .clientId("stargate")
-                .originZone("aws")
-                .originStargate("https://aws.local.de")
+    private String getToken(String client) {
+        AccessToken token = AccessToken.builder()
+                .env(ENVIRONMENT_REMOTE)
+                .clientId(client)
+                .originZone(ORIGIN_ZONE_REMOTE)
+                .originStargate(ORIGIN_STARGATE_REMOTE)
                 .build();
-        return meshToken.getGwMeshToken();
+        return token.getIdpToken();
     }
 
 }

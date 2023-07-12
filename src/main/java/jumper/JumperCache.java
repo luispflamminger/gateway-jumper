@@ -50,6 +50,10 @@ public class JumperCache
 
         log.debug( "try to grab token from cache with key: {}", tokenCacheKey);
 
+        if (log.isDebugEnabled()) {
+            printCache();
+        }
+
         TokenInfo token = this.cachingList.get( tokenCacheKey);
         if( token != null)
         {

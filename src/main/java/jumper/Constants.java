@@ -1,5 +1,7 @@
 package jumper;
 
+import java.util.List;
+
 public class Constants {
 
 	public final static String HEADER_X_SPACEGATE_CLIENT_ID = "X-Spacegate-Client-ID";
@@ -48,8 +50,11 @@ public class Constants {
 	public final static String LOCALHOST_ISSUER_SERVICE = "http://localhost:8081/api/v1";
 	public final static String DEFAULT_REALM = "default";
 	public final static String BEARER = "Bearer";
+	public final static String BASIC = "Basic";
 
-    public static final String SPACE = "space";
+    public static final List SPACE_ZONES = List.of("space", "spacex", "canis", "aries");
+
+	public static final String BASIC_AUTH_PROVIDER_KEY = "default";
 
 	public static final String ENVIRONMENT_PLACEHOLDER = "ENVIRONMENT_PLACEHOLDER";
 }
