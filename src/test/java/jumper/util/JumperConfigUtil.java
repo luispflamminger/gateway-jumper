@@ -1,19 +1,17 @@
 package jumper.util;
 
 import jumper.Constants;
-import jumper.model.config.BasicAuthCredentials;
-import jumper.model.config.JumperConfig;
-import jumper.model.config.OauthCredentials;
+import jumper.model.config.*;
 
 import java.util.HashMap;
 
+import static jumper.config.Config.*;
 import static jumper.model.config.JumperConfig.toBase64;
-import static jumper.util.Config.*;
 
-public class JumperConfigUtil{
+public class JumperConfigUtil {
 
 
-    public static String getJcSecurity(){
+    public static String getJcSecurity() {
         HashMap<String, OauthCredentials> oauth = new HashMap<>();
         OauthCredentials oc = new OauthCredentials();
         oc.setScopes(SCOPES);
@@ -23,10 +21,10 @@ public class JumperConfigUtil{
         return toBase64(jc);
     }
 
-    public static String getJcOauth(String id){
+    public static String getJcOauth(String id) {
         HashMap<String, OauthCredentials> oauth = new HashMap<>();
         OauthCredentials oc = new OauthCredentials();
-        oc.setClientId(addIdSuffix(CONSUMER_EXTERNAL_CONFIGURED,id));
+        oc.setClientId(addIdSuffix(CONSUMER_EXTERNAL_CONFIGURED, id));
         oc.setClientSecret("secret");
         oauth.put(CONSUMER, oc);
         JumperConfig jc = new JumperConfig();
@@ -34,7 +32,7 @@ public class JumperConfigUtil{
         return toBase64(jc);
     }
 
-    public static String getJcOauthWithScope(String id){
+    public static String getJcOauthWithScope(String id) {
         HashMap<String, OauthCredentials> oauth = new HashMap<>();
         OauthCredentials oc = new OauthCredentials();
         oc.setClientId(addIdSuffix(CONSUMER_EXTERNAL_CONFIGURED, id));
@@ -46,7 +44,7 @@ public class JumperConfigUtil{
         return toBase64(jc);
     }
 
-    public static String getJcBasicAuthConsumer(String id){
+    public static String getJcBasicAuthConsumer(String id) {
         HashMap<String, BasicAuthCredentials> basicAuthCredentialsHashMap = new HashMap<>();
         BasicAuthCredentials ba = new BasicAuthCredentials();
         ba.setUsername(addIdSuffix(CONSUMER, id));
@@ -57,7 +55,7 @@ public class JumperConfigUtil{
         return toBase64(jc);
     }
 
-    public static String getJcBasicAuthProvider(String id){
+    public static String getJcBasicAuthProvider(String id) {
         HashMap<String, BasicAuthCredentials> basicAuthCredentialsHashMap = new HashMap<>();
         BasicAuthCredentials ba = new BasicAuthCredentials();
         ba.setUsername(addIdSuffix(CONSUMER_GATEWAY, id));
@@ -68,7 +66,7 @@ public class JumperConfigUtil{
         return toBase64(jc);
     }
 
-    public static String getJcBasicAuthConsumerAndProvider(String id){
+    public static String getJcBasicAuthConsumerAndProvider(String id) {
         HashMap<String, BasicAuthCredentials> basicAuthCredentialsHashMap = new HashMap<>();
         BasicAuthCredentials baConsumer = new BasicAuthCredentials();
         baConsumer.setUsername(addIdSuffix(CONSUMER, id));
@@ -83,7 +81,7 @@ public class JumperConfigUtil{
         return toBase64(jc);
     }
 
-    public static String getJcBasicAuthOtherConsumer(String id){
+    public static String getJcBasicAuthOtherConsumer(String id) {
         HashMap<String, BasicAuthCredentials> basicAuthCredentialsHashMap = new HashMap<>();
         BasicAuthCredentials ba = new BasicAuthCredentials();
         ba.setUsername(addIdSuffix(CONSUMER, id));
@@ -94,7 +92,7 @@ public class JumperConfigUtil{
         return toBase64(jc);
     }
 
-    public static String getJcOauthGrantType(String id){
+    public static String getJcOauthGrantType(String id) {
         HashMap<String, OauthCredentials> oauth = new HashMap<>();
         OauthCredentials oc = new OauthCredentials();
         oc.setClientId(addIdSuffix(CONSUMER_EXTERNAL_CONFIGURED, id));
@@ -106,7 +104,7 @@ public class JumperConfigUtil{
         return toBase64(jc);
     }
 
-    public static String getJcOauthGrantTypePassword(String id){
+    public static String getJcOauthGrantTypePassword(String id) {
         HashMap<String, OauthCredentials> oauth = new HashMap<>();
         OauthCredentials oc = new OauthCredentials();
         oc.setClientId(addIdSuffix(CONSUMER_EXTERNAL_CONFIGURED, id));
@@ -120,7 +118,7 @@ public class JumperConfigUtil{
         return toBase64(jc);
     }
 
-    public static String getJcOauthGrantTypePasswordOnly(String id){
+    public static String getJcOauthGrantTypePasswordOnly(String id) {
         HashMap<String, OauthCredentials> oauth = new HashMap<>();
         OauthCredentials oc = new OauthCredentials();
         oc.setUsername(addIdSuffix("username", id));
@@ -132,7 +130,21 @@ public class JumperConfigUtil{
         return toBase64(jc);
     }
 
-    public static String addIdSuffix (String from,  String id){
+    public static String getJcRouteListener(String id, String consumer) {
+        HashMap<String, RouteListener> routeListenerHashMap = new HashMap<>();
+        RouteListener rl = new RouteListener();
+        rl.setIssue(LISTENER_ISSUE);
+        rl.setServiceOwner(LISTENER_PROVIDER);
+        routeListenerHashMap.put(consumer, rl);
+        JumperConfig jc = new JumperConfig();
+        jc.setRouteListener(routeListenerHashMap);
+        GatewayClient gc = new GatewayClient();
+        gc.setIssuer("realms/default");
+        jc.setGatewayClient(gc);
+        return toBase64(jc);
+    }
+
+    public static String addIdSuffix(String from, String id) {
         return from + "_" + id;
     }
 

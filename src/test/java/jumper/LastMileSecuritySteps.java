@@ -7,9 +7,9 @@ import io.cucumber.java.en.Then;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Header;
 import io.jsonwebtoken.Jwt;
-import jumper.mocks.MockApiUpstreamServer;
 import jumper.mocks.MockIrisServer;
-import jumper.util.JumperConfigurator;
+import jumper.mocks.MockUpstreamServer;
+import jumper.util.TokenUtil;
 import jumper.utilities.OauthTokenUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,49 +33,30 @@ public class LastMileSecuritySteps {
     @Autowired
     WebTestClient webTestClient;
 
-    @Value( "${jumper.issuer.url}")
+    @Value("${jumper.issuer.url}")
     private String localIssuerUrl;
 
-    MockApiUpstreamServer mockUpstreamServer;
+    MockUpstreamServer mockUpstreamServer;
     MockIrisServer mockIrisServer;
 
     Consumer<HttpHeaders> httpHeadersOfRequest;
 
-    @Before("@lms")
-    public void beforeScenario() {
-        mockUpstreamServer = new MockApiUpstreamServer();
-        mockUpstreamServer.startServer();
-        this.baseSteps.setMockUpstreamServer(mockUpstreamServer);
-
-        mockIrisServer = new MockIrisServer();
-        mockIrisServer.startServer();
-        this.baseSteps.setMockIrisServer(mockIrisServer);
-
-        this.baseSteps.setWebTestClient(webTestClient);
-    }
-
-    @After("@lms")
-    public void afterScenario() {
-        mockUpstreamServer.stopServer();
-        mockIrisServer.stopServer();
-    }
-
     @Given("lastMileSecurity is activated")
     public void lastMileSecurityIsActivated() {
-        httpHeadersOfRequest = JumperConfigurator.getJumperLmsHeaders();
+        httpHeadersOfRequest = TokenUtil.getJumperLmsHeaders();
         baseSteps.setHttpHeadersOfRequest(httpHeadersOfRequest);
     }
 
     @Then("API provider receives {word} and {word}")
     public void apiProviderReceivesAccessTokenAndGatewayToken(String at, String gt) {
 
-        if(!Objects.equals(at, "AccessToken") || !Objects.equals(gt, "GatewayToken")) {
+        if (!Objects.equals(at, "AccessToken") || !Objects.equals(gt, "GatewayToken")) {
             this.baseSteps.getRequestExchange().expectStatus().isEqualTo(HttpStatus.UNAUTHORIZED);
             return;
         }
         this.baseSteps.getRequestExchange()
-                .expectHeader().valueMatches(HttpHeaders.AUTHORIZATION, Pattern.compile("Bearer\\s\\w+.\\w+.+.\\w+").pattern())
-                .expectHeader().valueMatches(Constants.HEADER_LASTMILE_SECURITY_TOKEN, Pattern.compile("Bearer\\s\\w+.\\w+.+.\\w+").pattern())
+                .expectHeader().valueMatches(HttpHeaders.AUTHORIZATION, Pattern.compile("Bearer\\s\\w+.\\w+.+.\\S+").pattern())
+                .expectHeader().valueMatches(Constants.HEADER_LASTMILE_SECURITY_TOKEN, Pattern.compile("Bearer\\s\\w+.\\w+.+.\\S+").pattern())
                 .expectHeader().valueMatches(Constants.HEADER_X_B3_TRACE_ID, Pattern.compile("\\w+").pattern())
                 .expectHeader().valueMatches(Constants.HEADER_X_B3_SPAN_ID, Pattern.compile("\\w+").pattern())
                 .expectHeader().valueMatches(Constants.HEADER_X_B3_PARENT_SPAN_ID, Pattern.compile("\\w+").pattern())
@@ -92,15 +73,14 @@ public class LastMileSecuritySteps {
     private void checkConsumerToken(String consumerToken) {
         Jwt<Header, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(consumerToken));
 
-        assertNotNull(claimsFromToken.getBody().get( "clientId", String.class));
+        assertNotNull(claimsFromToken.getBody().get("clientId", String.class));
     }
 
     private void checkGatewayToken(String gatewayToken) {
         Jwt<Header, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(gatewayToken));
 
-        assertEquals(localIssuerUrl + "/" + Constants.DEFAULT_REALM, claimsFromToken.getBody().get( "iss", String.class));
+        assertEquals(localIssuerUrl + "/" + Constants.DEFAULT_REALM, claimsFromToken.getBody().get("iss", String.class));
     }
-
 
 
 }

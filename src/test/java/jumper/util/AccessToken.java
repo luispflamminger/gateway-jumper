@@ -13,8 +13,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import static jumper.util.Config.LOCAL_ISSUER;
-import static jumper.util.Config.REMOTE_ISSUER;
+import static jumper.config.Config.LOCAL_ISSUER;
+import static jumper.config.Config.REMOTE_ISSUER;
 
 @Builder
 public class AccessToken {
@@ -27,12 +27,12 @@ public class AccessToken {
 
     public String getConsumerAccessToken() {
         HashMap<String, String> claims = new HashMap<String, String>();
-        claims.put( "typ", "Bearer");
-        claims.put( "azp", clientId);
-        claims.put( "sub", UUID.randomUUID().toString());
-        claims.put( "originZone", originZone);
-        claims.put( "originStargate", originStargate);
-        claims.put( "clientId", clientId);
+        claims.put("typ", "Bearer");
+        claims.put("azp", clientId);
+        claims.put("sub", UUID.randomUUID().toString());
+        claims.put("originZone", originZone);
+        claims.put("originStargate", originStargate);
+        claims.put("clientId", clientId);
         if (audience != null) claims.put("aud", audience);
 
         return buildAccessToken(claims, LOCAL_ISSUER);
@@ -40,13 +40,13 @@ public class AccessToken {
 
     public String getIdpToken() {
         HashMap<String, String> claims = new HashMap<String, String>();
-        claims.put( "typ", "Bearer");
-        claims.put( "azp", clientId);
-        claims.put( "sub", UUID.randomUUID().toString());
-        claims.put( "clientId", clientId);
-        claims.put( "env", env);
-        claims.put( "originZone", originZone);
-        claims.put( "originStargate", originStargate);
+        claims.put("typ", "Bearer");
+        claims.put("azp", clientId);
+        claims.put("sub", UUID.randomUUID().toString());
+        claims.put("clientId", clientId);
+        claims.put("env", env);
+        claims.put("originZone", originZone);
+        claims.put("originStargate", originStargate);
 
         return buildAccessToken(claims, REMOTE_ISSUER);
     }

@@ -4,10 +4,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jumper.model.TokenInfo;
 import jumper.util.AccessToken;
-import lombok.Getter;
 import org.mockserver.client.MockServerClient;
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.model.Header;
+import org.mockserver.model.HttpError;
 import org.springframework.http.HttpHeaders;
 import org.springframework.util.Base64Utils;
 
@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static jumper.util.Config.*;
+import static jumper.config.Config.*;
 import static jumper.util.JumperConfigUtil.addIdSuffix;
 import static org.mockserver.integration.ClientAndServer.startClientAndServer;
 import static org.mockserver.matchers.Times.exactly;
@@ -26,7 +26,6 @@ public class MockIrisServer {
 
     private ClientAndServer mockServer;
 
-    @Getter
     private final int irisLocalPort = 1081;
 
     private final String irisLocalHost = "localhost";
@@ -42,7 +41,7 @@ public class MockIrisServer {
     public void createExpectationInternalToken(String id) {
 
         String tokenInfoJson = getTokenInfoJson(CONSUMER_GATEWAY);
-        List<Header> headersList = getHeaderList("106");
+        List<Header> headersList = getHeaderList("86");
 
         new MockServerClient(irisLocalHost, irisLocalPort)
                 .when(
@@ -116,7 +115,7 @@ public class MockIrisServer {
                         request()
                                 .withMethod("POST")
                                 .withPath("/external")
-                                .withBody(addIdSuffix("client_id=external_header",id) + "&client_secret=secret&grant_type=client_credentials"),
+                                .withBody(addIdSuffix("client_id=external_header", id) + "&client_secret=secret&grant_type=client_credentials"),
                         exactly(1))
                 .respond(
                         response()
@@ -219,32 +218,43 @@ public class MockIrisServer {
                 );
     }
 
-    public void createExpectationForInvalidAuth() {
-        List<Header> headersList = getHeaderList("64");
+    public void createExpectationExternalInvalidAuth(String id) {
 
         new MockServerClient(irisLocalHost, irisLocalPort)
                 .when(
                         request()
-                                .withHeaders(headersList)
                                 .withMethod("POST")
-                                .withPath("/auth/realms/default/protocol/openid-connect/token")
-                                .withBody("client_id=abc&client_secret=secret&grant_type=client_credentials"),
+                                .withPath("/external")
+                                .withBody(addIdSuffix("client_id=external_header", id) + "&client_secret=secret&grant_type=client_credentials"),
                         exactly(1))
                 .respond(
                         response()
                                 .withStatusCode(401)
                                 .withHeaders(
                                         new Header("Content-Type", "application/json; charset=utf-8"),
-                                        new Header("Cache-Control", "public, max-age=86400"))
-                                .withBody("{ message: 'incorrect clientId and secret combination' }")
-                                .withDelay(TimeUnit.SECONDS, 1)
+                                        new Header("Cache-Control", "no-store"))
+                                .withBody("{\n" +
+                                        "\t\"error\": \"unauthorized_client\",\n" +
+                                        "\t\"error_description\": \"Invalid client or Invalid client credentials\"\n" +
+                                        "}")
                 );
+    }
+
+    public void createExpectationDropConnection(String id) {
+
+        new MockServerClient(irisLocalHost, irisLocalPort)
+                .when(
+                        request()
+                                .withMethod("POST")
+                                .withPath("/auth/realms/default/protocol/openid-connect/token")
+                                .withBody(addIdSuffix("client_id=stargate", id) + "&client_secret=secret&grant_type=client_credentials"),
+                        exactly(1))
+                .error(HttpError.error().withDropConnection(true));
     }
 
     private List<Header> getHeaderList(String contentLength) {
         List<Header> headersList = new ArrayList<>();
-        headersList.add(new Header(HttpHeaders.USER_AGENT, "ReactorNetty/1.0.28"));
-        headersList.add(new Header(HttpHeaders.HOST, irisLocalHost+":"+irisLocalPort));
+        headersList.add(new Header(HttpHeaders.HOST, irisLocalHost + ":" + irisLocalPort));
         headersList.add(new Header(HttpHeaders.ACCEPT, "*/*"));
         headersList.add(new Header(HttpHeaders.CONTENT_LENGTH, contentLength));
         headersList.add(new Header(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded;charset=UTF-8"));

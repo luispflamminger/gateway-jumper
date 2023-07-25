@@ -1,4 +1,4 @@
-package jumper.util;
+package jumper.config;
 
 public class Config {
     public final static String CONSUMER = "eni--local-team--local-app";
@@ -21,4 +21,6 @@ public class Config {
     public final static String CALLBACK_SUFFIX = "/callback";
     public final static String PUBSUB_PUBLISHER = "testPublisher";
     public final static String PUBSUB_SUBSCRIBER = "testSubscriber";
+    public final static String LISTENER_ISSUE = "issue";
+    public final static String LISTENER_PROVIDER = "serviceOwner";
 }

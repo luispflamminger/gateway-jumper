@@ -77,4 +77,4 @@ jumpercache.cleanCacheInSeconds: 3600
 # local horizon
 ##############################
 horizon:
-  publishEventUrl: ${PUBLISH_EVENT_URL:http://producer.stage:8080/v1/events}
+  publishEventUrl: ${PUBLISH_EVENT_URL:http://localhost:1082/v1/events}

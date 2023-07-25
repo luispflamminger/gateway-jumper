@@ -305,7 +305,7 @@ public class OauthTokenUtil {
                 .onStatus(HttpStatus::is4xxClientError,
                         response -> {
                             logClientErrorResponse(response, tokenKey);
-                            return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to retrieve token from " + tokenEndpoint));
+                            return Mono.error(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Failed to retrieve token from " + tokenEndpoint));
                         })
                 .bodyToMono(TokenInfo.class)
                 .retryWhen(Retry.max(2)
