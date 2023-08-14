@@ -9,7 +9,6 @@ import jumper.filter.SetSpectreRoutingFilter;
 import jumper.filter.SpectreRequestFilter;
 import jumper.filter.SpectreResponseFilter;
 import jumper.spectre.SpectreBodyRewrite;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -25,21 +24,29 @@ public class Application {
     @Value("${horizon.publishEventUrl}")
     private String publishEventUrl;
 
-
-
-    @Autowired
-    private SpectreBodyRewrite spectreBodyRewrite;
-
     public static void main(String[] args) {
         SpringApplication.run(Application.class, args);
     }
 
     @Bean
-    public RouteLocator proxyRoute(RouteLocatorBuilder builder, Tracer tracer, RequestFilter requestFilter, RemoveHeaderFilter removeHeader, ResponseFilter responseFilter, SpectreRequestFilter spectreRequestFilter, SpectreResponseFilter spectreResponseFilter, RequestTransformationFilter requestTransformationFilter, ResponseTransformationFilter responseTransformationFilter, SetSpectreRoutingFilter setSpectreRoutingFilter) {
+    public RouteLocator proxyRoute(RouteLocatorBuilder builder,
+                                   Tracer tracer,
+                                   RequestFilter requestFilter,
+                                   RemoveHeaderFilter removeHeader,
+                                   ResponseFilter responseFilter,
+                                   SpectreRequestFilter spectreRequestFilter,
+                                   SpectreResponseFilter spectreResponseFilter,
+                                   RequestTransformationFilter requestTransformationFilter,
+                                   ResponseTransformationFilter responseTransformationFilter,
+                                   SetSpectreRoutingFilter setSpectreRoutingFilter,
+                                   SpectreBodyRewrite spectreBodyRewrite) {
+
         return builder.routes()
+
+
                 .route("jumper_route", p -> p
                         .path("/proxy/**")
-                        .filters(f -> f
+                        .filters(filterSpec -> filterSpec
                                 .filter(requestFilter.apply(new RequestFilter.Config(true, true, tracer)))
                                 .filter(removeHeader.apply(c -> c.setName("jumper_config")))
                                 .filter(removeHeader.apply(c -> c.setName("token_endpoint")))
@@ -59,6 +66,8 @@ public class Application {
                                 .filter(responseFilter.apply(c -> c.setTracer(tracer)))
                         )
                         .uri("no://op"))
+
+
                 .route("listener_route", p -> p
                         .path("/listener/**")
                         .filters(f -> f
@@ -85,6 +94,8 @@ public class Application {
                                 .filter(responseFilter.apply(c -> c.setTracer(tracer)))
                         )
                         .uri("no://op"))
+
+
                 .route("auto_event_route_post", p -> p
                         .path("/autoevent/**").and().method(HttpMethod.POST)
                         .filters(f -> f
@@ -94,6 +105,8 @@ public class Application {
                                 .filter(setSpectreRoutingFilter.apply())
                         )
                         .uri(publishEventUrl))
+
+
                 .route("auto_event_route_head", p -> p
                         .path("/autoevent/**").and().method(HttpMethod.HEAD)
                         .filters(f -> f
@@ -101,6 +114,8 @@ public class Application {
                                 .filter(setSpectreRoutingFilter.apply())
                         )
                         .uri(publishEventUrl))
+
+
                 .build();
     }
 

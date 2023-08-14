@@ -1,7 +1,6 @@
 package jumper.config;
 
 import jumper.exception.JsonErrorWebExceptionHandler;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -31,12 +30,7 @@ import static org.springframework.boot.autoconfigure.condition.ConditionalOnWebA
 @ConditionalOnWebApplication(type=REACTIVE)
 @ConditionalOnClass(WebFluxConfigurer.class)
 @EnableConfigurationProperties({ServerProperties.class, WebProperties.class})
-@RequiredArgsConstructor
 public class CustomErrorWebFluxAutoConfiguration {
-
-    private final ServerProperties serverProperties;
-    private final Tracer tracer;
-    private final CurrentTraceContext currentTraceContext;
 
     @Bean
     @ConditionalOnMissingBean(value = ErrorWebExceptionHandler.class, search = SearchStrategy.CURRENT)
@@ -45,12 +39,15 @@ public class CustomErrorWebFluxAutoConfiguration {
                                                              WebProperties webProperties,
                                                              ObjectProvider<ViewResolver> viewResolvers,
                                                              ServerCodecConfigurer serverCodecConfigurer,
-                                                             ApplicationContext applicationContext) {
+                                                             ApplicationContext applicationContext,
+                                                             ServerProperties serverProperties,
+                                                             Tracer tracer,
+                                                             CurrentTraceContext currentTraceContext) {
 
         JsonErrorWebExceptionHandler exceptionHandler = new JsonErrorWebExceptionHandler(
                 errorAttributes,
                 webProperties.getResources(),
-                this.serverProperties.getError(),
+                serverProperties.getError(),
                 applicationContext,
                 tracer,
                 currentTraceContext);
