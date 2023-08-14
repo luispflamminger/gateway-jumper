@@ -4,7 +4,14 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import jumper.filter.*;
+import jumper.filter.RemoveHeaderFilter;
+import jumper.filter.RequestFilter;
+import jumper.filter.RequestTransformationFilter;
+import jumper.filter.ResponseFilter;
+import jumper.filter.ResponseTransformationFilter;
+import jumper.filter.SetSpectreRoutingFilter;
+import jumper.filter.SpectreRequestFilter;
+import jumper.filter.SpectreResponseFilter;
 import jumper.spectre.SpectreBodyRewrite;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,8 +26,6 @@ import org.springframework.cloud.sleuth.Tracer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
-import org.springframework.security.config.web.server.ServerHttpSecurity;
-import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
 
@@ -115,18 +120,7 @@ public class Application {
                 .build();
     }
 
-    @Bean
-    public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
 
-        http.httpBasic().disable()
-                .formLogin().disable()
-                .csrf().disable()
-                .logout().disable()
-//                .headers().cache().disable()
-        ;
-
-        return http.build();
-    }
 
     @Bean
     public HttpClientCustomizer httpClientCustomizer() {
