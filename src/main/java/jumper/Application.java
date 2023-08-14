@@ -1,9 +1,5 @@
 package jumper;
 
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SslProvider;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import jumper.filter.RemoveHeaderFilter;
 import jumper.filter.RequestFilter;
 import jumper.filter.RequestTransformationFilter;
@@ -17,22 +13,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.web.embedded.netty.NettyReactiveWebServerFactory;
-import org.springframework.boot.web.server.WebServerFactoryCustomizer;
-import org.springframework.cloud.gateway.config.HttpClientCustomizer;
 import org.springframework.cloud.gateway.route.RouteLocator;
 import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
 import org.springframework.cloud.sleuth.Tracer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.client.reactive.ReactorClientHttpConnector;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.netty.http.client.HttpClient;
-
-import javax.net.ssl.SSLException;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @SpringBootApplication
 public class Application {
@@ -40,8 +25,7 @@ public class Application {
     @Value("${horizon.publishEventUrl}")
     private String publishEventUrl;
 
-    @Value("${CUSTOM_CIPHERS:}")
-    List<String> custom_ciphers;
+
 
     @Autowired
     private SpectreBodyRewrite spectreBodyRewrite;
@@ -122,82 +106,7 @@ public class Application {
 
 
 
-    @Bean
-    public HttpClientCustomizer httpClientCustomizer() {
-        try {
-            List dt_ciphers = List.of("TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"
-                    , "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
-                    , "TLS_DHE_DSS_WITH_AES_256_GCM_SHA384"
-                    , "TLS_DHE_RSA_WITH_AES_256_GCM_SHA384"
-                    , "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256"
-                    , "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256"
-                    , "TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256"
-                    //,"TLS_ECDHE_ECDSA_WITH_AES_256_CCM"
-                    //,"TLS_DHE_RSA_WITH_AES_256_CCM"
-                    , "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"
-                    , "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
-                    , "TLS_DHE_DSS_WITH_AES_128_GCM_SHA256"
-                    , "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256"
-                    //,"TLS_ECDHE_ECDSA_WITH_AES_128_CCM"
-                    //,"TLS_DHE_RSA_WITH_AES_128_CCM"
-                    , "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384"
-                    , "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384"
-                    , "TLS_DHE_DSS_WITH_AES_256_CBC_SHA256"
-                    , "TLS_DHE_RSA_WITH_AES_256_CBC_SHA256"
-                    , "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256"
-                    , "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256"
-                    , "TLS_DHE_DSS_WITH_AES_128_CBC_SHA256"
-                    , "TLS_DHE_RSA_WITH_AES_128_CBC_SHA256"
-                    , "TLS_AES_256_GCM_SHA384"
-                    , "TLS_CHACHA20_POLY1305_SHA256"
-                    , "TLS_AES_128_GCM_SHA256"
-                    //,"TLS_AES_128_CCM_SHA256"
-            );
-
-            SslContext s = SslContextBuilder
-                    .forClient()
-                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                    .protocols("TLSv1.2", "TLSv1.3")
-                    .sslProvider(SslProvider.JDK)
-                    .ciphers((Iterable<String>) Stream.concat(dt_ciphers.stream(),
-                                    custom_ciphers.stream())
-                            .distinct().collect(Collectors.toList())
-                    )
-                    .build();
-
-            return httpClient -> httpClient
-                    .secure(t -> t.sslContext(s));
-
-        } catch (SSLException e) {
-            e.printStackTrace();
-        }
-
-        return httpClient -> httpClient;
-    }
 
 
-    @Bean
-    public WebClient createWebClient() throws SSLException {
-        SslContext sslContext = SslContextBuilder
-                .forClient()
-                .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                .build();
-        HttpClient httpClient = HttpClient.create().secure(t -> t.sslContext(sslContext));
-        return WebClient.builder().clientConnector(new ReactorClientHttpConnector(httpClient)).build();
-    }
-
-    @Bean
-    public WebServerFactoryCustomizer<NettyReactiveWebServerFactory> customizer(@Value("${spring.cloud.gateway.httpclient.max-initial-line-length-tardis}") int maxInitialLineLength) {
-        return new WebServerFactoryCustomizer<NettyReactiveWebServerFactory>() {
-            @Override
-            public void customize(NettyReactiveWebServerFactory factory) {
-                factory.addServerCustomizers(server ->
-                        server.httpRequestDecoder(dec ->
-                                dec.maxInitialLineLength(maxInitialLineLength)
-                        )
-                );
-            }
-        };
-    }
 }
 
