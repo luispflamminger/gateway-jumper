@@ -2,7 +2,6 @@ package jumper.exception;
 
 import jumper.Constants;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.web.ErrorProperties;
 import org.springframework.boot.autoconfigure.web.WebProperties.Resources;
@@ -20,7 +19,11 @@ import org.springframework.http.MediaType;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.server.*;
+import org.springframework.web.reactive.function.server.RequestPredicates;
+import org.springframework.web.reactive.function.server.RouterFunction;
+import org.springframework.web.reactive.function.server.RouterFunctions;
+import org.springframework.web.reactive.function.server.ServerRequest;
+import org.springframework.web.reactive.function.server.ServerResponse;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
@@ -33,11 +36,8 @@ import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 @Slf4j
 public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandler {
 
-    @Autowired
-    Tracer tracer;
-
-    @Autowired
-    CurrentTraceContext currentTraceContext;
+    private final Tracer tracer;
+    private final CurrentTraceContext currentTraceContext;
 
     @Value( "${spring.application.name}")
     private String applicationName;
@@ -47,12 +47,18 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
     public JsonErrorWebExceptionHandler(ErrorAttributes errorAttributes,
                                         Resources resources,
                                         ErrorProperties errorProperties,
-                                        ApplicationContext applicationContext) {
+                                        ApplicationContext applicationContext,
+                                        Tracer tracer,
+                                        CurrentTraceContext currentTraceContext) {
+
         super(errorAttributes, resources, errorProperties, applicationContext);
+        this.tracer = tracer;
+        this.currentTraceContext = currentTraceContext;
     }
 
     @Override
     protected Map<String, Object> getErrorAttributes(ServerRequest request, ErrorAttributeOptions options) {
+
         // Here the logic can actually be customized according to the exception type
         Throwable error = super.getError(request);
 
@@ -87,7 +93,7 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
         ServerResponse.BodyBuilder responseBuilder = ServerResponse.status(this.getHttpStatus(error)).contentType(MediaType.APPLICATION_JSON);
 
         if (!customResponseHeaders.isEmpty()){
-            customResponseHeaders.forEach((k,v) -> responseBuilder.header(k,v));
+            customResponseHeaders.forEach(responseBuilder::header);
         }
 
         return responseBuilder.body(BodyInserters.fromValue(error));
@@ -96,27 +102,15 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
     @Override
     protected int getHttpStatus(Map<String, Object> errorAttributes) {
         int code = (int) errorAttributes.getOrDefault("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
+
         log.debug("errorAttributes {}", errorAttributes);
         // Here you can actually customize the HTTP response code based on the attributes inside the errorAttributes
-        /*
-        if code != 500 error log is suppressed later
 
-	protected void logError(ServerRequest request, ServerResponse response, Throwable throwable) {
-		if (logger.isDebugEnabled()) {
-			logger.debug(request.exchange().getLogPrefix() + formatError(throwable, request));
-		}
-		if (HttpStatus.resolve(response.rawStatusCode()) != null
-				&& response.statusCode().equals(HttpStatus.INTERNAL_SERVER_ERROR)) {
-			logger.error(LogMessage.of(() -> String.format("%s 500 Server Error for %s",
-					request.exchange().getLogPrefix(), formatRequest(request))), throwable);
-		}
-	}
-         */
         return code;
     }
 
     private HttpStatus findHttpStatus(ServerRequest request, Throwable error, MergedAnnotation<ResponseStatus> responseStatusAnnotation) {
-         customResponseHeaders = new HashMap();
+        customResponseHeaders = new HashMap<>();
 
         if (error instanceof ResponseStatusException) {
             return ((ResponseStatusException) error).getStatus();
@@ -138,20 +132,20 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
             return HttpStatus.SERVICE_UNAVAILABLE;
         }
 
-        return responseStatusAnnotation.getValue("code", HttpStatus.class).orElse(INTERNAL_SERVER_ERROR);
+        return responseStatusAnnotation
+                .getValue("code", HttpStatus.class)
+                .orElse(INTERNAL_SERVER_ERROR);
     }
 
     @Override
     protected void logError(ServerRequest request, ServerResponse response, Throwable throwable){
-        WebFluxSleuthOperators.withSpanInScope(tracer, currentTraceContext, request.exchange(), () -> {
-            super.logError(request, response, throwable);
-        });
+        WebFluxSleuthOperators.withSpanInScope(tracer, currentTraceContext, request.exchange(), ()
+                -> super.logError(request, response, throwable));
     }
 
-    private void logError(ServerRequest request, Throwable throwable){
-        WebFluxSleuthOperators.withSpanInScope(tracer, currentTraceContext, request.exchange(), () -> {
-            log.error(request.exchange().getLogPrefix() + this.formatError(throwable, request));
-        });
+    private void logError(ServerRequest request, Throwable throwable) {
+        WebFluxSleuthOperators.withSpanInScope(tracer, currentTraceContext, request.exchange(), ()
+                -> log.error(request.exchange().getLogPrefix() + this.formatError(throwable, request)));
     }
 
     private String formatError(Throwable ex, ServerRequest request) {
@@ -160,12 +154,15 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
     }
 
     private String determineMessage(Throwable error, MergedAnnotation<ResponseStatus> responseStatusAnnotation) {
+
         if (error instanceof ResponseStatusException) {
             return ((ResponseStatusException)error).getReason();
+
         } else {
             String reason = responseStatusAnnotation.getValue("reason", String.class).orElse("");
             if (StringUtils.hasText(reason)) {
                 return reason;
+
             } else {
                 return error.getMessage() != null ? error.getMessage() : "";
             }
