@@ -8,7 +8,5 @@ import java.util.HashMap;
 @Getter
 @Setter
 public class IncomingRequest extends Request {
-	
-	HashMap<String, String> logEntries;
-	
+    HashMap<String, String> logEntries;
 }
