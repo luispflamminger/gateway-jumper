@@ -7,8 +7,7 @@ import lombok.Data;
 import java.util.UUID;
 
 @Data
-public class Spectre
-{
+public class Spectre {
     private String specversion;
     private String type; //listener.ei.telekom.de.listener
     private String source = "RouteListener";

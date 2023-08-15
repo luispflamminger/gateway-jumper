@@ -14,7 +14,6 @@ import java.util.Base64;
 @Setter
 public class KeyInfo {
     private PrivateKey pk;
-
     private String kid;
 
     public void setPk(String privateKeyContent) throws NoSuchAlgorithmException, InvalidKeySpecException {
