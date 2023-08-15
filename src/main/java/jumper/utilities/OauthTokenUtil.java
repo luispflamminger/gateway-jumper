@@ -54,9 +54,9 @@ public class OauthTokenUtil {
     private final WebClient webClient;
     private final JumperTokenCache tokenCache;
 
-
     private static String securityPath;
     private static String securityFile;
+
 
     @Value("${jumper.security.dir:keypair}")
     public void setSecurityPath(String name){
@@ -83,9 +83,7 @@ public class OauthTokenUtil {
 
     public static String getClaimFromToken(String consumerToken, String claimName) {
         String consumerTokenWithoutSignature = getTokenWithoutSignature(consumerToken);
-        Jwt<Header, Claims> consumerTokenclaims = getAllClaimsFromToken(consumerTokenWithoutSignature);
-
-        return consumerTokenclaims.getBody().get(claimName, String.class);
+        return getAllClaimsFromToken(consumerTokenWithoutSignature).getBody().get(claimName, String.class);
     }
 
     public static Jwt<Header, Claims> getAllClaimsFromToken(String consumerToken) {
