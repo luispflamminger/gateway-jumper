@@ -12,7 +12,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.SignatureException;
 import io.netty.channel.ConnectTimeoutException;
-import jumper.JumperTokenCache;
+import jumper.service.JumperTokenCache;
 import jumper.model.TokenInfo;
 import jumper.model.config.KeyInfo;
 import jumper.model.config.OauthCredentials;
@@ -251,53 +251,58 @@ public class OauthTokenUtil {
 
         final String tokenKey = tokenCache.generateTokenCacheKey(tokenEndpoint, clientID, subscriberClientId);
 
-        TokenInfo cachedAccessToken = tokenCache.getToken(tokenKey);
-        if (cachedAccessToken != null) return cachedAccessToken;
+        return tokenCache.getToken(tokenKey).orElseGet(() -> {
 
-        MultiValueMap<String, String> cc = new LinkedMultiValueMap<>();
-        cc.add("client_id", clientID);
-        cc.add("client_secret", clientSecret);
-        cc.add("grant_type", AuthorizationGrantType.CLIENT_CREDENTIALS.getValue());
-        if (scope != null && !scope.isEmpty()) {
-            cc.add("scope", scope);
-        }
+            MultiValueMap<String, String> claims = new LinkedMultiValueMap<>();
+            claims.add("client_id", clientID);
+            claims.add("client_secret", clientSecret);
+            claims.add("grant_type", AuthorizationGrantType.CLIENT_CREDENTIALS.getValue());
 
-        return getAccessTokenQuery(tokenEndpoint, tokenKey, cc, null);
+            if (scope != null && !scope.isEmpty()) {
+                claims.add("scope", scope);
+            }
+
+            return getAccessTokenQuery(tokenEndpoint, tokenKey, claims, null);
+
+        });
+
     }
 
     public TokenInfo getAccessToken(String tokenEndpoint, OauthCredentials oauthCredentials, String subscriberClientId) {
 
         final String tokenKey = tokenCache.generateTokenCacheKey(tokenEndpoint, oauthCredentials.getId(), subscriberClientId);
 
-        TokenInfo cachedAccessToken = tokenCache.getToken(tokenKey);
-        if (cachedAccessToken != null) return cachedAccessToken;
+        return tokenCache.getToken(tokenKey).orElseGet(() -> {
 
-        MultiValueMap<String, String> cc = new LinkedMultiValueMap<>();
-        String basicAuth = null;
+            MultiValueMap<String, String> cc = new LinkedMultiValueMap<>();
+            String basicAuth = null;
 
-        if (oauthCredentials.getClientId() != null && !oauthCredentials.getClientId().isBlank() && oauthCredentials.getClientSecret() != null && !oauthCredentials.getClientSecret().isBlank()) {
-            basicAuth = encodeBasicAuth(oauthCredentials.getClientId(), oauthCredentials.getClientSecret());
-        }
+            if (oauthCredentials.getClientId() != null && !oauthCredentials.getClientId().isBlank() && oauthCredentials.getClientSecret() != null && !oauthCredentials.getClientSecret().isBlank()) {
+                basicAuth = encodeBasicAuth(oauthCredentials.getClientId(), oauthCredentials.getClientSecret());
+            }
 
-        if (oauthCredentials.getUsername() != null && !oauthCredentials.getUsername().isBlank() && oauthCredentials.getPassword() != null && !oauthCredentials.getPassword().isBlank()) {
-            cc.add("username", oauthCredentials.getUsername());
-            cc.add("password", oauthCredentials.getPassword());
-        }
+            if (oauthCredentials.getUsername() != null && !oauthCredentials.getUsername().isBlank() && oauthCredentials.getPassword() != null && !oauthCredentials.getPassword().isBlank()) {
+                cc.add("username", oauthCredentials.getUsername());
+                cc.add("password", oauthCredentials.getPassword());
+            }
 
-        if (oauthCredentials.getRefreshToken() != null && !oauthCredentials.getRefreshToken().isBlank()) {
-            cc.add("refresh_token", oauthCredentials.getRefreshToken());
-        }
+            if (oauthCredentials.getRefreshToken() != null && !oauthCredentials.getRefreshToken().isBlank()) {
+                cc.add("refresh_token", oauthCredentials.getRefreshToken());
+            }
 
-        if (oauthCredentials.getScopes() != null && !oauthCredentials.getScopes().isEmpty()) {
-            cc.add("scope", oauthCredentials.getScopes());
-        }
+            if (oauthCredentials.getScopes() != null && !oauthCredentials.getScopes().isEmpty()) {
+                cc.add("scope", oauthCredentials.getScopes());
+            }
 
-        cc.add("grant_type", oauthCredentials.getGrantType());
+            cc.add("grant_type", oauthCredentials.getGrantType());
 
-        return getAccessTokenQuery(tokenEndpoint, tokenKey, cc, basicAuth);
+            return getAccessTokenQuery(tokenEndpoint, tokenKey, cc, basicAuth);
+
+        });
+
     }
 
-    public TokenInfo getAccessTokenQuery(String tokenEndpoint, String tokenKey, MultiValueMap cc, String basicAuthHeader) {
+    public TokenInfo getAccessTokenQuery(String tokenEndpoint, String tokenKey, MultiValueMap claims, String basicAuthHeader) {
 
         Mono<TokenInfo> tokenInfoMono = webClient.post()
                 .uri(tokenEndpoint)
@@ -307,7 +312,7 @@ public class OauthTokenUtil {
                             if (basicAuthHeader != null) httpHeaders.setBasicAuth(basicAuthHeader);
                         }
                 )
-                .body(BodyInserters.fromFormData(cc))
+                .body(BodyInserters.fromFormData(claims))
                 .retrieve()
                 .onStatus(HttpStatus::is4xxClientError,
                         response -> {
