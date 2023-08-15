@@ -140,11 +140,7 @@ public class SpectreService
         return event;
     }
 
-    /***
-     * publish event (route to local Horizon)
-     *
-     * @param event
-     */
+
     private void publishEvent(Spectre event, JumperConfig jc) {
         String eventJson = null;
         try {
