@@ -4,11 +4,15 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jumper.Constants;
-import jumper.model.config.*;
+import jumper.model.config.JumperConfig;
+import jumper.model.config.RouteListener;
+import jumper.model.config.Spectre;
+import jumper.model.config.SpectreData;
+import jumper.model.config.SpectreKind;
 import jumper.utilities.OauthTokenUtil;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.sleuth.CurrentTraceContext;
 import org.springframework.cloud.sleuth.Span;
@@ -34,13 +38,14 @@ import java.util.function.Consumer;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class SpectreService
 {
-    @Autowired
-    Tracer tracer;
+    private final Tracer tracer;
 
-    @Autowired
-    CurrentTraceContext currentTraceContext;
+    private final CurrentTraceContext currentTraceContext;
+
+
 
     @Value( "${jumper.stargate.url}")
     private String stargateUrl;

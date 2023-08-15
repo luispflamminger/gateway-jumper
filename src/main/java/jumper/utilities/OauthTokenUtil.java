@@ -2,21 +2,32 @@ package jumper.utilities;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.Header;
+import io.jsonwebtoken.Jwt;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.SignatureException;
 import io.netty.channel.ConnectTimeoutException;
-import jumper.JumperCache;
+import jumper.JumperTokenCache;
 import jumper.model.TokenInfo;
 import jumper.model.config.KeyInfo;
 import jumper.model.config.OauthCredentials;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.stereotype.Service;
-import org.springframework.util.*;
+import org.springframework.util.Assert;
+import org.springframework.util.Base64Utils;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -37,27 +48,24 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class OauthTokenUtil {
 
-    @Autowired
-    private WebClient webClient;
+    private final WebClient webClient;
+    private final JumperTokenCache tokenCache;
 
-    @Autowired
-    JumperCache tokenCache;
 
-    private static String delimiter = ".";
-
-    private static String SECURITY_PATH;
-    private static String SECURITY_FILE;
+    private static String securityPath;
+    private static String securityFile;
 
     @Value("${jumper.security.dir:keypair}")
     public void setSecurityPath(String name){
-        OauthTokenUtil.SECURITY_PATH = name;
+        OauthTokenUtil.securityPath = name;
     }
 
     @Value("${jumper.security.file:key.json}")
     public void setSecurityFile(String name){
-        OauthTokenUtil.SECURITY_FILE = name;
+        OauthTokenUtil.securityFile = name;
     }
 
 
@@ -69,16 +77,15 @@ public class OauthTokenUtil {
 
         String[] token = consumerToken.split(" ");
         String[] splitToken = token[1].split("\\.");
-        String consumerTokenWithoutSignature = splitToken[0] + "." + splitToken[1] + ".";
 
-        return consumerTokenWithoutSignature;
+        return splitToken[0] + "." + splitToken[1] + ".";
     }
 
     public static String getClaimFromToken(String consumerToken, String claimName) {
         String consumerTokenWithoutSignature = getTokenWithoutSignature(consumerToken);
         Jwt<Header, Claims> consumerTokenclaims = getAllClaimsFromToken(consumerTokenWithoutSignature);
-        String claimValue = consumerTokenclaims.getBody().get(claimName, String.class);
-        return claimValue;
+
+        return consumerTokenclaims.getBody().get(claimName, String.class);
     }
 
     public static Jwt<Header, Claims> getAllClaimsFromToken(String consumerToken) {
@@ -206,7 +213,7 @@ public class OauthTokenUtil {
     }
 
     public static KeyInfo loadKeyinfo() throws IOException {
-        Path kidFile = Path.of(System.getProperty("user.dir")  + File.separator + SECURITY_PATH + File.separator + SECURITY_FILE);
+        Path kidFile = Path.of(System.getProperty("user.dir")  + File.separator + securityPath + File.separator + securityFile);
         KeyInfo keyInfo = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false).readValue( Files.readString(kidFile), KeyInfo.class);
         return keyInfo;
     }
@@ -242,7 +249,7 @@ public class OauthTokenUtil {
 
     public TokenInfo getAccessToken(String tokenEndpoint, String clientID, String clientSecret, String scope, String subscriberClientId) {
 
-        final String tokenKey = tokenEndpoint + delimiter + clientID + delimiter + subscriberClientId;
+        final String tokenKey = tokenCache.generateTokenCacheKey(tokenEndpoint, clientID, subscriberClientId);
 
         TokenInfo cachedAccessToken = tokenCache.getToken(tokenKey);
         if (cachedAccessToken != null) return cachedAccessToken;
@@ -260,7 +267,7 @@ public class OauthTokenUtil {
 
     public TokenInfo getAccessToken(String tokenEndpoint, OauthCredentials oauthCredentials, String subscriberClientId) {
 
-        final String tokenKey = tokenEndpoint + delimiter + oauthCredentials.getId() + delimiter + subscriberClientId;
+        final String tokenKey = tokenCache.generateTokenCacheKey(tokenEndpoint, oauthCredentials.getId(), subscriberClientId);
 
         TokenInfo cachedAccessToken = tokenCache.getToken(tokenKey);
         if (cachedAccessToken != null) return cachedAccessToken;

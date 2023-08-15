@@ -9,34 +9,33 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @Service
-public class JumperCache
+public class JumperTokenCache
 {
 
-    private static Logger log = LoggerFactory.getLogger( JumperCache.class);
+    private static Logger log = LoggerFactory.getLogger( JumperTokenCache.class);
 
     @Value( "${jumpercache.ttlOffset}")
     private int ttlOffset;
 
-    @SuppressWarnings( "unused")
+    @Value( "${jumpercache.cleanCacheInSeconds:0}")
     private long cleanCacheInSeconds;
 
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool( 1);
+    private static final String TOKEN_CACHE_KEY_DELIMITER = ".";
 
     Map<String, TokenInfo> cachingList = new HashMap<>();
 
-    public JumperCache( @Value( "${jumpercache.cleanCacheInSeconds:0}") long cleanCacheInSeconds)
-    {
-        if( cleanCacheInSeconds > 0)
-        {
-            scheduler.scheduleAtFixedRate( this.cleanCacheJob(), cleanCacheInSeconds, cleanCacheInSeconds, TimeUnit.SECONDS);
-            log.debug( "JumperCache cleanup job is enabled. the cache is cleaned every {} seconds.", cleanCacheInSeconds);
-        }
-        else
-        {
+    public JumperTokenCache() {
+
+        if( this.cleanCacheInSeconds > 0) {
+
+            Executors.newScheduledThreadPool(1)
+                    .scheduleAtFixedRate( this.cleanCacheJob(), cleanCacheInSeconds, cleanCacheInSeconds, TimeUnit.SECONDS);
+            log.debug( "JumperCache cleanup job is enabled. the cache is cleaned every {} seconds.", this.cleanCacheInSeconds);
+
+        } else {
             log.debug( "JumperCache cleanup job is not enabled. To activate the cache cleaning job, you must specify a value > 0 in your properties with the key 'jumpercache.cleanCacheInSeconds'.");
         }
     }
@@ -79,6 +78,10 @@ public class JumperCache
         // save token
         log.debug( "Token saved with tokenKey: '{}'", tokenKey);
         this.cachingList.put( tokenKey, gwAccessToken);
+    }
+
+    public String generateTokenCacheKey(String tokenEndpoint, String clientID, String subscriberClientId) {
+        return tokenEndpoint + TOKEN_CACHE_KEY_DELIMITER + clientID + TOKEN_CACHE_KEY_DELIMITER + subscriberClientId;
     }
 
     public void printCache() {

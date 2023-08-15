@@ -11,9 +11,10 @@ import jumper.model.request.IncomingRequest;
 import jumper.model.request.JumperInfoRequest;
 import jumper.model.request.OutgoingRequest;
 import jumper.utilities.OauthTokenUtil;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -52,14 +53,14 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
     public static final int REQUEST_FILTER_ORDER = RouteToRequestUrlFilter.ROUTE_TO_URL_FILTER_ORDER + 1;
 
-    @Autowired
-    CurrentTraceContext currentTraceContext;
+    private final CurrentTraceContext currentTraceContext;
 
-    @Autowired
-    OauthTokenUtil oauthTokenUtil;
+    private final OauthTokenUtil oauthTokenUtilService;
 
-    public RequestFilter() {
+    public RequestFilter(CurrentTraceContext currentTraceContext, OauthTokenUtil oauthTokenUtil) {
         super(Config.class);
+        this.currentTraceContext = currentTraceContext;
+        this.oauthTokenUtilService = oauthTokenUtil;
     }
 
     @Override
@@ -102,8 +103,8 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
                 String jumper_config_Base64 = getLastValueFromHeaderField(request, Constants.HEADER_JUMPER_CONFIG);
 
-                String consumerTokenWithoutSignature = OauthTokenUtil.getTokenWithoutSignature(consumerToken);
-                Jwt<Header, Claims> consumerTokenclaims = OauthTokenUtil.getAllClaimsFromToken(consumerTokenWithoutSignature);
+                String consumerTokenWithoutSignature = oauthTokenUtilService.getTokenWithoutSignature(consumerToken);
+                Jwt<Header, Claims> consumerTokenclaims = oauthTokenUtilService.getAllClaimsFromToken(consumerTokenWithoutSignature);
                 String consumer = consumerTokenclaims.getBody().get("clientId", String.class);
                 String consumerOriginStargate = consumerTokenclaims.getBody().get("originStargate", String.class);
                 String consumerOriginZone = consumerTokenclaims.getBody().get("originZone", String.class);
@@ -140,7 +141,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                     URI _uri = request.getURI();
                     String _query = _uri.getRawQuery();
                     String _fragment = _uri.getFragment();
-                    routing_path = _uri.getRawPath().replaceFirst("^/(proxy|listener)", ""); //for token should be also decoded
+                    routing_path = _uri.getRawPath().replaceFirst("^" + config.getRoutePathPrefix(), ""); //for token should be also decoded
                     if (requestPath != null) requestPath += routing_path;
                     if (_query != null) routing_path = routing_path + "?" + _query;
                     if (_fragment != null) routing_path = routing_path + "#" + _fragment;
@@ -169,7 +170,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                             }
 
                             BasicAuthCredentials basicAuthCredentials = jc.getBasicAuth().containsKey(consumer) ? jc.getBasicAuth().get(consumer) : jc.getBasicAuth().get(Constants.BASIC_AUTH_PROVIDER_KEY);
-                            addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BASIC + " " + OauthTokenUtil.encodeBasicAuth(basicAuthCredentials.getUsername(), basicAuthCredentials.getPassword()));
+                            addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BASIC + " " + oauthTokenUtilService.encodeBasicAuth(basicAuthCredentials.getUsername(), basicAuthCredentials.getPassword()));
                         } else {
 
 
@@ -189,7 +190,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                                 log.debug("Remote TokenEndpoint is set to: %s", token_endpoint);
 
                                 if (jc.getOauth() != null && jc.getOauth().containsKey(consumer) && jc.getOauth().get(consumer).getGrantType() != null && !jc.getOauth().get(consumer).getGrantType().isBlank()) {
-                                    TokenInfo tokenInfo = oauthTokenUtil.getAccessToken(token_endpoint, jc.getOauth().get(consumer), consumer);
+                                    TokenInfo tokenInfo = oauthTokenUtilService.getAccessToken(token_endpoint, jc.getOauth().get(consumer), consumer);
                                     addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER + " " + tokenInfo.getAccessToken());
                                 } else {
                                     clientCredentialsFlow_legacy(exchange, chain, client_scope, token_endpoint, tif_clientID, tif_clientSecret, xSpacegateClientId, xSpacegateClientSecret, xSpacegateScope, consumer, jc);
@@ -206,7 +207,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                                     jumperInfoRequest.setBasicAuth(false);
                                 }
 
-                                lastmileSecurityToken = OauthTokenUtil.generateExtGatewayToken(envName,
+                                lastmileSecurityToken = oauthTokenUtilService.generateExtGatewayToken(envName,
                                         consumerToken,
                                         request.getMethod().toString(),
                                         requestPath,
@@ -227,7 +228,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                                     jumperInfoRequest.setBasicAuth(false);
                                 }
 
-                                lastmileSecurityToken = OauthTokenUtil.generateGatewayToken(envName, consumerToken, request.getMethod().toString(), requestPath, lmsIssuer);
+                                lastmileSecurityToken = oauthTokenUtilService.generateGatewayToken(envName, consumerToken, request.getMethod().toString(), requestPath, lmsIssuer);
 
                                 addHeader(exchange, chain, Constants.HEADER_LASTMILE_SECURITY_TOKEN, Constants.BEARER + " " + lastmileSecurityToken);
                                 log.debug("lastMileSecurityToken: " + lastmileSecurityToken);
@@ -249,7 +250,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
                             tif_remote_issuer = tif_remote_issuer + Constants.ISSUER_SUFFIX;
 
-                            TokenInfo meshTokenInfo = oauthTokenUtil.getAccessToken(tif_remote_issuer, tif_clientID, tif_clientSecret);
+                            TokenInfo meshTokenInfo = oauthTokenUtilService.getAccessToken(tif_remote_issuer, tif_clientID, tif_clientSecret);
 
                             // set gw and consumer tokens correctly
                             addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, "Bearer " + meshTokenInfo.getAccessToken());
@@ -373,7 +374,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         log.debug( "Get token for consumer: {} with clientId: {}", consumer, tif_clientID);
         if( tif_clientID != null && tif_clientSecret != null)
         {
-            TokenInfo tokenInfo = oauthTokenUtil.getAccessToken(token_endpoint, tif_clientID, tif_clientSecret, client_scope, consumer);
+            TokenInfo tokenInfo = oauthTokenUtilService.getAccessToken(token_endpoint, tif_clientID, tif_clientSecret, client_scope, consumer);
             addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER+" "+tokenInfo.getAccessToken());
 
         }
@@ -456,31 +457,14 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         return log.isInfoEnabled();
     }
 
+    @Getter
+    @AllArgsConstructor
     public static class Config {
+
         private boolean preLogger;
         private boolean postLogger;
         private Tracer tracer;
+        private String routePathPrefix;
 
-        public Config(boolean preLogger, boolean postLogger, Tracer tracer) {
-            this.preLogger = preLogger;
-            this.postLogger = postLogger;
-            this.tracer = tracer;
-        }
-
-        public boolean isPreLogger() {
-            return preLogger;
-        }
-
-        public void setPreLogger(boolean preLogger) {
-            this.preLogger = preLogger;
-        }
-
-        public boolean isPostLogger() {
-            return postLogger;
-        }
-
-        public void setPostLogger(boolean postLogger) {
-            this.postLogger = postLogger;
-        }
     }
 }

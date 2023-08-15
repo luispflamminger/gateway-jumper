@@ -18,6 +18,7 @@ import org.springframework.cloud.sleuth.Tracer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpMethod;
 
+
 @SpringBootApplication
 public class Application {
 
@@ -45,9 +46,10 @@ public class Application {
 
 
                 .route("jumper_route", p -> p
-                        .path("/proxy/**")
+                        .path(Constants.PROXY_ROOT_PATH_PREFIX + "/**")
                         .filters(filterSpec -> filterSpec
-                                .filter(requestFilter.apply(new RequestFilter.Config(true, true, tracer)))
+                                .filter(requestFilter.apply(new RequestFilter.Config(true, true, tracer, Constants.PROXY_ROOT_PATH_PREFIX)))
+
                                 .filter(removeHeader.apply(c -> c.setName("jumper_config")))
                                 .filter(removeHeader.apply(c -> c.setName("token_endpoint")))
                                 .filter(removeHeader.apply(c -> c.setName("remote_api_url")))
@@ -63,15 +65,17 @@ public class Application {
                                 .filter(removeHeader.apply(c -> c.setName("x-anonymous-groups")))
                                 .filter(removeHeader.apply(c -> c.setName("x-forwarded-prefix")))
                                 .filter(removeHeader.apply(c -> c.setName("access_token_forwarding")))
+
                                 .filter(responseFilter.apply(c -> c.setTracer(tracer)))
                         )
                         .uri("no://op"))
 
 
                 .route("listener_route", p -> p
-                        .path("/listener/**")
-                        .filters(f -> f
-                                .filter(requestFilter.apply(new RequestFilter.Config(true, true, tracer)))
+                        .path(Constants.LISTENER_ROOT_PATH_PREFIX + "/**")
+                        .filters(filterSpec -> filterSpec
+                                .filter(requestFilter.apply(new RequestFilter.Config(true, true, tracer, Constants.LISTENER_ROOT_PATH_PREFIX)))
+
                                 .filter(requestTransformationFilter)
                                 .filter(responseTransformationFilter)
                                 .filter(spectreRequestFilter.apply(new SpectreRequestFilter.Config()))
@@ -91,16 +95,16 @@ public class Application {
                                 .filter(removeHeader.apply(c -> c.setName("x-anonymous-groups")))
                                 .filter(removeHeader.apply(c -> c.setName("x-forwarded-prefix")))
                                 .filter(removeHeader.apply(c -> c.setName("access_token_forwarding")))
+
                                 .filter(responseFilter.apply(c -> c.setTracer(tracer)))
                         )
                         .uri("no://op"))
 
 
                 .route("auto_event_route_post", p -> p
-                        .path("/autoevent/**").and().method(HttpMethod.POST)
+                        .path(Constants.AUTOEVENT_ROOT_PATH_PREFIX + "/**").and().method(HttpMethod.POST)
                         .filters(f -> f
-                                .modifyRequestBody(String.class, String.class,
-                                        spectreBodyRewrite)
+                                .modifyRequestBody(String.class, String.class, spectreBodyRewrite)
                                 .removeRequestParameter(Constants.QUERY_PARAM_LISTENER)
                                 .filter(setSpectreRoutingFilter.apply())
                         )
@@ -108,7 +112,7 @@ public class Application {
 
 
                 .route("auto_event_route_head", p -> p
-                        .path("/autoevent/**").and().method(HttpMethod.HEAD)
+                        .path(Constants.AUTOEVENT_ROOT_PATH_PREFIX + "/**").and().method(HttpMethod.HEAD)
                         .filters(f -> f
                                 .removeRequestParameter(Constants.QUERY_PARAM_LISTENER)
                                 .filter(setSpectreRoutingFilter.apply())

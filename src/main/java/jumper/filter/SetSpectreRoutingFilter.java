@@ -45,9 +45,8 @@ public class SetSpectreRoutingFilter extends SetRequestHeaderGatewayFilterFactor
 
             //routing path is no longer fixed, so we set it here
             //placeholder is expected just on qa
-            ServerHttpRequest request = req.mutate().headers((httpHeaders) -> {
-                        httpHeaders.set(Constants.HEADER_AUTHORIZATION, spectreToken);
-                    })
+            ServerHttpRequest request = req.mutate()
+                    .headers(httpHeaders -> httpHeaders.set(Constants.HEADER_AUTHORIZATION, spectreToken))
                     .path(publishEventPath)
                     .build();
 
