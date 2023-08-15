@@ -319,7 +319,7 @@ public class OauthTokenUtil {
                         })
                 .bodyToMono(TokenInfo.class)
                 .retryWhen(Retry.max(2)
-                        .filter(throwable -> throwable instanceof ConnectTimeoutException)
+                        .filter(ConnectTimeoutException.class::isInstance)
                         .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
                                     throw new ServerErrorException("Failed to connect to " + tokenEndpoint, (Throwable) null);
                                 }

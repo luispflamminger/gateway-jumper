@@ -4,7 +4,6 @@ import jumper.model.config.JumperConfig;
 import jumper.model.config.RouteListener;
 import jumper.spectre.SpectreService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.NettyWriteResponseFilter;
 import org.springframework.cloud.gateway.filter.OrderedGatewayFilter;
@@ -16,9 +15,7 @@ import reactor.core.publisher.Mono;
 @Slf4j
 public class SpectreResponseFilter extends AbstractGatewayFilterFactory<SpectreResponseFilter.Config> {
 
-    @Autowired
-    SpectreService aes;
-
+    private final SpectreService spectreService;
 
     /**
      * At Order "NettyWriteResponseFilter.WRITE_RESPONSE_FILTER_ORDER - 1" we have the response in cachedResponseBodyObject
@@ -27,8 +24,9 @@ public class SpectreResponseFilter extends AbstractGatewayFilterFactory<SpectreR
      */
     public static final int AUTO_EVENT_RESPONSE_FILTER_ORDER = NettyWriteResponseFilter.WRITE_RESPONSE_FILTER_ORDER - 2;
 
-    public SpectreResponseFilter()  {
+    public SpectreResponseFilter(SpectreService spectreService)  {
         super(Config.class);
+        this.spectreService = spectreService;
     }
 
     @Override
@@ -47,7 +45,7 @@ public class SpectreResponseFilter extends AbstractGatewayFilterFactory<SpectreR
 
                 //ServerHttpRequest request = exchange.getRequest();
                 JumperConfig jc = JumperConfig.parseConfigFrom(exchange);
-                if(aes.isListenerMatched(jc))
+                if(spectreService.isListenerMatched(jc))
                 {
                     RouteListener listener = jc.getRouteListener().get( jc.getConsumer());
 /*
@@ -57,7 +55,7 @@ public class SpectreResponseFilter extends AbstractGatewayFilterFactory<SpectreR
                     // publish event (route to local Horizon)
                     aes.publishEvent(eventRespMsg, jc);
  */
-                    aes.handleEvent(jc, exchange, exchange.getResponse(), listener, responseBody);
+                    spectreService.handleEvent(jc, exchange, exchange.getResponse(), listener, responseBody);
                 }
 
             }));

@@ -23,8 +23,7 @@ public class SpectreBodyRewrite implements RewriteFunction<String, String> {
         MultiValueMap<String, String> params = exchange.getRequest().getQueryParams();
 
         String id = null;
-        if(params.containsKey(Constants.QUERY_PARAM_LISTENER))
-        {
+        if (params.containsKey(Constants.QUERY_PARAM_LISTENER)) {
             id = params.getFirst(Constants.QUERY_PARAM_LISTENER);
         }
 
@@ -34,13 +33,10 @@ public class SpectreBodyRewrite implements RewriteFunction<String, String> {
         Spectre event = adjustEventType(body, id);
 
         String eventJson = null;
-        try
-        {
-            eventJson = new ObjectMapper().writeValueAsString( event);
-        }
-        catch( JsonProcessingException e1)
-        {
-            e1.printStackTrace();
+        try {
+            eventJson = new ObjectMapper().writeValueAsString(event);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
         }
         log.debug("Spectre: adjusted={}", eventJson);
         return Mono.just(eventJson);
@@ -49,13 +45,10 @@ public class SpectreBodyRewrite implements RewriteFunction<String, String> {
     private Spectre adjustEventType(String body, String id) {
         Spectre event = null;
 
-        try
-        {
-            event = new ObjectMapper().readValue( body, Spectre.class);
-            event.setType( event.getType()+"."+id);
-        }
-        catch( IOException e)
-        {
+        try {
+            event = new ObjectMapper().readValue(body, Spectre.class);
+            event.setType(event.getType() + "." + id);
+        } catch (IOException e) {
             e.printStackTrace();
         }
 

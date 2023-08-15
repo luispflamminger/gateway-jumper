@@ -1,5 +1,6 @@
 package jumper.utilities;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.reactivestreams.Publisher;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,10 +11,10 @@ import reactor.core.publisher.Mono;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class RequestBodyRewrite implements RewriteFunction<byte[], byte[]> {
 
-    @Autowired
-    JumperUtil jumperUtil;
+    private final JumperUtil jumperUtil;
 
     @Override
     public Publisher<byte[]> apply(ServerWebExchange exchange, byte[] originalBody) {

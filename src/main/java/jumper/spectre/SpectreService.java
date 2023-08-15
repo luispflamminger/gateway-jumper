@@ -1,7 +1,6 @@
 package jumper.spectre;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jumper.Constants;
 import jumper.model.config.JumperConfig;
@@ -18,7 +17,6 @@ import org.springframework.cloud.sleuth.CurrentTraceContext;
 import org.springframework.cloud.sleuth.Span;
 import org.springframework.cloud.sleuth.Tracer;
 import org.springframework.cloud.sleuth.instrument.web.WebFluxSleuthOperators;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -33,8 +31,8 @@ import reactor.core.scheduler.Schedulers;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
-import java.util.function.Consumer;
 
 @Slf4j
 @Service
@@ -42,9 +40,7 @@ import java.util.function.Consumer;
 public class SpectreService
 {
     private final Tracer tracer;
-
     private final CurrentTraceContext currentTraceContext;
-
 
 
     @Value( "${jumper.stargate.url}")
@@ -59,34 +55,23 @@ public class SpectreService
     WebClient webClient = WebClient.create();
 
     public boolean isAnyListenerPresent( JumperConfig jc) {
-
-        if( jc.getRouteListener() != null && !jc.getRouteListener().isEmpty())
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
+        return jc.getRouteListener() != null && !jc.getRouteListener().isEmpty();
     }
 
     public boolean isListenerMatched( JumperConfig jc) {
 
-        if( !isAnyListenerPresent( jc))
-        {
+        if (!isAnyListenerPresent(jc)) {
             return false;
         }
 
         String consumer = jc.getConsumer();
-        return jc.getRouteListener().containsKey( consumer) && jc.getRouteListener().get( consumer) != null;
-
+        return Objects.nonNull(jc.getRouteListener().get( consumer));
     }
 
     public void handleEvent(JumperConfig jc, ServerWebExchange exchange, Object http, RouteListener listener, String payload){
         WebFluxSleuthOperators.withSpanInScope(tracer, currentTraceContext, exchange, () -> {
             publishEvent(createEvent( jc,  exchange,  http,  listener,  payload), jc) ;
         });
-
     }
 
     private Spectre createEvent(JumperConfig jc, ServerWebExchange exchange, Object http, RouteListener listener, String payload) {
@@ -193,25 +178,15 @@ public class SpectreService
     private Mono<Void> publishEventMono(String url, String eventJson, String token, String spanId) {
         final Mono<Void> responseMono = webClient.post()
                 .uri(url)
-                .headers(new Consumer<HttpHeaders>() {
-                    @Override
-                    public void accept(HttpHeaders httpHeaders) {
-                        httpHeaders.setBearerAuth(token);
+                .headers(httpHeaders -> {
 
-                        //pass tracing info from request to spectre, maybe also new client span should be created
-                        Span currentSpan = tracer.currentSpan();
-                        if (currentSpan != null) {
-                            /*
-                            String b3 = currentSpan.context().traceIdString() + "-" + currentSpan.context().spanIdString();
-                            if (currentSpan.context().sampled()) b3 += "-1";
-                            else b3 += "-0";
-                            if (currentSpan.context().parentIdString() != null) b3 += "-" + currentSpan.context().parentIdString();
-                            log.debug("set b3 : {} to created event", b3);
-                            httpHeaders.set(Constants.HEADER_B3, b3);
-                             */
-                            httpHeaders.set(Constants.HEADER_X_B3_TRACE_ID, currentSpan.context().traceId());
-                            httpHeaders.set(Constants.HEADER_X_B3_SPAN_ID, spanId);
-                        }
+                    httpHeaders.setBearerAuth(token);
+
+                    //pass tracing info from request to spectre, maybe also new client span should be created
+                    Span currentSpan = tracer.currentSpan();
+                    if (currentSpan != null) {
+                        httpHeaders.set(Constants.HEADER_X_B3_TRACE_ID, currentSpan.context().traceId());
+                        httpHeaders.set(Constants.HEADER_X_B3_SPAN_ID, spanId);
                     }
                 })
                 .contentType(MediaType.APPLICATION_JSON)
@@ -232,7 +207,7 @@ public class SpectreService
                     log.debug("publishEventMono success" );
                 });
 
-        return responseMono.flatMap(response -> Mono.empty());
+        return responseMono.then(Mono.defer(Mono::empty));
     }
 
     private static void logDebugResponse(Logger log, ClientResponse response) {
@@ -244,20 +219,21 @@ public class SpectreService
         }
     }
 
-    private Object parsePayload (MediaType mediaType, String s){
-        if (s == null) return s;
+    private Object parsePayload (MediaType mediaType, String payload){
+        if (payload == null) {
+            return null;
+        }
 
-        if (mediaType != null && mediaType.isCompatibleWith(MediaType.APPLICATION_JSON)){
+        if (mediaType != null && mediaType.isCompatibleWith(MediaType.APPLICATION_JSON)) {
             log.debug("json compatible content-type, will try to parse as json payload");
             try{
-                JsonNode j = new ObjectMapper().readTree(s);
-                return j;
+                return new ObjectMapper().readTree(payload);
             }
             catch (JsonProcessingException e){
                 e.printStackTrace();
             }
         }
 
-        return s;
+        return payload;
     }
 }
