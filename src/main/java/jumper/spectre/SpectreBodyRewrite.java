@@ -13,6 +13,7 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -37,14 +38,14 @@ public class SpectreBodyRewrite implements RewriteFunction<String, String> {
         }
         log.debug("Spectre: adjusted={}", eventJson);
 
-        return Mono.just(eventJson);
+        return Mono.just(Objects.requireNonNull(eventJson));
     }
 
     private Spectre adjustEventType(String body, String id) {
         Spectre event = null;
 
         try {
-            event = new ObjectMapper().readValue(body, Spectre.class);
+            event = new ObjectMapper(). readValue(body, Spectre.class);
             event.setType(event.getType() + "." + id);
         } catch (IOException e) {
             e.printStackTrace();
