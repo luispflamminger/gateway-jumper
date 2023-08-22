@@ -10,7 +10,7 @@ import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
-import java.net.URISyntaxException;
+import java.util.Objects;
 
 @Component
 public class SpectreRoutingFilter extends SetRequestHeaderGatewayFilterFactory {
@@ -25,29 +25,20 @@ public class SpectreRoutingFilter extends SetRequestHeaderGatewayFilterFactory {
             ServerHttpRequest req = exchange.getRequest();
 
             //no environment info sent from kong, so we dig it from token
-            String consumerToken;
-            String publishEventPath;
+            String consumerToken = req.getHeaders().getFirst(Constants.HEADER_AUTHORIZATION);
             String envName = Constants.DEFAULT_REALM;
-            if ((consumerToken = req.getHeaders().getFirst(Constants.HEADER_AUTHORIZATION)) != null) {
-                envName = OauthTokenUtil.getClaimFromToken(consumerToken, "iss").replaceFirst(".*realms\\/", "");
-            }
-
-            try {
-                URI uri = new URI(publishEventUrl.replaceFirst(Constants.ENVIRONMENT_PLACEHOLDER, envName));
-                publishEventPath =  uri.getPath();
-            }
-            catch (URISyntaxException ex){
-                throw new IllegalStateException("URISyntaxException while getting horizon url", ex);
+            if (Objects.nonNull(consumerToken)) {
+                envName = OauthTokenUtil.getClaimFromToken(consumerToken, "iss").replaceFirst(".*realms/", "");
             }
 
             //minimalistic token with correct issuer
             String spectreToken = "Bearer " + OauthTokenUtil.generateGatewayTokenForPublisher(localIssuerUrl + "/" + envName);
 
             //routing path is no longer fixed, so we set it here
-            //placeholder is expected just on qa
             ServerHttpRequest request = req.mutate()
                     .headers(httpHeaders -> httpHeaders.set(Constants.HEADER_AUTHORIZATION, spectreToken))
-                    .path(publishEventPath)
+                    //placeholder is expected just on virtual environments like qa
+                    .path(URI.create(publishEventUrl.replaceFirst(Constants.ENVIRONMENT_PLACEHOLDER, envName)).getPath())
                     .build();
 
             exchange.getAttributes().put(ServerWebExchangeUtils.GATEWAY_REQUEST_URL_ATTR, request.getURI());
