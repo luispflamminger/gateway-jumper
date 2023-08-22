@@ -297,7 +297,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                     incReq.setLogEntries(logEntries);
                     jumperInfoRequest.setIncomingRequest(incReq);
 
-                    log.info("logging request", value("jumperInfo", jumperInfoRequest));
+                    log.info("logging request: {}", value("jumperInfo", jumperInfoRequest));
                 }
 
                 addTracingInfo(request, config.tracer);

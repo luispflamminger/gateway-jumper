@@ -1,6 +1,7 @@
 package jumper.filter;
 
 import jumper.utilities.RequestBodyRewrite;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,9 +16,10 @@ import reactor.core.publisher.Mono;
 
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class RequestTransformationFilter implements  GatewayFilter, Ordered{
-    @Autowired private ModifyRequestBodyGatewayFilterFactory modifyRequestBodyFilter;
-    @Autowired private RequestBodyRewrite requestBodyRewrite;
+    private final ModifyRequestBodyGatewayFilterFactory modifyRequestBodyFilter;
+    private final RequestBodyRewrite requestBodyRewrite;
 
     @Value( "${spring.codec.max-in-memory-size}")
     private int limit;
@@ -28,7 +30,7 @@ public class RequestTransformationFilter implements  GatewayFilter, Ordered{
         public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
 
             ServerHttpRequest request = exchange.getRequest();
-            if (request.getHeaders().getContentLength() > limit){
+            if (request.getHeaders().getContentLength() > limit) {
                 log.warn("limit {} exceeded, will not store request payload", limit);
                 return chain.filter(exchange);
             }

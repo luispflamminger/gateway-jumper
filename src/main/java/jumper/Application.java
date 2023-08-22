@@ -5,7 +5,7 @@ import jumper.filter.RequestFilter;
 import jumper.filter.RequestTransformationFilter;
 import jumper.filter.ResponseFilter;
 import jumper.filter.ResponseTransformationFilter;
-import jumper.filter.SetSpectreRoutingFilter;
+import jumper.filter.SpectreRoutingFilter;
 import jumper.filter.SpectreRequestFilter;
 import jumper.filter.SpectreResponseFilter;
 import jumper.spectre.SpectreBodyRewrite;
@@ -39,7 +39,7 @@ public class Application {
                                    SpectreResponseFilter spectreResponseFilter,
                                    RequestTransformationFilter requestTransformationFilter,
                                    ResponseTransformationFilter responseTransformationFilter,
-                                   SetSpectreRoutingFilter setSpectreRoutingFilter,
+                                   SpectreRoutingFilter spectreRoutingFilter,
                                    SpectreBodyRewrite spectreBodyRewrite) {
 
         return builder.routes()
@@ -50,13 +50,13 @@ public class Application {
                         .filters(filterSpec -> filterSpec
                                 .filter(requestFilter.apply(new RequestFilter.Config(true, true, tracer, Constants.PROXY_ROOT_PATH_PREFIX)))
 
-                                .filter(removeHeader.apply(c -> c.setName("jumper_config")))
-                                .filter(removeHeader.apply(c -> c.setName("token_endpoint")))
-                                .filter(removeHeader.apply(c -> c.setName("remote_api_url")))
-                                .filter(removeHeader.apply(c -> c.setName("issuer")))
-                                .filter(removeHeader.apply(c -> c.setName("client_id")))
-                                .filter(removeHeader.apply(c -> c.setName("client_secret")))
-                                .filter(removeHeader.apply(c -> c.setName("api_base_path")))
+                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_JUMPER_CONFIG)))
+                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_TOKEN_ENDPOINT)))
+                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_REMOTE_API_URL)))
+                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_ISSUER)))
+                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_CLIENT_ID)))
+                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_CLIENT_SECRET)))
+                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_API_BASE_PATH)))
                                 .filter(removeHeader.apply(c -> c.setName("x-consumer-id")))
                                 .filter(removeHeader.apply(c -> c.setName("x-consumer-custom-id")))
                                 .filter(removeHeader.apply(c -> c.setName("x-consumer-groups")))
@@ -80,10 +80,10 @@ public class Application {
                                 .filter(responseTransformationFilter)
                                 .filter(spectreRequestFilter.apply(new SpectreRequestFilter.Config()))
                                 .filter(spectreResponseFilter.apply(new SpectreResponseFilter.Config()))
-                                .filter(removeHeader.apply(c -> c.setName("jumper_config")))
-                                .filter(removeHeader.apply(c -> c.setName("token_endpoint")))
-                                .filter(removeHeader.apply(c -> c.setName("remote_api_url")))
-                                .filter(removeHeader.apply(c -> c.setName("issuer")))
+                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_JUMPER_CONFIG)))
+                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_TOKEN_ENDPOINT)))
+                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_REMOTE_API_URL)))
+                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_ISSUER)))
                                 .filter(removeHeader.apply(c -> c.setName("client_id")))
                                 .filter(removeHeader.apply(c -> c.setName("client_secret")))
                                 .filter(removeHeader.apply(c -> c.setName("api_base_path")))
@@ -103,19 +103,19 @@ public class Application {
 
                 .route("auto_event_route_post", p -> p
                         .path(Constants.AUTOEVENT_ROOT_PATH_PREFIX + "/**").and().method(HttpMethod.POST)
-                        .filters(f -> f
+                        .filters(filterSpec -> filterSpec
                                 .modifyRequestBody(String.class, String.class, spectreBodyRewrite)
                                 .removeRequestParameter(Constants.QUERY_PARAM_LISTENER)
-                                .filter(setSpectreRoutingFilter.apply())
+                                .filter(spectreRoutingFilter.apply())
                         )
                         .uri(publishEventUrl))
 
 
                 .route("auto_event_route_head", p -> p
                         .path(Constants.AUTOEVENT_ROOT_PATH_PREFIX + "/**").and().method(HttpMethod.HEAD)
-                        .filters(f -> f
+                        .filters(filterSpec -> filterSpec
                                 .removeRequestParameter(Constants.QUERY_PARAM_LISTENER)
-                                .filter(setSpectreRoutingFilter.apply())
+                                .filter(spectreRoutingFilter.apply())
                         )
                         .uri(publishEventUrl))
 

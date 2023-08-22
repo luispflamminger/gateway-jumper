@@ -3,7 +3,6 @@ package jumper.filter;
 import jumper.model.response.IncomingResponse;
 import jumper.model.response.JumperInfoResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.OrderedGatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
@@ -22,12 +21,12 @@ import static net.logstash.logback.argument.StructuredArguments.value;
 @Slf4j
 public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.Config> {
 
-	@Autowired
-	CurrentTraceContext currentTraceContext;
+	private final CurrentTraceContext currentTraceContext;
 
-	public ResponseFilter() {
+	public ResponseFilter(CurrentTraceContext currentTraceContext) {
         super(Config.class);
-    }
+		this.currentTraceContext = currentTraceContext;
+	}
 
 	@Override
 	public GatewayFilter apply(Config config) {
@@ -40,7 +39,7 @@ public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.
 					ServerHttpResponse response = exchange.getResponse();
 					ServerHttpRequest request = exchange.getRequest();
 
-					if(isLogLevelEnabled()) {
+					if (isLogLevelEnabled()) {
 						JumperInfoResponse jumperInfoResponse = new JumperInfoResponse();
 						IncomingResponse incomingResponse = new IncomingResponse();
 
@@ -49,7 +48,7 @@ public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.
 
 						jumperInfoResponse.setIncomingResponse(incomingResponse);
 
-						log.info("response", value("jumperInfo", jumperInfoResponse));
+						log.info("logging response: {}", value("jumperInfo", jumperInfoResponse));
 					}
 
 					Long contentLength = response.getHeaders().getContentLength();

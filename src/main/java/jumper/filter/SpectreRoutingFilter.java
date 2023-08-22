@@ -13,7 +13,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 @Component
-public class SetSpectreRoutingFilter extends SetRequestHeaderGatewayFilterFactory {
+public class SpectreRoutingFilter extends SetRequestHeaderGatewayFilterFactory {
     @Value( "${jumper.issuer.url}")
     private String localIssuerUrl;
 

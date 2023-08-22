@@ -23,10 +23,11 @@ public class RemoveHeaderFilter extends RemoveRequestHeaderGatewayFilterFactory 
 					.headers(httpHeaders -> httpHeaders.remove(config.getName()))
 					.build();
 			
-			return chain.filter(exchange.mutate().request(request).build());
+			return chain.filter(exchange.mutate()
+					.request(request)
+					.build());
 				
 		}, REMOVE_HEADER_FILTER_ORDER);
 			
 	}
-
 }

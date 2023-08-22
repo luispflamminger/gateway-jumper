@@ -207,7 +207,15 @@ public class OauthTokenUtil {
             throw new RuntimeException("Error while generating LMS token, key info missing");
         }
 
-        return Jwts.builder().setClaims(claims).setIssuer(issuer).setExpiration(expiration).setIssuedAt(issuedAt).signWith(keyInfo.getPk(), SignatureAlgorithm.RS256).setHeaderParam("kid", keyInfo.getKid()).setHeaderParam("typ", "JWT").compact();
+        return Jwts.builder()
+                .setClaims(claims)
+                .setIssuer(issuer)
+                .setExpiration(expiration)
+                .setIssuedAt(issuedAt)
+                .signWith(keyInfo.getPk(), SignatureAlgorithm.RS256)
+                .setHeaderParam("kid", keyInfo.getKid())
+                .setHeaderParam("typ", "JWT")
+                .compact();
     }
 
     public static KeyInfo loadKeyinfo() throws IOException {

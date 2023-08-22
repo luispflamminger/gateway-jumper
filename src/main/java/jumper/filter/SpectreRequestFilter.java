@@ -32,21 +32,13 @@ public class SpectreRequestFilter extends AbstractGatewayFilterFactory<SpectreRe
             String requestBody = exchange.getAttribute("cachedRequestBodyObject");
             log.debug("Request: headers={}, payload={}", request.getHeaders().toSingleValueMap(), requestBody);
 
-            //JumperConfig jc = JumperConfig.parseConfigFrom( request);
             JumperConfig jc = JumperConfig.parseConfigFrom( exchange);
-            if(!spectreService.isListenerMatched(jc))
-            {
+            if (!spectreService.isListenerMatched(jc)) {
                 return chain.filter(exchange.mutate().request(request).build());
             }
 
             RouteListener listener = jc.getRouteListener().get( jc.getConsumer());
-/*
-            // Create Event with additional information
-            Spectre eventReqMsg = aes.createEvent(jc, exchange, exchange.getRequest(), listener, requestBody);
 
-            // publish event (route to local Horizon)
-            aes.publishEvent(eventReqMsg, jc);
-*/
             spectreService.handleEvent(jc, exchange, exchange.getRequest(), listener, requestBody);
             return chain.filter(exchange);
 

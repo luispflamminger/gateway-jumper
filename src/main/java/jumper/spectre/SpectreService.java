@@ -74,7 +74,7 @@ public class SpectreService
         });
     }
 
-    private Spectre createEvent(JumperConfig jc, ServerWebExchange exchange, Object http, RouteListener listener, String payload) {
+    private Spectre     createEvent(JumperConfig jc, ServerWebExchange exchange, Object http, RouteListener listener, String payload) {
 
         ServerHttpRequest rq = exchange.getRequest();
         ServerHttpResponse rs = exchange.getResponse();
@@ -86,13 +86,11 @@ public class SpectreService
         event.setDatacontenttype( "application/json");
         event.setType( "de.telekom.ei.listener");
 
-        SpectreData data = null;
+        SpectreData data = new SpectreData();
         String spanName = "Spectre request";
         if( http instanceof ServerHttpRequest)
         {
-            data = new SpectreData();
-            Map<String,String> httpHeaders = new HashMap<>();
-            httpHeaders.putAll(rq.getHeaders().toSingleValueMap());
+            Map<String, String> httpHeaders = new HashMap<>(rq.getHeaders().toSingleValueMap());
             httpHeaders.replace(Constants.HEADER_AUTHORIZATION, jc.getConsumerToken());
             httpHeaders.remove(Constants.HEADER_CONSUMER_TOKEN);
             data.setHeader( httpHeaders);
@@ -105,9 +103,7 @@ public class SpectreService
         {
             spanName = ("Spectre response");
 
-            data = new SpectreData();
-            Map<String,String> httpHeaders = new HashMap<>();
-            httpHeaders.putAll(rs.getHeaders().toSingleValueMap());
+            Map<String, String> httpHeaders = new HashMap<>(rs.getHeaders().toSingleValueMap());
             httpHeaders.put(Constants.HEADER_X_TARDIS_TRACE_ID, rq.getHeaders().getFirst(Constants.HEADER_X_TARDIS_TRACE_ID));
             data.setHeader( httpHeaders);
             data.setKind( SpectreKind.RESPONSE.toString());
@@ -166,7 +162,8 @@ public class SpectreService
 
         publishEventMono(publishEventUrl.replaceFirst(Constants.ENVIRONMENT_PLACEHOLDER, envName),
                 eventJson,
-                OauthTokenUtil.generateGatewayTokenForPublisher(localIssuerUrl + "/" + envName), event.getSpanId()
+                OauthTokenUtil.generateGatewayTokenForPublisher(localIssuerUrl + "/" + envName),
+                event.getSpanId()
         ).subscribe();
 
     }

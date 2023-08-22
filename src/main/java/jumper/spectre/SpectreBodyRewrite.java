@@ -22,10 +22,7 @@ public class SpectreBodyRewrite implements RewriteFunction<String, String> {
     public Publisher<String> apply(ServerWebExchange exchange, String body) {
         MultiValueMap<String, String> params = exchange.getRequest().getQueryParams();
 
-        String id = null;
-        if (params.containsKey(Constants.QUERY_PARAM_LISTENER)) {
-            id = params.getFirst(Constants.QUERY_PARAM_LISTENER);
-        }
+        String id = params.getFirst(Constants.QUERY_PARAM_LISTENER);
 
         log.debug("Spectre: payload={}", body);
 
@@ -39,6 +36,7 @@ public class SpectreBodyRewrite implements RewriteFunction<String, String> {
             e.printStackTrace();
         }
         log.debug("Spectre: adjusted={}", eventJson);
+
         return Mono.just(eventJson);
     }
 

@@ -33,7 +33,7 @@ public class SpectreResponseFilter extends AbstractGatewayFilterFactory<SpectreR
     public GatewayFilter apply(Config config) {
         return new OrderedGatewayFilter((exchange, chain) -> {
 
-            //try to store jc now as on response phase is not available
+            //try to store jc now as on response phase it is not available
             //use jc passed with exchange
             //JumperConfig jc = JumperConfig.parseConfigFrom( exchange.getRequest());
 
