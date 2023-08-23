@@ -2,6 +2,9 @@ package jumper.filter;
 
 import jumper.model.response.IncomingResponse;
 import jumper.model.response.JumperInfoResponse;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.OrderedGatewayFilter;
@@ -22,10 +25,12 @@ import static net.logstash.logback.argument.StructuredArguments.value;
 public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.Config> {
 
 	private final CurrentTraceContext currentTraceContext;
+	private final Tracer tracer;
 
-	public ResponseFilter(CurrentTraceContext currentTraceContext) {
+	public ResponseFilter(CurrentTraceContext currentTraceContext, Tracer tracer) {
         super(Config.class);
 		this.currentTraceContext = currentTraceContext;
+		this.tracer = tracer;
 	}
 
 	@Override
@@ -34,7 +39,7 @@ public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.
 
 			return chain.filter(exchange).then(Mono.fromRunnable(() -> {
 
-				WebFluxSleuthOperators.withSpanInScope(config.tracer, currentTraceContext, exchange, () -> {
+				WebFluxSleuthOperators.withSpanInScope(tracer, currentTraceContext, exchange, () -> {
 
 					ServerHttpResponse response = exchange.getResponse();
 					ServerHttpRequest request = exchange.getRequest();
@@ -53,7 +58,7 @@ public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.
 
 					Long contentLength = response.getHeaders().getContentLength();
 
-					Span span = config.tracer.currentSpan();
+					Span span = tracer.currentSpan();
 
 					if (contentLength == null || contentLength.toString().equals("-1")) {
 						span.tag("message.size_response", "0");
@@ -74,23 +79,12 @@ public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.
 		return log.isInfoEnabled();
 	}
 
-	/**
-	 * Some configuration options for this filter
-	 *
-	 */
-	public static class Config {
 
-		private Tracer tracer;
+	@Getter
+	@Setter
+	@AllArgsConstructor
+	public static class Config extends AbstractGatewayFilterFactory.NameConfig{
 
-		public Config(){}
-
-		public Config(Tracer tracer) {
-			this.tracer = tracer;
-		}
-
-		public void setTracer(Tracer tracer){
-			this.tracer = tracer;
-		}
 	}
 
 }
