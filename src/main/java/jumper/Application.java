@@ -18,6 +18,10 @@ import org.springframework.cloud.sleuth.Tracer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpMethod;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
 
 @SpringBootApplication
 public class Application {
@@ -42,30 +46,32 @@ public class Application {
                                    SpectreRoutingFilter spectreRoutingFilter,
                                    SpectreBodyRewrite spectreBodyRewrite) {
 
-        return builder.routes()
+        Set<String> headerList = new HashSet<>(
+                Arrays.asList(
+                        Constants.HEADER_JUMPER_CONFIG,
+                        Constants.HEADER_TOKEN_ENDPOINT,
+                        Constants.HEADER_REMOTE_API_URL,
+                        Constants.HEADER_ISSUER,
+                        Constants.HEADER_CLIENT_ID,
+                        Constants.HEADER_CLIENT_SECRET,
+                        Constants.HEADER_API_BASE_PATH,
+                        "x-consumer-id",
+                        "x-consumer-custom-id",
+                        "x-consumer-groups",
+                        "x-consumer-username",
+                        "x-anonymous-consumer",
+                        "x-anonymous-groups",
+                        "x-forwarded-prefix",
+                        Constants.HEADER_ACCESS_TOKEN_FORWARDING));
 
+
+        return builder.routes()
 
                 .route("jumper_route", p -> p
                         .path(Constants.PROXY_ROOT_PATH_PREFIX + "/**")
                         .filters(filterSpec -> filterSpec
                                 .filter(requestFilter.apply(new RequestFilter.Config(true, true, tracer, Constants.PROXY_ROOT_PATH_PREFIX)))
-
-                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_JUMPER_CONFIG)))
-                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_TOKEN_ENDPOINT)))
-                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_REMOTE_API_URL)))
-                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_ISSUER)))
-                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_CLIENT_ID)))
-                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_CLIENT_SECRET)))
-                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_API_BASE_PATH)))
-                                .filter(removeHeader.apply(c -> c.setName("x-consumer-id")))
-                                .filter(removeHeader.apply(c -> c.setName("x-consumer-custom-id")))
-                                .filter(removeHeader.apply(c -> c.setName("x-consumer-groups")))
-                                .filter(removeHeader.apply(c -> c.setName("x-consumer-username")))
-                                .filter(removeHeader.apply(c -> c.setName("x-anonymous-consumer")))
-                                .filter(removeHeader.apply(c -> c.setName("x-anonymous-groups")))
-                                .filter(removeHeader.apply(c -> c.setName("x-forwarded-prefix")))
-                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_ACCESS_TOKEN_FORWARDING)))
-
+                                .filter(removeHeader.apply(config -> config.setHeaders(headerList)))
                                 .filter(responseFilter.apply(c -> c.setTracer(tracer)))
                         )
                         .uri("no://op"))
@@ -75,28 +81,12 @@ public class Application {
                         .path(Constants.LISTENER_ROOT_PATH_PREFIX + "/**")
                         .filters(filterSpec -> filterSpec
                                 .filter(requestFilter.apply(new RequestFilter.Config(true, true, tracer, Constants.LISTENER_ROOT_PATH_PREFIX)))
-
+                                .filter(removeHeader.apply(config -> config.setHeaders(headerList)))
                                 .filter(requestTransformationFilter)
-                                .filter(responseTransformationFilter)
-                                .filter(spectreRequestFilter.apply(new SpectreRequestFilter.Config()))
-                                .filter(spectreResponseFilter.apply(new SpectreResponseFilter.Config()))
-                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_JUMPER_CONFIG)))
-                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_TOKEN_ENDPOINT)))
-                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_REMOTE_API_URL)))
-                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_ISSUER)))
-                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_CLIENT_ID)))
-                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_CLIENT_SECRET)))
-                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_API_BASE_PATH)))
-                                .filter(removeHeader.apply(c -> c.setName("x-consumer-id")))
-                                .filter(removeHeader.apply(c -> c.setName("x-consumer-custom-id")))
-                                .filter(removeHeader.apply(c -> c.setName("x-consumer-groups")))
-                                .filter(removeHeader.apply(c -> c.setName("x-consumer-username")))
-                                .filter(removeHeader.apply(c -> c.setName("x-anonymous-consumer")))
-                                .filter(removeHeader.apply(c -> c.setName("x-anonymous-groups")))
-                                .filter(removeHeader.apply(c -> c.setName("x-forwarded-prefix")))
-                                .filter(removeHeader.apply(c -> c.setName(Constants.HEADER_ACCESS_TOKEN_FORWARDING)))
-
+                                .filter(spectreRequestFilter.apply(config -> {}))
                                 .filter(responseFilter.apply(c -> c.setTracer(tracer)))
+                                .filter(responseTransformationFilter)
+                                .filter(spectreResponseFilter.apply(config -> {}))
                         )
                         .uri("no://op"))
 

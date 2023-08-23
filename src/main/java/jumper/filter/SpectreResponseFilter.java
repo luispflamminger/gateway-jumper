@@ -13,7 +13,7 @@ import reactor.core.publisher.Mono;
 
 @Component
 @Slf4j
-public class SpectreResponseFilter extends AbstractGatewayFilterFactory<SpectreResponseFilter.Config> {
+public class SpectreResponseFilter extends AbstractGatewayFilterFactory<AbstractGatewayFilterFactory.NameConfig> {
 
     private final SpectreService spectreService;
 
@@ -25,12 +25,12 @@ public class SpectreResponseFilter extends AbstractGatewayFilterFactory<SpectreR
     public static final int AUTO_EVENT_RESPONSE_FILTER_ORDER = NettyWriteResponseFilter.WRITE_RESPONSE_FILTER_ORDER - 2;
 
     public SpectreResponseFilter(SpectreService spectreService)  {
-        super(Config.class);
+        super(AbstractGatewayFilterFactory.NameConfig.class);
         this.spectreService = spectreService;
     }
 
     @Override
-    public GatewayFilter apply(Config config) {
+    public GatewayFilter apply(AbstractGatewayFilterFactory.NameConfig config) {
         return new OrderedGatewayFilter((exchange, chain) -> {
 
             //try to store jc now as on response phase it is not available
@@ -62,6 +62,4 @@ public class SpectreResponseFilter extends AbstractGatewayFilterFactory<SpectreR
         }, AUTO_EVENT_RESPONSE_FILTER_ORDER);
     }
 
-    public static class Config {
-    }
 }
