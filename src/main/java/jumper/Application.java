@@ -1,6 +1,6 @@
 package jumper;
 
-import jumper.filter.RemoveHeaderFilter;
+import jumper.filter.RemoveRequestHeaderFilter;
 import jumper.filter.RequestFilter;
 import jumper.filter.RequestTransformationFilter;
 import jumper.filter.ResponseFilter;
@@ -14,7 +14,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.gateway.route.RouteLocator;
 import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
-import org.springframework.cloud.sleuth.Tracer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpMethod;
 
@@ -35,9 +34,8 @@ public class Application {
 
     @Bean
     public RouteLocator proxyRoute(RouteLocatorBuilder builder,
-                                   Tracer tracer,
                                    RequestFilter requestFilter,
-                                   RemoveHeaderFilter removeHeader,
+                                   RemoveRequestHeaderFilter removeRequestHeader,
                                    ResponseFilter responseFilter,
                                    SpectreRequestFilter spectreRequestFilter,
                                    SpectreResponseFilter spectreResponseFilter,
@@ -70,9 +68,9 @@ public class Application {
                 .route("jumper_route", p -> p
                         .path(Constants.PROXY_ROOT_PATH_PREFIX + "/**")
                         .filters(filterSpec -> filterSpec
-                                .filter(requestFilter.apply(new RequestFilter.Config(true, true, tracer, Constants.PROXY_ROOT_PATH_PREFIX)))
-                                .filter(removeHeader.apply(config -> config.setHeaders(headerList)))
-                                .filter(responseFilter.apply(c -> c.setTracer(tracer)))
+                                .filter(requestFilter.apply(new RequestFilter.Config(true, true, Constants.PROXY_ROOT_PATH_PREFIX)))
+                                .filter(removeRequestHeader.apply(config -> config.setHeaders(headerList)))
+                                .filter(responseFilter.apply(config -> {}))
                         )
                         .uri("no://op"))
 
@@ -80,11 +78,11 @@ public class Application {
                 .route("listener_route", p -> p
                         .path(Constants.LISTENER_ROOT_PATH_PREFIX + "/**")
                         .filters(filterSpec -> filterSpec
-                                .filter(requestFilter.apply(new RequestFilter.Config(true, true, tracer, Constants.LISTENER_ROOT_PATH_PREFIX)))
-                                .filter(removeHeader.apply(config -> config.setHeaders(headerList)))
+                                .filter(requestFilter.apply(new RequestFilter.Config(true, true, Constants.LISTENER_ROOT_PATH_PREFIX)))
+                                .filter(removeRequestHeader.apply(config -> config.setHeaders(headerList)))
                                 .filter(requestTransformationFilter)
                                 .filter(spectreRequestFilter.apply(config -> {}))
-                                .filter(responseFilter.apply(c -> c.setTracer(tracer)))
+                                .filter(responseFilter.apply(config -> {}))
                                 .filter(responseTransformationFilter)
                                 .filter(spectreResponseFilter.apply(config -> {}))
                         )
