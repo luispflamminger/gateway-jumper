@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
-public class JumperTokenCacheService {
+public class TokenCacheService {
 
     @Value("${jumpercache.ttlOffset}")
     private int ttlOffset;
@@ -25,7 +25,7 @@ public class JumperTokenCacheService {
 
     Map<String, TokenInfo> cachingList = new HashMap<>();
 
-    public JumperTokenCacheService() {
+    public TokenCacheService() {
 
         if (cleanCacheInSeconds > 0) {
 

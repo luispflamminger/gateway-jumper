@@ -12,7 +12,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.SignatureException;
 import io.netty.channel.ConnectTimeoutException;
-import jumper.service.JumperTokenCacheService;
+import jumper.service.TokenCacheService;
 import jumper.model.TokenInfo;
 import jumper.model.config.KeyInfo;
 import jumper.model.config.OauthCredentials;
@@ -52,7 +52,7 @@ import java.util.concurrent.TimeUnit;
 public class OauthTokenUtil {
 
     private final WebClient webClient;
-    private final JumperTokenCacheService tokenCache;
+    private final TokenCacheService tokenCache;
 
     private static String securityPath;
     private static String securityFile;
