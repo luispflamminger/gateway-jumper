@@ -1,7 +1,7 @@
 package jumper.filter;
 
 
-import jumper.utilities.ResponseBodyRewrite;
+import jumper.filter.rewrite.ResponseBodyRewrite;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;

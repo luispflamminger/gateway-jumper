@@ -8,7 +8,7 @@ import jumper.filter.ResponseTransformationFilter;
 import jumper.filter.SpectreRoutingFilter;
 import jumper.filter.SpectreRequestFilter;
 import jumper.filter.SpectreResponseFilter;
-import jumper.spectre.SpectreBodyRewrite;
+import jumper.filter.rewrite.SpectreBodyRewrite;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

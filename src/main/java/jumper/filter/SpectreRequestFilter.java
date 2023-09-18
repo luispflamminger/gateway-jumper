@@ -2,7 +2,7 @@ package jumper.filter;
 
 import jumper.model.config.JumperConfig;
 import jumper.model.config.RouteListener;
-import jumper.spectre.SpectreService;
+import jumper.service.SpectreService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.OrderedGatewayFilter;

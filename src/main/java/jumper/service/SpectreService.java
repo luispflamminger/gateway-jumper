@@ -1,4 +1,4 @@
-package jumper.spectre;
+package jumper.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,7 +11,6 @@ import jumper.model.config.SpectreKind;
 import jumper.utilities.OauthTokenUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.sleuth.CurrentTraceContext;
 import org.springframework.cloud.sleuth.Span;
@@ -54,37 +53,23 @@ public class SpectreService
 
     WebClient webClient = WebClient.create();
 
-    public boolean isAnyListenerPresent( JumperConfig jc) {
-        return jc.getRouteListener() != null && !jc.getRouteListener().isEmpty();
-    }
 
     public boolean isListenerMatched( JumperConfig jc) {
 
-        if (!isAnyListenerPresent(jc)) {
-            return false;
-        }
-
         String consumer = jc.getConsumer();
-        return Objects.nonNull(jc.getRouteListener().get( consumer));
+        return Objects.nonNull(jc.getRouteListener()) && Objects.nonNull(jc.getRouteListener().get( consumer));
     }
 
-    public void handleEvent(JumperConfig jc, ServerWebExchange exchange, Object http, RouteListener listener, String payload){
-        WebFluxSleuthOperators.withSpanInScope(tracer, currentTraceContext, exchange, () -> {
-            publishEvent(createEvent( jc,  exchange,  http,  listener,  payload), jc) ;
-        });
+    public void handleEvent(JumperConfig jc, ServerWebExchange exchange, Object http, RouteListener listener, String payload) {
+        WebFluxSleuthOperators.withSpanInScope(tracer, currentTraceContext, exchange, () ->
+                publishEvent(createEvent(jc, exchange, http, listener, payload), jc)
+        );
     }
 
     private Spectre     createEvent(JumperConfig jc, ServerWebExchange exchange, Object http, RouteListener listener, String payload) {
 
         ServerHttpRequest rq = exchange.getRequest();
         ServerHttpResponse rs = exchange.getResponse();
-
-        Spectre event = new Spectre();
-        event.setSpecversion( "1.0");
-        event.setSource( stargateUrl);
-        event.setId( UUID.randomUUID());
-        event.setDatacontenttype( "application/json");
-        event.setType( "de.telekom.ei.listener");
 
         SpectreData data = new SpectreData();
         String spanName = "Spectre request";
@@ -108,14 +93,22 @@ public class SpectreService
             data.setHeader( httpHeaders);
             data.setKind( SpectreKind.RESPONSE.toString());
             data.setPayload(parsePayload(rs.getHeaders().getContentType(), payload));
-            data.setStatus( rs.getStatusCode().value());
+            data.setStatus( Objects.requireNonNull(rs.getStatusCode()).value());
         }
         data.setConsumer( jc.getConsumer());
         data.setIssue( listener.getIssue());
         data.setProvider( listener.getServiceOwner());
-        data.setMethod( rq.getMethod().toString());
+        data.setMethod( Objects.requireNonNull(rq.getMethod()).toString());
 
-        event.setData( data);
+        Spectre event = Spectre.builder()
+                .specversion("1.0")
+                .source(stargateUrl)
+                .id(UUID.randomUUID())
+                .datacontenttype("application/json")
+                .type("de.telekom.ei.listener")
+                .data(data)
+                .build();
+
 
         String finalSpanName = spanName;
 
@@ -152,12 +145,9 @@ public class SpectreService
         //for real route environment header is set, so also available within jc
         if (jc.getGatewayClient().getIssuer() != null) {
             envName = jc.getGatewayClient().getIssuer().replaceFirst(".*realms\\/", "");
-        }
-        //on proxy route we need to use token
-        else {
-            if (jc.getConsumerToken() != null) {
-                envName = OauthTokenUtil.getClaimFromToken(jc.getConsumerToken(), "iss").replaceFirst(".*realms\\/", "");
-            }
+        } else if (jc.getConsumerToken() != null) {
+            //on proxy route we need to use token
+            envName = OauthTokenUtil.getClaimFromToken(jc.getConsumerToken(), "iss").replaceFirst(".*realms\\/", "");
         }
 
         publishEventMono(publishEventUrl.replaceFirst(Constants.ENVIRONMENT_PLACEHOLDER, envName),
@@ -187,28 +177,26 @@ public class SpectreService
                 .retrieve()
                 .onStatus(HttpStatus::isError, response -> {
                     log.error("while publishing event got error status: {}", response.statusCode());
-                    logDebugResponse(log, response);
+                    logDebugResponse(response);
                     return Mono.empty();
                 })
                 .onStatus(status -> !HttpStatus.CREATED.equals(status), response -> {
                     log.warn("while publishing event got unexpected status: {}", response.statusCode());
-                    logDebugResponse(log, response);
+                    logDebugResponse(response);
                     return Mono.empty();
                 })
                 .bodyToMono(Void.class)
-                .doOnSuccess(status -> {
-                    log.debug("publishEventMono success" );
-                });
+                .doOnSuccess(status -> log.debug("publishEventMono success" ));
 
         return responseMono.then(Mono.defer(Mono::empty));
     }
 
-    private static void logDebugResponse(Logger log, ClientResponse response) {
-        if (log.isDebugEnabled()) {
-            log.debug("Response headers: {}", response.headers().asHttpHeaders());
+    private static void logDebugResponse(ClientResponse response) {
+        if (SpectreService.log.isDebugEnabled()) {
+            SpectreService.log.debug("Response headers: {}", response.headers().asHttpHeaders());
             response.bodyToMono(String.class)
                     .publishOn(Schedulers.boundedElastic())
-                    .subscribe(body -> log.debug("Response body: {}", body));
+                    .subscribe(body -> SpectreService.log.debug("Response body: {}", body));
         }
     }
 

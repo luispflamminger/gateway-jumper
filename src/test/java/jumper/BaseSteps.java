@@ -189,9 +189,7 @@ public class BaseSteps {
 
         setHttpHeadersOfRequest(
                 httpHeadersOfRequest.andThen(
-                        httpHeaders -> {
-                            httpHeaders.add(HttpHeaders.CONTENT_TYPE, "application/json");
-                        }
+                        httpHeaders -> httpHeaders.add(HttpHeaders.CONTENT_TYPE, "application/json")
                 )
         );
 
@@ -321,9 +319,8 @@ public class BaseSteps {
     }
 
     public static JSONObject getTestJson() {
-        JSONObject jsonObject = null;
 
-        jsonObject = new JSONObject();
+        JSONObject jsonObject = new JSONObject();
         try {
             jsonObject.put("swagger", "2.0");
             jsonObject.put("info", new JSONObject()
@@ -337,18 +334,13 @@ public class BaseSteps {
     }
 
     public static Spectre getTestSpectre() {
-        Spectre spectre = new Spectre();
-        spectre.setSpecversion("1.0");
-        spectre.setType("de.telekom.ei.listener");
-        return spectre;
+        return Spectre.builder().specversion("1.0").type("de.telekom.ei.listener").build();
     }
 
     private void setBasePathHeader(String basePathHeader) {
         this.setHttpHeadersOfRequest(
                 httpHeadersOfRequest.andThen(
-                        httpHeaders -> {
-                            httpHeaders.set(Constants.HEADER_API_BASE_PATH, basePathHeader);
-                        }
+                        httpHeaders -> httpHeaders.set(Constants.HEADER_API_BASE_PATH, basePathHeader)
                 )
         );
     }
@@ -356,9 +348,7 @@ public class BaseSteps {
     private void setRemoteSuffix(String suffix) {
         this.setHttpHeadersOfRequest(
                 httpHeadersOfRequest.andThen(
-                        httpHeaders -> {
-                            httpHeaders.set(Constants.HEADER_REMOTE_API_URL, httpHeaders.getFirst(Constants.HEADER_REMOTE_API_URL) + suffix);
-                        }
+                        httpHeaders -> httpHeaders.set(Constants.HEADER_REMOTE_API_URL, httpHeaders.getFirst(Constants.HEADER_REMOTE_API_URL) + suffix)
                 )
         );
     }

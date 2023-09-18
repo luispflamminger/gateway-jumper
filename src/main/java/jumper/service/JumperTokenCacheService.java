@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
-public class JumperTokenCache {
+public class JumperTokenCacheService {
 
     @Value("${jumpercache.ttlOffset}")
     private int ttlOffset;
@@ -25,16 +25,16 @@ public class JumperTokenCache {
 
     Map<String, TokenInfo> cachingList = new HashMap<>();
 
-    public JumperTokenCache() {
+    public JumperTokenCacheService() {
 
-        if (this.cleanCacheInSeconds > 0) {
+        if (cleanCacheInSeconds > 0) {
 
             Executors.newScheduledThreadPool(1)
-                    .scheduleAtFixedRate(this.cleanCacheJob(), cleanCacheInSeconds, cleanCacheInSeconds, TimeUnit.SECONDS);
-            log.debug("JumperCache cleanup job is enabled. the cache is cleaned every {} seconds.", this.cleanCacheInSeconds);
+                    .scheduleAtFixedRate(cleanCacheJob(), cleanCacheInSeconds, cleanCacheInSeconds, TimeUnit.SECONDS);
+            log.debug("JumperCache cleanup job is enabled. the cache is cleaned every {} seconds.", cleanCacheInSeconds);
 
         } else {
-            log.debug("JumperCache cleanup job is not enabled. To activate the cache cleaning job, you must specify a value > 0 in your properties with the key 'jumpercache.cleanCacheInSeconds'.");
+            log.debug("JumperCache cleanup job is not enabled. Specify a value > 0 in your properties with the key 'jumpercache.cleanCacheInSeconds'.");
         }
     }
 
