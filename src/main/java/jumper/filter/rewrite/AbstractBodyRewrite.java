@@ -13,7 +13,7 @@ public abstract class AbstractBodyRewrite {
     @Value("${spring.codec.max-in-memory-size}")
     private int limit;
 
-    public String getBodyForContentType(MediaType mediaType, byte[] originalBody) {
+    String getBodyForContentType(MediaType mediaType, byte[] originalBody) {
         String bodyToStore;
 
         if (isText(mediaType)) {
@@ -33,7 +33,7 @@ public abstract class AbstractBodyRewrite {
         return bodyToStore;
     }
 
-    private static boolean isText(MediaType mediaType) {
+    private boolean isText(MediaType mediaType) {
         return
                 Objects.nonNull(mediaType) &&
                         (mediaType.isCompatibleWith(MediaType.parseMediaType("text/*"))

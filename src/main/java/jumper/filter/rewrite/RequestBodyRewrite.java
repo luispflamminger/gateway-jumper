@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+import java.util.Objects;
+
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -16,9 +18,10 @@ public class RequestBodyRewrite extends AbstractBodyRewrite implements RewriteFu
     @Override
     public Publisher<byte[]> apply(ServerWebExchange exchange, byte[] originalBody) {
 
-        if (originalBody != null) {
+        if (Objects.nonNull(originalBody)) {
             exchange.getAttributes().put("cachedRequestBodyObject", getBodyForContentType(exchange.getRequest().getHeaders().getContentType(), originalBody));
             return Mono.just(originalBody);
+
         } else {
             return Mono.empty();
         }
