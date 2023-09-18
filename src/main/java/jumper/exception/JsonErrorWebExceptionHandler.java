@@ -75,9 +75,13 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
         errorAttributes.put("error", errorStatus.getReasonPhrase());
         errorAttributes.put("status", errorStatus.value());
         errorAttributes.put("method", request.methodName());
-        errorAttributes.put("traceId", (request.headers().firstHeader(Constants.HEADER_X_B3_TRACE_ID) != null) ?
+
+        errorAttributes
+                .put("traceId", (Objects.nonNull(request.headers().firstHeader(Constants.HEADER_X_B3_TRACE_ID))) ?
                 request.headers().firstHeader(Constants.HEADER_X_B3_TRACE_ID) : "");
-        errorAttributes.put("tardisTraceId", (request.headers().firstHeader(Constants.HEADER_X_TARDIS_TRACE_ID) != null) ?
+
+        errorAttributes
+                .put("tardisTraceId", (Objects.nonNull(request.headers().firstHeader(Constants.HEADER_X_TARDIS_TRACE_ID))) ?
                 request.headers().firstHeader(Constants.HEADER_X_TARDIS_TRACE_ID) : "");
 
         //should also evaluate include options (stacktrace, message, bindingErrors)
