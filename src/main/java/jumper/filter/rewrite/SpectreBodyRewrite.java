@@ -1,4 +1,4 @@
-package jumper.spectre;
+package jumper.filter.rewrite;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
