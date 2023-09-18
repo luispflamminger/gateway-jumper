@@ -6,7 +6,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jumper.Constants;
+import jumper.service.HeaderUtilService;
 import lombok.Data;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.web.server.ServerWebExchange;
 
@@ -61,14 +63,12 @@ public class JumperConfig {
     @JsonIgnore
     public static JumperConfig fromBase64(String jsonConfigBase64) {
         String decodedJson = new String(Base64.getDecoder().decode(jsonConfigBase64.getBytes()));
-        JumperConfig jc = null;
         try {
-            jc = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false).readValue(decodedJson, JumperConfig.class);
+            return new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false).readValue(decodedJson, JumperConfig.class);
         } catch (JsonProcessingException e) {
             e.printStackTrace();
+            return new JumperConfig();
         }
-
-        return jc;
     }
 
     @JsonIgnore
@@ -99,6 +99,25 @@ public class JumperConfig {
         debugHeader = request.getHeaders().getFirst( Constants.HEADER_DEBUG_RESPONSE_HEADER);
  */
     }
+
+    @JsonIgnore
+    public static JumperConfig parseConfigFrom(ServerHttpRequest request) {
+
+        JumperConfig jc;
+        String jumperConfigBase64 = HeaderUtilService.getLastValueFromHeaderField(request, Constants.HEADER_JUMPER_CONFIG);
+
+        if (StringUtils.isNotBlank(jumperConfigBase64)) {
+            jc = JumperConfig.fromBase64(jumperConfigBase64);
+
+        } else {
+            jc = new JumperConfig();
+        }
+
+        jc.fillWithLegacyHeaders(request); // TODO: remove as soon we have completely shifted to json_config
+
+        return jc;
+    }
+
 
 
     @JsonIgnore
