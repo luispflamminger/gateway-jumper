@@ -10,7 +10,7 @@ import jumper.model.config.JumperConfig;
 import jumper.model.request.IncomingRequest;
 import jumper.model.request.JumperInfoRequest;
 import jumper.model.request.OutgoingRequest;
-import jumper.utilities.OauthTokenUtil;
+import jumper.service.OauthTokenUtilService;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -47,7 +47,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
     private final CurrentTraceContext currentTraceContext;
     private final Tracer tracer;
-    private final OauthTokenUtil oauthTokenUtilService;
+    private final OauthTokenUtilService oauthTokenUtilService;
 
     @Value( "${jumper.issuer.url}")
     private String localIssuerUrl;
@@ -57,11 +57,11 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
     public static final int REQUEST_FILTER_ORDER = RouteToRequestUrlFilter.ROUTE_TO_URL_FILTER_ORDER + 1;
 
-    public RequestFilter(CurrentTraceContext currentTraceContext, Tracer tracer, OauthTokenUtil oauthTokenUtil) {
+    public RequestFilter(CurrentTraceContext currentTraceContext, Tracer tracer, OauthTokenUtilService oauthTokenUtilService) {
         super(Config.class);
         this.currentTraceContext = currentTraceContext;
         this.tracer = tracer;
-        this.oauthTokenUtilService = oauthTokenUtil;
+        this.oauthTokenUtilService = oauthTokenUtilService;
     }
 
     @Override
@@ -171,7 +171,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                             }
 
                             BasicAuthCredentials basicAuthCredentials = jc.getBasicAuth().containsKey(consumer) ? jc.getBasicAuth().get(consumer) : jc.getBasicAuth().get(Constants.BASIC_AUTH_PROVIDER_KEY);
-                            addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BASIC + " " + oauthTokenUtilService.encodeBasicAuth(basicAuthCredentials.getUsername(), basicAuthCredentials.getPassword()));
+                            addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BASIC + " " + OauthTokenUtilService.encodeBasicAuth(basicAuthCredentials.getUsername(), basicAuthCredentials.getPassword()));
                         } else {
 
 

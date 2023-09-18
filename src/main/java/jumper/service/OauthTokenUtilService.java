@@ -1,4 +1,4 @@
-package jumper.utilities;
+package jumper.service;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,7 +12,6 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.SignatureException;
 import io.netty.channel.ConnectTimeoutException;
-import jumper.service.TokenCacheService;
 import jumper.model.TokenInfo;
 import jumper.model.config.KeyInfo;
 import jumper.model.config.OauthCredentials;
@@ -49,7 +48,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class OauthTokenUtil {
+public class OauthTokenUtilService {
 
     private final WebClient webClient;
     private final TokenCacheService tokenCache;
@@ -59,13 +58,13 @@ public class OauthTokenUtil {
 
 
     @Value("${jumper.security.dir:keypair}")
-    public void setSecurityPath(String name){
-        OauthTokenUtil.securityPath = name;
+    private void setSecurityPath(String name){
+        securityPath = name;
     }
 
     @Value("${jumper.security.file:key.json}")
-    public void setSecurityFile(String name){
-        OauthTokenUtil.securityFile = name;
+    private void setSecurityFile(String name){
+        securityFile = name;
     }
 
 
@@ -81,7 +80,7 @@ public class OauthTokenUtil {
         return splitToken[0] + "." + splitToken[1] + ".";
     }
 
-    public static String getClaimFromToken(String consumerToken, String claimName) {
+    public String getClaimFromToken(String consumerToken, String claimName) {
         String consumerTokenWithoutSignature = getTokenWithoutSignature(consumerToken);
         return getAllClaimsFromToken(consumerTokenWithoutSignature).getBody().get(claimName, String.class);
     }
@@ -104,7 +103,7 @@ public class OauthTokenUtil {
         throw new IllegalStateException("Was not able to parse consumer token");
     }
 
-    public static String generateExtGatewayToken(String envName, String consumerToken, String operation, String requestPath, String issuer, String scope, String publisherId, String subscriberId) {
+    public String generateExtGatewayToken(String envName, String consumerToken, String operation, String requestPath, String issuer, String scope, String publisherId, String subscriberId) {
         //nearly to pass additional claims as a map, so far scope + publisher
 
         String[] token = consumerToken.split(" ");
@@ -145,7 +144,7 @@ public class OauthTokenUtil {
         return generateToken(claims, issuer, expiration, issuedAt);
     }
 
-    public static String generateGatewayToken(String envName, String consumerToken, String operation, String requestPath, String issuer) {
+    public String generateGatewayToken(String envName, String consumerToken, String operation, String requestPath, String issuer) {
 
 
         String[] token = consumerToken.split(" ");
@@ -169,7 +168,6 @@ public class OauthTokenUtil {
         claims.put("sub", sub);
         claims.put("requestPath", requestPath);
         claims.put("operation", operation);
-//	      claims.put("env", envName);
         claims.put("accessTokenSignature", signature);
         claims.put("originZone", consumerOriginZone);
         claims.put("originStargate", consumerOriginStargate);
@@ -181,8 +179,8 @@ public class OauthTokenUtil {
         return generateToken(claims, issuer, expiration, issuedAt);
     }
 
-    public static String generateGatewayTokenForPublisher(String issuer) {
-        HashMap<String, String> claims = new HashMap<String, String>();
+    public String generateGatewayTokenForPublisher(String issuer) {
+        HashMap<String, String> claims = new HashMap<>();
         claims.put("typ", "Bearer");
         claims.put("azp", "stargate");
         claims.put("clientId", "gateway");
@@ -195,7 +193,7 @@ public class OauthTokenUtil {
     }
 
 
-    private static String generateToken(HashMap<String, String> claims, String issuer, Date expiration, Date issuedAt) {
+    private String generateToken(HashMap<String, String> claims, String issuer, Date expiration, Date issuedAt) {
         KeyInfo keyInfo = null;
 
         try {
@@ -220,34 +218,11 @@ public class OauthTokenUtil {
 
     public static KeyInfo loadKeyinfo() throws IOException {
         Path kidFile = Path.of(System.getProperty("user.dir")  + File.separator + securityPath + File.separator + securityFile);
-        KeyInfo keyInfo = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false).readValue( Files.readString(kidFile), KeyInfo.class);
-        return keyInfo;
-    }
-    /*
-    public static String loadKid() throws IOException {
-        Path kidFile = Path.of(System.getProperty("user.dir")  + File.separator + SECURITY_PATH + File.separator+ "kid");
-        return Files.readString(kidFile);
+        return new ObjectMapper()
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+                .readValue( Files.readString(kidFile), KeyInfo.class);
     }
 
-    public static PrivateKey loadPrivKey() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
-
-        String privateKeyContent;
-
-        Path privateKeyFile = Path.of(System.getProperty("user.dir") + File.separator + SECURITY_PATH + File.separator + "app.pem");
-
-        privateKeyContent = Files.readString(privateKeyFile)
-                .replaceAll("(\\r|\\n)", "")
-                .replace("-----BEGIN PRIVATE KEY-----", "")
-                .replace("-----END PRIVATE KEY-----", "");
-
-        KeyFactory kf = KeyFactory.getInstance("RSA");
-
-        PKCS8EncodedKeySpec keySpecPKCS8 = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(privateKeyContent));
-        PrivateKey privKey = kf.generatePrivate(keySpecPKCS8);
-
-        return privKey;
-    }
-    */
 
     public TokenInfo getAccessToken(String tokenEndpoint, String clientID, String clientSecret) {
         return getAccessToken(tokenEndpoint, clientID, clientSecret, null, "");
@@ -308,7 +283,7 @@ public class OauthTokenUtil {
 
     }
 
-    public TokenInfo getAccessTokenQuery(String tokenEndpoint, String tokenKey, MultiValueMap claims, String basicAuthHeader) {
+    private TokenInfo getAccessTokenQuery(String tokenEndpoint, String tokenKey, MultiValueMap claims, String basicAuthHeader) {
 
         Mono<TokenInfo> tokenInfoMono = webClient.post()
                 .uri(tokenEndpoint)

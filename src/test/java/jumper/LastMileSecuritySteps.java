@@ -1,7 +1,5 @@
 package jumper;
 
-import io.cucumber.java.After;
-import io.cucumber.java.Before;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.jsonwebtoken.Claims;
@@ -10,13 +8,12 @@ import io.jsonwebtoken.Jwt;
 import jumper.mocks.MockIrisServer;
 import jumper.mocks.MockUpstreamServer;
 import jumper.util.TokenUtil;
-import jumper.utilities.OauthTokenUtil;
+import jumper.service.OauthTokenUtilService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.test.web.reactive.server.WebTestClient;
 
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -30,14 +27,8 @@ public class LastMileSecuritySteps {
 
     private final BaseSteps baseSteps;
 
-    @Autowired
-    WebTestClient webTestClient;
-
     @Value("${jumper.issuer.url}")
     private String localIssuerUrl;
-
-    MockUpstreamServer mockUpstreamServer;
-    MockIrisServer mockIrisServer;
 
     Consumer<HttpHeaders> httpHeadersOfRequest;
 
@@ -71,13 +62,13 @@ public class LastMileSecuritySteps {
     }
 
     private void checkConsumerToken(String consumerToken) {
-        Jwt<Header, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(consumerToken));
+        Jwt<Header, Claims> claimsFromToken = OauthTokenUtilService.getAllClaimsFromToken(OauthTokenUtilService.getTokenWithoutSignature(consumerToken));
 
         assertNotNull(claimsFromToken.getBody().get("clientId", String.class));
     }
 
     private void checkGatewayToken(String gatewayToken) {
-        Jwt<Header, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(gatewayToken));
+        Jwt<Header, Claims> claimsFromToken = OauthTokenUtilService.getAllClaimsFromToken(OauthTokenUtilService.getTokenWithoutSignature(gatewayToken));
 
         assertEquals(localIssuerUrl + "/" + Constants.DEFAULT_REALM, claimsFromToken.getBody().get("iss", String.class));
     }

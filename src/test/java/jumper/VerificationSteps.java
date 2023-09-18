@@ -4,7 +4,7 @@ import io.cucumber.java.en.Then;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Header;
 import io.jsonwebtoken.Jwt;
-import jumper.utilities.OauthTokenUtil;
+import jumper.service.OauthTokenUtilService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -110,7 +110,7 @@ public class VerificationSteps {
     }
 
     private void checkOneToken(String token) {
-        Jwt<Header, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
+        Jwt<Header, Claims> claimsFromToken = OauthTokenUtilService.getAllClaimsFromToken(OauthTokenUtilService.getTokenWithoutSignature(token));
 
         assertEquals("Bearer", claimsFromToken.getBody().get("typ", String.class));
         assertEquals(CONSUMER, claimsFromToken.getBody().get("clientId", String.class));
@@ -126,7 +126,7 @@ public class VerificationSteps {
     }
 
     private void checkPubSub(String token) {
-        Jwt<Header, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
+        Jwt<Header, Claims> claimsFromToken = OauthTokenUtilService.getAllClaimsFromToken(OauthTokenUtilService.getTokenWithoutSignature(token));
 
         assertEquals(PUBSUB_PUBLISHER, claimsFromToken.getBody().get("publisherId", String.class));
         assertEquals(PUBSUB_SUBSCRIBER, claimsFromToken.getBody().get("subscriberId", String.class));
@@ -134,20 +134,20 @@ public class VerificationSteps {
     }
 
     private void checkScopes(String token) {
-        Jwt<Header, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
+        Jwt<Header, Claims> claimsFromToken = OauthTokenUtilService.getAllClaimsFromToken(OauthTokenUtilService.getTokenWithoutSignature(token));
 
         assertEquals(SCOPES, claimsFromToken.getBody().get("scope", String.class));
     }
 
     private void checkAud(String token) {
-        Jwt<Header, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
+        Jwt<Header, Claims> claimsFromToken = OauthTokenUtilService.getAllClaimsFromToken(OauthTokenUtilService.getTokenWithoutSignature(token));
 
         assertEquals("testAudience", claimsFromToken.getBody().get("aud", String.class));
     }
 
 
     private void checkMeshToken(String token) {
-        Jwt<Header, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
+        Jwt<Header, Claims> claimsFromToken = OauthTokenUtilService.getAllClaimsFromToken(OauthTokenUtilService.getTokenWithoutSignature(token));
 
         assertEquals("Bearer", claimsFromToken.getBody().get("typ", String.class));
         assertEquals(CONSUMER_GATEWAY, claimsFromToken.getBody().get("clientId", String.class));
@@ -161,14 +161,14 @@ public class VerificationSteps {
     }
 
     private void checkExternalConfigured(String token) {
-        Jwt<Header, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
+        Jwt<Header, Claims> claimsFromToken = OauthTokenUtilService.getAllClaimsFromToken(OauthTokenUtilService.getTokenWithoutSignature(token));
 
         assertEquals(CONSUMER_EXTERNAL_CONFIGURED, claimsFromToken.getBody().get("clientId", String.class));
         assertEquals(REMOTE_ISSUER, claimsFromToken.getBody().getIssuer());
     }
 
     private void checkExternalHeader(String token) {
-        Jwt<Header, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
+        Jwt<Header, Claims> claimsFromToken = OauthTokenUtilService.getAllClaimsFromToken(OauthTokenUtilService.getTokenWithoutSignature(token));
 
         assertEquals(CONSUMER_EXTERNAL_HEADER, claimsFromToken.getBody().get("clientId", String.class));
         assertEquals(REMOTE_ISSUER, claimsFromToken.getBody().getIssuer());

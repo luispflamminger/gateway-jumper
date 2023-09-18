@@ -3,7 +3,7 @@ package jumper.util;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import jumper.model.config.KeyInfo;
-import jumper.utilities.OauthTokenUtil;
+import jumper.service.OauthTokenUtilService;
 import lombok.Builder;
 
 import java.io.IOException;
@@ -26,7 +26,7 @@ public class AccessToken {
     private String audience;
 
     public String getConsumerAccessToken() {
-        HashMap<String, String> claims = new HashMap<String, String>();
+        HashMap<String, String> claims = new HashMap<>();
         claims.put("typ", "Bearer");
         claims.put("azp", clientId);
         claims.put("sub", UUID.randomUUID().toString());
@@ -39,7 +39,7 @@ public class AccessToken {
     }
 
     public String getIdpToken() {
-        HashMap<String, String> claims = new HashMap<String, String>();
+        HashMap<String, String> claims = new HashMap<>();
         claims.put("typ", "Bearer");
         claims.put("azp", clientId);
         claims.put("sub", UUID.randomUUID().toString());
@@ -58,13 +58,14 @@ public class AccessToken {
         Date expiration = new Date(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(5));
         KeyInfo keyInfo = null;
         try {
-            keyInfo = OauthTokenUtil.loadKeyinfo();
+            keyInfo = OauthTokenUtilService.loadKeyinfo();
         } catch (IOException e) {
             e.getStackTrace();
         }
 
         String keyId = "123456";
 
+        assert keyInfo != null;
         return Jwts.builder().setClaims(claims).setIssuer(issuer).setExpiration(expiration).setIssuedAt(issuedAt).signWith(keyInfo.getPk(), SignatureAlgorithm.RS256).setHeaderParam("kid", keyId).setHeaderParam("typ", "JWT").compact();
 
     }

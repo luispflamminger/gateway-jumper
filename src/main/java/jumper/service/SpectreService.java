@@ -8,7 +8,6 @@ import jumper.model.config.RouteListener;
 import jumper.model.config.Spectre;
 import jumper.model.config.SpectreData;
 import jumper.model.config.SpectreKind;
-import jumper.utilities.OauthTokenUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,9 +36,10 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class SpectreService {
+
+    private final OauthTokenUtilService oauthTokenUtilService;
     private final Tracer tracer;
     private final CurrentTraceContext currentTraceContext;
-
 
     @Value( "${jumper.stargate.url}")
     private String stargateUrl;
@@ -142,13 +142,13 @@ public class SpectreService {
         publishEventMono(
                 publishEventUrl.replaceFirst(Constants.ENVIRONMENT_PLACEHOLDER, envName),
                 eventJson,
-                OauthTokenUtil.generateGatewayTokenForPublisher(localIssuerUrl + "/" + envName),
+                oauthTokenUtilService.generateGatewayTokenForPublisher(localIssuerUrl + "/" + envName),
                 event.getSpanId()
         ).subscribe();
 
     }
 
-    private static String determineEnvironment(JumperConfig jc) {
+    private String determineEnvironment(JumperConfig jc) {
 
         //default fallback value
         String envName = Constants.DEFAULT_REALM;
@@ -159,7 +159,7 @@ public class SpectreService {
 
         } else if (jc.getConsumerToken() != null) {
             //on proxy route we need to use token
-            envName = OauthTokenUtil.getClaimFromToken(jc.getConsumerToken(), "iss").replaceFirst(".*realms\\/", "");
+            envName = oauthTokenUtilService.getClaimFromToken(jc.getConsumerToken(), "iss").replaceFirst(".*realms\\/", "");
         }
 
         return envName;
