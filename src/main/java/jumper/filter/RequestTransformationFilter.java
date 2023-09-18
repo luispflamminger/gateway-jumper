@@ -3,7 +3,6 @@ package jumper.filter;
 import jumper.utilities.RequestBodyRewrite;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -17,30 +16,30 @@ import reactor.core.publisher.Mono;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-public class RequestTransformationFilter implements  GatewayFilter, Ordered{
+public class RequestTransformationFilter implements GatewayFilter, Ordered {
     private final ModifyRequestBodyGatewayFilterFactory modifyRequestBodyFilter;
     private final RequestBodyRewrite requestBodyRewrite;
 
-    @Value( "${spring.codec.max-in-memory-size}")
+    @Value("${spring.codec.max-in-memory-size}")
     private int limit;
 
-    public static final int REQUEST_TRANSFORM_FILTER_ORDER = RemoveHeaderFilter.REMOVE_HEADER_FILTER_ORDER +1;
+    public static final int REQUEST_TRANSFORM_FILTER_ORDER = RemoveRequestHeaderFilter.REMOVE_REQUEST_HEADER_FILTER_ORDER + 1;
 
-        @Override
-        public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
 
-            ServerHttpRequest request = exchange.getRequest();
-            if (request.getHeaders().getContentLength() > limit) {
-                log.warn("limit {} exceeded, will not store request payload", limit);
-                return chain.filter(exchange);
-            }
-
-            return modifyRequestBodyFilter
-                    .apply(
-                            new ModifyRequestBodyGatewayFilterFactory.Config()
-                                    .setRewriteFunction(byte[].class, byte[].class, requestBodyRewrite))
-                    .filter(exchange, chain);
+        ServerHttpRequest request = exchange.getRequest();
+        if (request.getHeaders().getContentLength() > limit) {
+            log.warn("limit {} exceeded, will not store request payload", limit);
+            return chain.filter(exchange);
         }
+
+        return modifyRequestBodyFilter
+                .apply(
+                        new ModifyRequestBodyGatewayFilterFactory.Config()
+                                .setRewriteFunction(byte[].class, byte[].class, requestBodyRewrite))
+                .filter(exchange, chain);
+    }
 
     public int getOrder() {
         return REQUEST_TRANSFORM_FILTER_ORDER;

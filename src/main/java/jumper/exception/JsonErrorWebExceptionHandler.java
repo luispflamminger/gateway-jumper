@@ -30,6 +30,7 @@ import reactor.core.publisher.Mono;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 
@@ -87,6 +88,7 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
     protected RouterFunction<ServerResponse> getRoutingFunction(ErrorAttributes errorAttributes) {
         return RouterFunctions.route(RequestPredicates.all(), this::renderErrorResponse);
     }
+
     @Override
     protected Mono<ServerResponse> renderErrorResponse(ServerRequest request) {
         Map<String, Object> error = this.getErrorAttributes(request, this.getErrorAttributeOptions(request, MediaType.ALL));
@@ -164,7 +166,7 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
                 return reason;
 
             } else {
-                return error.getMessage() != null ? error.getMessage() : "";
+                return Objects.nonNull(error.getMessage()) ? error.getMessage() : "";
             }
         }
     }

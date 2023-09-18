@@ -11,11 +11,11 @@ import org.springframework.stereotype.Component;
 import java.util.Set;
 
 @Component
-public class RemoveHeaderFilter extends AbstractGatewayFilterFactory<RemoveHeaderFilter.Config> {
+public class RemoveRequestHeaderFilter extends AbstractGatewayFilterFactory<RemoveRequestHeaderFilter.Config> {
 	
-	public static final int REMOVE_HEADER_FILTER_ORDER = RequestFilter.REQUEST_FILTER_ORDER +1;
+	public static final int REMOVE_REQUEST_HEADER_FILTER_ORDER = RequestFilter.REQUEST_FILTER_ORDER +1;
 	
-	public RemoveHeaderFilter() {
+	public RemoveRequestHeaderFilter() {
 		super(Config.class);
 	}
 	
@@ -31,13 +31,13 @@ public class RemoveHeaderFilter extends AbstractGatewayFilterFactory<RemoveHeade
 					.request(request)
 					.build());
 
-		}, REMOVE_HEADER_FILTER_ORDER);
+		}, REMOVE_REQUEST_HEADER_FILTER_ORDER);
 			
 	}
 
 	@Getter
 	@Setter
-	public static class Config {
+	public static class Config extends AbstractGatewayFilterFactory.NameConfig{
 		private Set<String> headers;
 	}
 }

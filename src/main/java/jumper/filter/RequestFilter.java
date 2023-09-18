@@ -45,6 +45,10 @@ import static net.logstash.logback.argument.StructuredArguments.value;
 @Slf4j
 public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Config> {
 
+    private final CurrentTraceContext currentTraceContext;
+    private final Tracer tracer;
+    private final OauthTokenUtil oauthTokenUtilService;
+
     @Value( "${jumper.issuer.url}")
     private String localIssuerUrl;
 
@@ -53,20 +57,17 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
     public static final int REQUEST_FILTER_ORDER = RouteToRequestUrlFilter.ROUTE_TO_URL_FILTER_ORDER + 1;
 
-    private final CurrentTraceContext currentTraceContext;
-
-    private final OauthTokenUtil oauthTokenUtilService;
-
-    public RequestFilter(CurrentTraceContext currentTraceContext, OauthTokenUtil oauthTokenUtil) {
+    public RequestFilter(CurrentTraceContext currentTraceContext, Tracer tracer, OauthTokenUtil oauthTokenUtil) {
         super(Config.class);
         this.currentTraceContext = currentTraceContext;
+        this.tracer = tracer;
         this.oauthTokenUtilService = oauthTokenUtil;
     }
 
     @Override
     public GatewayFilter apply(Config config) {
         return new OrderedGatewayFilter((exchange, chain) -> {
-            WebFluxSleuthOperators.withSpanInScope(config.tracer, currentTraceContext, exchange, () -> {
+            WebFluxSleuthOperators.withSpanInScope(tracer, currentTraceContext, exchange, () -> {
 
                 ServerHttpRequest request = exchange.getRequest();
 
@@ -300,7 +301,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                     log.info("logging request: {}", value("jumperInfo", jumperInfoRequest));
                 }
 
-                addTracingInfo(request, config.tracer);
+                addTracingInfo(request);
 
             });
             return chain.filter(exchange)
@@ -398,7 +399,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         }
     }
 
-    private void addTracingInfo(ServerHttpRequest request, Tracer tracer) {
+    private void addTracingInfo(ServerHttpRequest request) {
 
         String xTardisTraceId = request.getHeaders().getFirst( Constants.HEADER_X_TARDIS_TRACE_ID);
 
@@ -457,13 +458,12 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         return log.isInfoEnabled();
     }
 
-    @Getter
     @AllArgsConstructor
-    public static class Config {
+    @Getter
+    public static class Config extends AbstractGatewayFilterFactory.NameConfig {
 
         private boolean preLogger;
         private boolean postLogger;
-        private Tracer tracer;
         private String routePathPrefix;
 
     }

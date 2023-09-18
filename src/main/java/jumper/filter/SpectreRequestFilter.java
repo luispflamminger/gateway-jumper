@@ -45,6 +45,6 @@ public class SpectreRequestFilter extends AbstractGatewayFilterFactory<SpectreRe
         }, AUTO_EVENT_REQUEST_FILTER_ORDER);
     }
 
-    public static class Config {
+    public static class Config extends AbstractGatewayFilterFactory.NameConfig {
     }
 }
