@@ -27,33 +27,31 @@ public class JumperConfig {
     String api_base_path;
     String consumer;
     String api_resource;
-/*
-    String token_endpoint;
-    String tif_remote_issuer;
-    String tif_clientID;
-    String tif_clientSecret;
-    String access_token_forwarding;
-    String realmName;
-    String envName;
-    String xB3TraceId;
-    String xTardisTraceId;
-    String xBusinessContext;
-    String xRequestId;
-    String xCorrelationId;
-    String requestPath;
-    String remote_api_url;
-    String debugHeader;
-*/
+
+    /*
+        String token_endpoint;
+        String tif_remote_issuer;
+        String tif_clientID;
+        String tif_clientSecret;
+        String access_token_forwarding;
+        String realmName;
+        String envName;
+        String xB3TraceId;
+        String xTardisTraceId;
+        String xBusinessContext;
+        String xRequestId;
+        String xCorrelationId;
+        String requestPath;
+        String remote_api_url;
+        String debugHeader;
+    */
     @JsonIgnore
     public static String toBase64(JumperConfig jc) {
         String jsonConfigBase64 = null;
-        try
-        {
-            String decodedJson = new ObjectMapper().writeValueAsString( jc);
-            jsonConfigBase64 = Base64.getEncoder().encodeToString( decodedJson.getBytes());
-        }
-        catch( JsonProcessingException e)
-        {
+        try {
+            String decodedJson = new ObjectMapper().writeValueAsString(jc);
+            jsonConfigBase64 = Base64.getEncoder().encodeToString(decodedJson.getBytes());
+        } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
 
@@ -62,14 +60,11 @@ public class JumperConfig {
 
     @JsonIgnore
     public static JumperConfig fromBase64(String jsonConfigBase64) {
-        String decodedJson = new String(Base64.getDecoder().decode( jsonConfigBase64.getBytes()));
+        String decodedJson = new String(Base64.getDecoder().decode(jsonConfigBase64.getBytes()));
         JumperConfig jc = null;
-        try
-        {
-            jc = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false).readValue( decodedJson, JumperConfig.class);
-        }
-        catch( JsonProcessingException e)
-        {
+        try {
+            jc = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false).readValue(decodedJson, JumperConfig.class);
+        } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
 
@@ -77,10 +72,10 @@ public class JumperConfig {
     }
 
     @JsonIgnore
-    public void fillWithLegacyHeaders( ServerHttpRequest request) {
-        scopes = request.getHeaders().getFirst( Constants.HEADER_CLIENT_SCOPES);
-        consumerToken = request.getHeaders().getFirst( Constants.HEADER_AUTHORIZATION);
-        api_base_path = request.getHeaders().getFirst( Constants.HEADER_API_BASE_PATH);
+    public void fillWithLegacyHeaders(ServerHttpRequest request) {
+        scopes = request.getHeaders().getFirst(Constants.HEADER_CLIENT_SCOPES);
+        consumerToken = request.getHeaders().getFirst(Constants.HEADER_AUTHORIZATION);
+        api_base_path = request.getHeaders().getFirst(Constants.HEADER_API_BASE_PATH);
         api_resource = request.getPath().value();
 
 /*
@@ -107,15 +102,12 @@ public class JumperConfig {
 
 
     @JsonIgnore
-    public static JumperConfig parseConfigFrom(ServerWebExchange exchange){
-        JumperConfig jc = null;
-        String jumper_config_Base64 = exchange.getAttribute(Constants.HEADER_JUMPER_CONFIG);
-        if (jumper_config_Base64 != null && !jumper_config_Base64.isEmpty()) {
-            jc = JumperConfig.fromBase64(jumper_config_Base64);
+    public static JumperConfig parseConfigFrom(ServerWebExchange exchange) {
+        String jumperConfigBase64 = exchange.getAttribute(Constants.HEADER_JUMPER_CONFIG);
+        if (jumperConfigBase64 != null && !jumperConfigBase64.isEmpty()) {
+            return JumperConfig.fromBase64(jumperConfigBase64);
+        } else {
+            return new JumperConfig();
         }
-        else{
-            jc = new JumperConfig();
-        }
-        return jc;
     }
 }

@@ -10,6 +10,7 @@ import jumper.model.config.JumperConfig;
 import jumper.model.request.IncomingRequest;
 import jumper.model.request.JumperInfoRequest;
 import jumper.model.request.OutgoingRequest;
+import jumper.service.HeaderUtilService;
 import jumper.service.OauthTokenUtilService;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -31,7 +32,6 @@ import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
-import reactor.core.publisher.Mono;
 
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -47,6 +47,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
     private final CurrentTraceContext currentTraceContext;
     private final Tracer tracer;
+    private final HeaderUtilService headerUtilService;
     private final OauthTokenUtilService oauthTokenUtilService;
 
     @Value( "${jumper.issuer.url}")
@@ -57,10 +58,11 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
     public static final int REQUEST_FILTER_ORDER = RouteToRequestUrlFilter.ROUTE_TO_URL_FILTER_ORDER + 1;
 
-    public RequestFilter(CurrentTraceContext currentTraceContext, Tracer tracer, OauthTokenUtilService oauthTokenUtilService) {
+    public RequestFilter(CurrentTraceContext currentTraceContext, Tracer tracer, HeaderUtilService headerUtilService, OauthTokenUtilService oauthTokenUtilService) {
         super(Config.class);
         this.currentTraceContext = currentTraceContext;
         this.tracer = tracer;
+        this.headerUtilService = headerUtilService;
         this.oauthTokenUtilService = oauthTokenUtilService;
     }
 
@@ -73,20 +75,20 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
                 String client_scope = "";
 
-                String token_endpoint = getLastValueFromHeaderField(request, Constants.HEADER_TOKEN_ENDPOINT);
-                String tif_remote_issuer = getLastValueFromHeaderField(request, Constants.HEADER_ISSUER);
-                String tif_clientID = getLastValueFromHeaderField(request, Constants.HEADER_CLIENT_ID);
-                String tif_clientSecret = getLastValueFromHeaderField(request, Constants.HEADER_CLIENT_SECRET);
-                String consumerToken = request.getHeaders().getFirst(Constants.HEADER_AUTHORIZATION);
-                String api_base_path = getLastValueFromHeaderField(request, Constants.HEADER_API_BASE_PATH);
-                String access_token_forwarding = getLastValueFromHeaderField(request, Constants.HEADER_ACCESS_TOKEN_FORWARDING);
-                String realmName = getLastValueFromHeaderField(request, Constants.HEADER_REALM);
+                String token_endpoint = headerUtilService.getLastValueFromHeaderField(request, Constants.HEADER_TOKEN_ENDPOINT);
+                String tif_remote_issuer = headerUtilService.getLastValueFromHeaderField(request, Constants.HEADER_ISSUER);
+                String tif_clientID = headerUtilService.getLastValueFromHeaderField(request, Constants.HEADER_CLIENT_ID);
+                String tif_clientSecret = headerUtilService.getLastValueFromHeaderField(request, Constants.HEADER_CLIENT_SECRET);
+                String consumerToken = headerUtilService.getFirstValueFromHeaderField(request,Constants.HEADER_AUTHORIZATION);
+                String api_base_path = headerUtilService.getLastValueFromHeaderField(request, Constants.HEADER_API_BASE_PATH);
+                String access_token_forwarding = headerUtilService.getLastValueFromHeaderField(request, Constants.HEADER_ACCESS_TOKEN_FORWARDING);
+                String realmName = headerUtilService.getLastValueFromHeaderField(request, Constants.HEADER_REALM);
 
                 if (StringUtils.isBlank(realmName)) {
                     realmName = Constants.DEFAULT_REALM;
                 }
 
-                String envName = getLastValueFromHeaderField(request, Constants.HEADER_ENVIRONMENT);
+                String envName = headerUtilService.getLastValueFromHeaderField(request, Constants.HEADER_ENVIRONMENT);
 
                 String routing_path;
                 String requestPath = api_base_path;
@@ -98,11 +100,11 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                     throw new RuntimeException("missing mandatory header remote_api_url");
                 }
 
-                String xSpacegateClientId = request.getHeaders().getFirst(Constants.HEADER_X_SPACEGATE_CLIENT_ID);
-                String xSpacegateClientSecret = request.getHeaders().getFirst(Constants.HEADER_X_SPACEGATE_CLIENT_SECRET);
-                String xSpacegateScope = request.getHeaders().getFirst(Constants.HEADER_X_SPACEGATE_SCOPE);
+                String xSpacegateClientId = headerUtilService.getFirstValueFromHeaderField(request, Constants.HEADER_X_SPACEGATE_CLIENT_ID);
+                String xSpacegateClientSecret = headerUtilService.getLastValueFromHeaderField(request, Constants.HEADER_X_SPACEGATE_CLIENT_SECRET);
+                String xSpacegateScope = headerUtilService.getLastValueFromHeaderField(request, Constants.HEADER_X_SPACEGATE_SCOPE);
 
-                String jumper_config_Base64 = getLastValueFromHeaderField(request, Constants.HEADER_JUMPER_CONFIG);
+                String jumper_config_Base64 = headerUtilService.getLastValueFromHeaderField(request, Constants.HEADER_JUMPER_CONFIG);
 
                 String consumerTokenWithoutSignature = oauthTokenUtilService.getTokenWithoutSignature(consumerToken);
                 Jwt<Header, Claims> consumerTokenclaims = oauthTokenUtilService.getAllClaimsFromToken(consumerTokenWithoutSignature);
@@ -126,13 +128,8 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                 //store enhanced jumper_config for usage in SpectreFilters
                 exchange.getAttributes().put(Constants.HEADER_JUMPER_CONFIG, JumperConfig.toBase64(jc));
 
-                // Pre-processing
-                if (config.isPreLogger()) {
-                    log.debug("Pre GatewayFilter logging");
-                }
-
                 JumperInfoRequest jumperInfoRequest = null;
-                if (isLogLevelEnabled()){
+                if (isInfoLogLevelEnabled()){
                     jumperInfoRequest = new JumperInfoRequest();
                     jumperInfoRequest.setEnvironment(envName);
                 }
@@ -162,7 +159,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
                         if (jc.getBasicAuth() != null && (jc.getBasicAuth().containsKey(consumer) || jc.getBasicAuth().containsKey(Constants.BASIC_AUTH_PROVIDER_KEY))) {
                             log.debug("----------------BASIC AUTH HEADER-------------");
-                            if (isLogLevelEnabled()) {
+                            if (isInfoLogLevelEnabled()) {
                                 jumperInfoRequest.setLastMileSecurity(false);
                                 jumperInfoRequest.setLastMileSecurityEnhanced(false);
                                 jumperInfoRequest.setMeshActivated(false);
@@ -171,7 +168,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                             }
 
                             BasicAuthCredentials basicAuthCredentials = jc.getBasicAuth().containsKey(consumer) ? jc.getBasicAuth().get(consumer) : jc.getBasicAuth().get(Constants.BASIC_AUTH_PROVIDER_KEY);
-                            addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BASIC + " " + OauthTokenUtilService.encodeBasicAuth(basicAuthCredentials.getUsername(), basicAuthCredentials.getPassword()));
+                            headerUtilService.addHeader(exchange, Constants.HEADER_AUTHORIZATION, Constants.BASIC + " " + OauthTokenUtilService.encodeBasicAuth(basicAuthCredentials.getUsername(), basicAuthCredentials.getPassword()));
                         } else {
 
 
@@ -180,7 +177,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                             // Egress
                             if (token_endpoint != null) {
                                 log.debug("----------------EXTERNAL AUTHORIZATION-------------");
-                                if (isLogLevelEnabled()) {
+                                if (isInfoLogLevelEnabled()) {
                                     jumperInfoRequest.setLastMileSecurity(false);
                                     jumperInfoRequest.setLastMileSecurityEnhanced(false);
                                     jumperInfoRequest.setMeshActivated(false);
@@ -192,7 +189,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
                                 if (jc.getOauth() != null && jc.getOauth().containsKey(consumer) && jc.getOauth().get(consumer).getGrantType() != null && !jc.getOauth().get(consumer).getGrantType().isBlank()) {
                                     TokenInfo tokenInfo = oauthTokenUtilService.getAccessToken(token_endpoint, jc.getOauth().get(consumer), consumer);
-                                    addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER + " " + tokenInfo.getAccessToken());
+                                    headerUtilService.addHeader(exchange, Constants.HEADER_AUTHORIZATION, Constants.BEARER + " " + tokenInfo.getAccessToken());
                                 } else {
                                     clientCredentialsFlow_legacy(exchange, chain, client_scope, token_endpoint, tif_clientID, tif_clientSecret, xSpacegateClientId, xSpacegateClientSecret, xSpacegateScope, consumer, jc);
                                 }
@@ -200,7 +197,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
                             } else if (access_token_forwarding != null && access_token_forwarding.equals("false")) {
                                 log.debug("----------------LAST MILE SECURITY (ONE TOKEN)-------------");
-                                if (isLogLevelEnabled()) {
+                                if (isInfoLogLevelEnabled()) {
                                     jumperInfoRequest.setLastMileSecurity(true);
                                     jumperInfoRequest.setLastMileSecurityEnhanced(true);
                                     jumperInfoRequest.setMeshActivated(false);
@@ -217,11 +214,11 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                                         request.getHeaders().getFirst(Constants.HEADER_X_PUBSUB_PUBLISHER_ID),
                                         request.getHeaders().getFirst(Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID)
                                 );
-                                addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER + " " + lastmileSecurityToken);
+                                headerUtilService.addHeader(exchange, Constants.HEADER_AUTHORIZATION, Constants.BEARER + " " + lastmileSecurityToken);
                                 log.debug("lastMileSecurityToken: " + lastmileSecurityToken);
                             } else {
                                 log.debug("----------------LAST MILE SECURITY (LEGACY)-------------");
-                                if (isLogLevelEnabled()) {
+                                if (isInfoLogLevelEnabled()) {
                                     jumperInfoRequest.setLastMileSecurity(true);
                                     jumperInfoRequest.setLastMileSecurityEnhanced(false);
                                     jumperInfoRequest.setMeshActivated(false);
@@ -231,7 +228,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
                                 lastmileSecurityToken = oauthTokenUtilService.generateGatewayToken(envName, consumerToken, request.getMethod().toString(), requestPath, lmsIssuer);
 
-                                addHeader(exchange, chain, Constants.HEADER_LASTMILE_SECURITY_TOKEN, Constants.BEARER + " " + lastmileSecurityToken);
+                                headerUtilService.addHeader(exchange, Constants.HEADER_LASTMILE_SECURITY_TOKEN, Constants.BEARER + " " + lastmileSecurityToken);
                                 log.debug("lastMileSecurityToken: " + lastmileSecurityToken);
                             }
 
@@ -241,7 +238,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                             /** GW-2-GW MESH TOKEN GENERATION **/
                             log.debug("----------------GATEWAY MESH-------------");
 
-                            if (isLogLevelEnabled()) {
+                            if (isInfoLogLevelEnabled()) {
                                 jumperInfoRequest.setLastMileSecurity(false);
                                 jumperInfoRequest.setLastMileSecurityEnhanced(false);
                                 jumperInfoRequest.setMeshActivated(true);
@@ -254,8 +251,8 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                             TokenInfo meshTokenInfo = oauthTokenUtilService.getAccessToken(tif_remote_issuer, tif_clientID, tif_clientSecret);
 
                             // set gw and consumer tokens correctly
-                            addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, "Bearer " + meshTokenInfo.getAccessToken());
-                            addHeader(exchange, chain, Constants.HEADER_CONSUMER_TOKEN, consumerToken);
+                            headerUtilService.addHeader(exchange, Constants.HEADER_AUTHORIZATION, "Bearer " + meshTokenInfo.getAccessToken());
+                            headerUtilService.addHeader(exchange, Constants.HEADER_CONSUMER_TOKEN, consumerToken);
 
                             checkForSpaceZone(exchange, chain, consumerOriginZone, consumerToken);
 
@@ -263,8 +260,8 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
                 }
 
-                addHeader(exchange, chain, Constants.HEADER_X_ORIGIN_STARGATE, consumerOriginStargate);
-                addHeader(exchange, chain, Constants.HEADER_X_ORIGIN_ZONE, consumerOriginZone);
+                headerUtilService.addHeader(exchange, Constants.HEADER_X_ORIGIN_STARGATE, consumerOriginStargate);
+                headerUtilService.addHeader(exchange, Constants.HEADER_X_ORIGIN_ZONE, consumerOriginZone);
 
                 if (consumerOriginStargate != null) {
                     String hostStargate = "";
@@ -274,12 +271,12 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                     } catch (MalformedURLException e) {
                         log.error(e.getMessage(), e);
                     }
-                    addHeader(exchange, chain, Constants.HEADER_X_FORWARDED_HOST, hostStargate);
+                    headerUtilService.addHeader(exchange, Constants.HEADER_X_FORWARDED_HOST, hostStargate);
                 }
 
-                rewriteXForwardedHeader(exchange, chain);
+                headerUtilService.rewriteXForwardedHeader(exchange);
 
-                if(isLogLevelEnabled()) {
+                if(isInfoLogLevelEnabled()) {
                     IncomingRequest incReq = new IncomingRequest();
                     incReq.setBasePath(api_base_path);
                     incReq.setHost(remote_api_url);
@@ -304,16 +301,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                 addTracingInfo(request);
 
             });
-            return chain.filter(exchange)
-                    .then(Mono.fromRunnable(() -> {
-                        // Post-processing
-
-                        // do something with the response
-
-                        if (config.isPostLogger()) {
-                            log.debug("Post GatewayFilter logging");
-                        }
-                    }));
+            return chain.filter(exchange);
         }, RouteToRequestUrlFilter.ROUTE_TO_URL_FILTER_ORDER + 1);
     }
 
@@ -322,7 +310,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         {
             log.debug( "Using SubscriberClientId {} from xSpacegateClientId-Header", xSpacegateClientId);
             tif_clientID = xSpacegateClientId;
-            removeHeader(exchange, chain, Constants.HEADER_X_SPACEGATE_CLIENT_ID);
+            headerUtilService.removeHeader(exchange, Constants.HEADER_X_SPACEGATE_CLIENT_ID);
         }
         else if( jc.getOauth() != null && jc.getOauth().containsKey(consumer) && jc.getOauth().get(consumer).getClientId() != null && !jc.getOauth().get(consumer).getClientId().isBlank())
         {
@@ -339,7 +327,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         {
             log.debug( "Using SubscriberClientSecret from xSpacegateClientSecret-Header");
             tif_clientSecret = xSpacegateClientSecret;
-            removeHeader(exchange, chain, Constants.HEADER_X_SPACEGATE_CLIENT_SECRET);
+            headerUtilService.removeHeader(exchange, Constants.HEADER_X_SPACEGATE_CLIENT_SECRET);
         }
         else if( jc.getOauth() != null && jc.getOauth().containsKey(consumer) && jc.getOauth().get(consumer).getClientSecret() != null && !jc.getOauth().get(consumer).getClientSecret().isBlank())
         {
@@ -356,7 +344,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         {
             log.debug( "Using Scope from xSpacegateScope-Header");
             client_scope = xSpacegateScope;
-            removeHeader(exchange, chain, Constants.HEADER_X_SPACEGATE_SCOPE);
+            headerUtilService.removeHeader(exchange, Constants.HEADER_X_SPACEGATE_SCOPE);
         }
         else if( jc.getOauth() != null && jc.getOauth().containsKey(consumer) && jc.getOauth().get(consumer).getScopes() != null && !jc.getOauth().get(consumer).getScopes().isBlank())
         {
@@ -376,7 +364,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         if( tif_clientID != null && tif_clientSecret != null)
         {
             TokenInfo tokenInfo = oauthTokenUtilService.getAccessToken(token_endpoint, tif_clientID, tif_clientSecret, client_scope, consumer);
-            addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER+" "+tokenInfo.getAccessToken());
+            headerUtilService.addHeader(exchange, Constants.HEADER_AUTHORIZATION, Constants.BEARER+" "+tokenInfo.getAccessToken());
 
         }
         else
@@ -395,7 +383,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
     private void checkForSpaceZone(ServerWebExchange exchange, GatewayFilterChain chain, String zone, String token ) {
         if(zone != null && Constants.SPACE_ZONES.contains(zone)) {
-            addHeader(exchange, chain, Constants.HEADER_X_SPACEGATE_TOKEN, token);
+            headerUtilService.addHeader(exchange, Constants.HEADER_X_SPACEGATE_TOKEN, token);
         }
     }
 
@@ -422,31 +410,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         incomingRequestSpan.event("jrqf");
     }
 
-    private void rewriteXForwardedHeader( ServerWebExchange exchange, GatewayFilterChain chain) {
-        addHeader(exchange, chain, Constants.HEADER_X_FORWARDED_PORT, Constants.HEADER_X_FORWARDED_PORT_PORT);
-        addHeader(exchange, chain, Constants.HEADER_X_FORWARDED_PROTO, Constants.HEADER_X_FORWARDED_PROTO_HTTPS);
-
-
-    }
-
-    private void addHeader(ServerWebExchange exchange, GatewayFilterChain chain, String headerName, String headerValue) {
-        ServerHttpRequest request = exchange.getRequest()
-                .mutate()
-                .header(headerName, headerValue)
-                .build();
-        ServerWebExchange exchange1 = exchange.mutate().request(request).build();
-        chain.filter(exchange1);
-    }
-
-    private void removeHeader(ServerWebExchange exchange, GatewayFilterChain chain, String headerName){
-        ServerHttpRequest request = exchange.getRequest()
-                .mutate()
-                .headers(httpHeaders -> httpHeaders.remove(headerName))
-                .build();
-        ServerWebExchange exchange1 = exchange.mutate().request(request).build();
-        chain.filter(exchange1);
-    }
-
     private String setSecurityScopes(JumperConfig jumperConfig, String consumer){
         if (jumperConfig.getOauth() != null && jumperConfig.getOauth().containsKey(consumer)){
             return jumperConfig.getOauth().get(consumer).getScopes();
@@ -454,17 +417,13 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         return null;
     }
 
-    private boolean isLogLevelEnabled(){
+    private boolean isInfoLogLevelEnabled(){
         return log.isInfoEnabled();
     }
 
     @AllArgsConstructor
     @Getter
     public static class Config extends AbstractGatewayFilterFactory.NameConfig {
-
-        private boolean preLogger;
-        private boolean postLogger;
         private String routePathPrefix;
-
     }
 }

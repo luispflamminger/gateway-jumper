@@ -68,7 +68,7 @@ public class Application {
                 .route("jumper_route", p -> p
                         .path(Constants.PROXY_ROOT_PATH_PREFIX + "/**")
                         .filters(filterSpec -> filterSpec
-                                .filter(requestFilter.apply(new RequestFilter.Config(true, true, Constants.PROXY_ROOT_PATH_PREFIX)))
+                                .filter(requestFilter.apply(new RequestFilter.Config(Constants.PROXY_ROOT_PATH_PREFIX)))
                                 .filter(removeRequestHeader.apply(config -> config.setHeaders(headerList)))
                                 .filter(responseFilter.apply(config -> {}))
                         )
@@ -78,7 +78,7 @@ public class Application {
                 .route("listener_route", p -> p
                         .path(Constants.LISTENER_ROOT_PATH_PREFIX + "/**")
                         .filters(filterSpec -> filterSpec
-                                .filter(requestFilter.apply(new RequestFilter.Config(true, true, Constants.LISTENER_ROOT_PATH_PREFIX)))
+                                .filter(requestFilter.apply(new RequestFilter.Config(Constants.LISTENER_ROOT_PATH_PREFIX)))
                                 .filter(removeRequestHeader.apply(config -> config.setHeaders(headerList)))
                                 .filter(requestTransformationFilter)
                                 .filter(spectreRequestFilter.apply(config -> {}))
