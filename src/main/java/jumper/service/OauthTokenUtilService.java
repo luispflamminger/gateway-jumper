@@ -12,7 +12,9 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.SignatureException;
 import io.netty.channel.ConnectTimeoutException;
+import jumper.Constants;
 import jumper.model.TokenInfo;
+import jumper.model.config.JumperConfig;
 import jumper.model.config.KeyInfo;
 import jumper.model.config.OauthCredentials;
 import lombok.RequiredArgsConstructor;
@@ -22,8 +24,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.stereotype.Service;
-import org.springframework.util.Assert;
-import org.springframework.util.Base64Utils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
@@ -52,6 +52,7 @@ public class OauthTokenUtilService {
 
     private final WebClient webClient;
     private final TokenCacheService tokenCache;
+    private final BasicAuthUtilService basicAuthUtilService;
 
     private static String securityPath;
     private static String securityFile;
@@ -224,8 +225,8 @@ public class OauthTokenUtilService {
     }
 
 
-    public TokenInfo getAccessToken(String tokenEndpoint, String clientID, String clientSecret) {
-        return getAccessToken(tokenEndpoint, clientID, clientSecret, null, "");
+    public TokenInfo getInternalMeshAccessToken(JumperConfig jc) {
+        return getAccessToken(jc.getInternalTokenEndpoint() + Constants.ISSUER_SUFFIX, jc.getClientId(), jc.getClientSecret(), null, "");
     }
 
     public TokenInfo getAccessToken(String tokenEndpoint, String clientID, String clientSecret, String scope, String subscriberClientId) {
@@ -259,7 +260,7 @@ public class OauthTokenUtilService {
             String basicAuth = null;
 
             if (oauthCredentials.getClientId() != null && !oauthCredentials.getClientId().isBlank() && oauthCredentials.getClientSecret() != null && !oauthCredentials.getClientSecret().isBlank()) {
-                basicAuth = encodeBasicAuth(oauthCredentials.getClientId(), oauthCredentials.getClientSecret());
+                basicAuth = basicAuthUtilService.encodeBasicAuth(oauthCredentials.getClientId(), oauthCredentials.getClientSecret());
             }
 
             if (oauthCredentials.getUsername() != null && !oauthCredentials.getUsername().isBlank() && oauthCredentials.getPassword() != null && !oauthCredentials.getPassword().isBlank()) {
@@ -314,15 +315,6 @@ public class OauthTokenUtilService {
         tokenCache.saveToken(tokenKey, accessToken);
 
         return accessToken;
-    }
-
-    public static String encodeBasicAuth(String username, String password){
-        Assert.notNull(username, "Username must not be null");
-        Assert.doesNotContain(username, ":", "Username must not contain a colon");
-        Assert.notNull(password, "Password must not be null");
-
-        String basicAuthPreparation = username + ":" + password;
-        return Base64Utils.encodeToString(basicAuthPreparation.getBytes());
     }
 
     private void logClientErrorResponse(ClientResponse response, String tokenKey) {

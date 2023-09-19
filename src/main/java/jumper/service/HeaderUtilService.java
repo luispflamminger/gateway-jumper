@@ -2,11 +2,13 @@ package jumper.service;
 
 import jumper.Constants;
 import org.springframework.http.server.reactive.ServerHttpRequest;
-import org.springframework.stereotype.Service;
 import org.springframework.web.server.ServerWebExchange;
 
-@Service
 public class HeaderUtilService {
+
+    private HeaderUtilService() {
+        throw new IllegalStateException("Utility class");
+    }
 
     public static String getFirstValueFromHeaderField(ServerHttpRequest request, String headerName) {
         return request.getHeaders().getFirst(headerName);
@@ -36,7 +38,5 @@ public class HeaderUtilService {
     public static void rewriteXForwardedHeader( ServerWebExchange exchange) {
         addHeader(exchange, Constants.HEADER_X_FORWARDED_PORT, Constants.HEADER_X_FORWARDED_PORT_PORT);
         addHeader(exchange, Constants.HEADER_X_FORWARDED_PROTO, Constants.HEADER_X_FORWARDED_PROTO_HTTPS);
-
-
     }
 }

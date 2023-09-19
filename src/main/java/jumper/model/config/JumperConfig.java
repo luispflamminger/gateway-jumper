@@ -26,9 +26,13 @@ public class JumperConfig {
 
     String scopes;
     String consumerToken;
-    String api_base_path;
+    String apiBasePath;
     String consumer;
-    String api_resource;
+    String externalTokenEndpoint;
+    String internalTokenEndpoint;
+    String clientId;
+    String clientSecret;
+    Boolean accessTokenForwarding;
 
     /*
         String token_endpoint;
@@ -73,10 +77,19 @@ public class JumperConfig {
 
     @JsonIgnore
     public void fillWithLegacyHeaders(ServerHttpRequest request) {
-        scopes = request.getHeaders().getFirst(Constants.HEADER_CLIENT_SCOPES);
-        consumerToken = request.getHeaders().getFirst(Constants.HEADER_AUTHORIZATION);
-        api_base_path = request.getHeaders().getFirst(Constants.HEADER_API_BASE_PATH);
-        api_resource = request.getPath().value();
+        scopes = HeaderUtilService.getLastValueFromHeaderField(request, Constants.HEADER_CLIENT_SCOPES);
+        consumerToken = HeaderUtilService.getLastValueFromHeaderField(request, Constants.HEADER_AUTHORIZATION);
+        apiBasePath = HeaderUtilService.getLastValueFromHeaderField(request, Constants.HEADER_API_BASE_PATH);
+        externalTokenEndpoint = HeaderUtilService.getLastValueFromHeaderField(request, Constants.HEADER_TOKEN_ENDPOINT);
+        internalTokenEndpoint = HeaderUtilService.getLastValueFromHeaderField(request, Constants.HEADER_ISSUER);
+        clientId = HeaderUtilService.getLastValueFromHeaderField(request, Constants.HEADER_CLIENT_ID);
+        clientSecret = HeaderUtilService.getLastValueFromHeaderField(request, Constants.HEADER_CLIENT_SECRET);
+
+        if (request.getHeaders().containsKey(Constants.HEADER_ACCESS_TOKEN_FORWARDING)) {
+            accessTokenForwarding = Boolean.valueOf(HeaderUtilService.getLastValueFromHeaderField(request, Constants.HEADER_ACCESS_TOKEN_FORWARDING));
+        }
+
+
 
 /*
         token_endpoint = request.getHeaders().getFirst( Constants.HEADER_TOKEN_ENDPOINT);
