@@ -99,7 +99,7 @@ public class JumperConfig {
 
         setRemoteApiUrl(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_REMOTE_API_URL));
         setEnvName(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_ENVIRONMENT));
-        setXSpacegateClientId(HeaderUtil.getFirstValueFromHeaderField(request, Constants.HEADER_X_SPACEGATE_CLIENT_ID));
+        setXSpacegateClientId(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_SPACEGATE_CLIENT_ID));
         setXSpacegateClientSecret(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_SPACEGATE_CLIENT_SECRET));
         setXSpacegateScope(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_SPACEGATE_SCOPE));
     }
