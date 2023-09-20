@@ -48,7 +48,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class OauthTokenUtilService {
+public class OauthTokenUtil {
 
     private final WebClient webClient;
     private final TokenCacheService tokenCache;
@@ -81,7 +81,19 @@ public class OauthTokenUtilService {
         return splitToken[0] + "." + splitToken[1] + ".";
     }
 
-    public String getClaimFromToken(String consumerToken, String claimName) {
+    private String getSignature(String consumerToken) {
+
+        if (consumerToken == null){
+            throw new IllegalStateException("Consumer token not provided, but expected");
+        }
+
+        String[] token = consumerToken.split(" ");
+        String[] splitToken = token[1].split("\\.");
+
+        return splitToken[2];
+    }
+
+    public static String getClaimFromToken(String consumerToken, String claimName) {
         String consumerTokenWithoutSignature = getTokenWithoutSignature(consumerToken);
         return getAllClaimsFromToken(consumerTokenWithoutSignature).getBody().get(claimName, String.class);
     }
@@ -107,9 +119,7 @@ public class OauthTokenUtilService {
     public String generateExtGatewayToken(String envName, String consumerToken, String operation, String requestPath, String issuer, String scope, String publisherId, String subscriberId) {
         //nearly to pass additional claims as a map, so far scope + publisher
 
-        String[] token = consumerToken.split(" ");
-        String[] splitToken = token[1].split("\\.");
-        String consumerTokenWithoutSignature = splitToken[0] + "." + splitToken[1] + ".";
+        String consumerTokenWithoutSignature = getTokenWithoutSignature(consumerToken);
 
         Jwt<Header, Claims> gatewayTokenclaims = getAllClaimsFromToken(consumerTokenWithoutSignature);
 
@@ -148,10 +158,8 @@ public class OauthTokenUtilService {
     public String generateGatewayToken(String envName, String consumerToken, String operation, String requestPath, String issuer) {
 
 
-        String[] token = consumerToken.split(" ");
-        String[] splitToken = token[1].split("\\.");
-        String consumerTokenWithoutSignature = splitToken[0] + "." + splitToken[1] + ".";
-        String signature = splitToken[2];
+        String consumerTokenWithoutSignature = getTokenWithoutSignature(consumerToken);
+        String consumerTokenSignature = getSignature(consumerToken);
 
         Jwt<Header, Claims> gatewayTokenclaims = getAllClaimsFromToken(consumerTokenWithoutSignature);
 
@@ -169,7 +177,7 @@ public class OauthTokenUtilService {
         claims.put("sub", sub);
         claims.put("requestPath", requestPath);
         claims.put("operation", operation);
-        claims.put("accessTokenSignature", signature);
+        claims.put("accessTokenSignature", consumerTokenSignature);
         claims.put("originZone", consumerOriginZone);
         claims.put("originStargate", consumerOriginStargate);
         claims.put("clientId", clientId);

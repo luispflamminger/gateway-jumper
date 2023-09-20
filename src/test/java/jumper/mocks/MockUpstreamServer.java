@@ -3,7 +3,7 @@ package jumper.mocks;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Header;
 import io.jsonwebtoken.Jwt;
-import jumper.service.OauthTokenUtilService;
+import jumper.service.OauthTokenUtil;
 import org.mockserver.client.MockServerClient;
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.matchers.Times;
@@ -98,7 +98,7 @@ public class MockUpstreamServer {
                 );
 
         String token = recordedRequests[0].getFirstHeader("Authorization");
-        Jwt<Header, Claims> claimsFromToken = OauthTokenUtilService.getAllClaimsFromToken(OauthTokenUtilService.getTokenWithoutSignature(token));
+        Jwt<Header, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
         assertEquals(expectedValue, claimsFromToken.getBody().get(claim, String.class));
 
     }

@@ -1,12 +1,19 @@
 package jumper.service;
 
 import jumper.Constants;
+import jumper.model.config.JumperConfig;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.web.server.ServerWebExchange;
 
-public class HeaderUtilService {
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.Objects;
 
-    private HeaderUtilService() {
+@Slf4j
+public class HeaderUtil {
+
+    private HeaderUtil() {
         throw new IllegalStateException("Utility class");
     }
 
@@ -35,7 +42,19 @@ public class HeaderUtilService {
                 .build();
     }
 
-    public static void rewriteXForwardedHeader( ServerWebExchange exchange) {
+    public static void rewriteXForwardedHeader(ServerWebExchange exchange, JumperConfig jumperConfig) {
+
+        if (Objects.nonNull(jumperConfig.getConsumerOriginStargate())) {
+            String hostStargate = "";
+            try {
+                URL url = new URL(jumperConfig.getConsumerOriginStargate());
+                hostStargate = url.getHost();
+            } catch (MalformedURLException e) {
+                log.error(e.getMessage(), e);
+            }
+            HeaderUtil.addHeader(exchange, Constants.HEADER_X_FORWARDED_HOST, hostStargate);
+        }
+
         addHeader(exchange, Constants.HEADER_X_FORWARDED_PORT, Constants.HEADER_X_FORWARDED_PORT_PORT);
         addHeader(exchange, Constants.HEADER_X_FORWARDED_PROTO, Constants.HEADER_X_FORWARDED_PROTO_HTTPS);
     }

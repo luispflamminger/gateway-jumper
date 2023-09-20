@@ -58,6 +58,9 @@ public class Constants {
 	public static final String DEFAULT_REALM = "default";
 	public static final String BEARER = "Bearer";
 	public static final String BASIC = "Basic";
+	public static final String TOKEN_CLAIM_CLIENT_ID = "clientId";
+	public static final String TOKEN_CLAIM_ORIGIN_STARGATE = "originStargate";
+	public static final String TOKEN_CLAIM_ORIGIN_ZONE = "originZone";
 
     public static final List<String> SPACE_ZONES = List.of("space", "spacex", "canis", "aries");
 

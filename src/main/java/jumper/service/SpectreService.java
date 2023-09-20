@@ -37,7 +37,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SpectreService {
 
-    private final OauthTokenUtilService oauthTokenUtilService;
+    private final OauthTokenUtil oauthTokenUtil;
     private final Tracer tracer;
     private final CurrentTraceContext currentTraceContext;
 
@@ -142,7 +142,7 @@ public class SpectreService {
         publishEventMono(
                 publishEventUrl.replaceFirst(Constants.ENVIRONMENT_PLACEHOLDER, envName),
                 eventJson,
-                oauthTokenUtilService.generateGatewayTokenForPublisher(localIssuerUrl + "/" + envName),
+                oauthTokenUtil.generateGatewayTokenForPublisher(localIssuerUrl + "/" + envName),
                 event.getSpanId()
         ).subscribe();
 
@@ -159,7 +159,7 @@ public class SpectreService {
 
         } else if (jc.getConsumerToken() != null) {
             //on proxy route we need to use token
-            envName = oauthTokenUtilService.getClaimFromToken(jc.getConsumerToken(), "iss").replaceFirst(".*realms\\/", "");
+            envName = OauthTokenUtil.getClaimFromToken(jc.getConsumerToken(), "iss").replaceFirst(".*realms\\/", "");
         }
 
         return envName;

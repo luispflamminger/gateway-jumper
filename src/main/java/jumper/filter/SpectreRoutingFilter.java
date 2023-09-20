@@ -1,7 +1,7 @@
 package jumper.filter;
 
 import jumper.Constants;
-import jumper.service.OauthTokenUtilService;
+import jumper.service.OauthTokenUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
@@ -17,7 +17,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class SpectreRoutingFilter extends SetRequestHeaderGatewayFilterFactory {
 
-    private final OauthTokenUtilService oauthTokenUtilService;
+    private final OauthTokenUtil oauthTokenUtil;
 
     @Value( "${jumper.issuer.url}")
     private String localIssuerUrl;
@@ -33,11 +33,11 @@ public class SpectreRoutingFilter extends SetRequestHeaderGatewayFilterFactory {
             String consumerToken = req.getHeaders().getFirst(Constants.HEADER_AUTHORIZATION);
             String envName = Constants.DEFAULT_REALM;
             if (Objects.nonNull(consumerToken)) {
-                envName = oauthTokenUtilService.getClaimFromToken(consumerToken, "iss").replaceFirst(".*realms/", "");
+                envName = OauthTokenUtil.getClaimFromToken(consumerToken, "iss").replaceFirst(".*realms/", "");
             }
 
             //minimalistic token with correct issuer
-            String spectreToken = "Bearer " + oauthTokenUtilService.generateGatewayTokenForPublisher(localIssuerUrl + "/" + envName);
+            String spectreToken = "Bearer " + oauthTokenUtil.generateGatewayTokenForPublisher(localIssuerUrl + "/" + envName);
 
             //routing path is no longer fixed, so we set it here
             ServerHttpRequest request = req.mutate()

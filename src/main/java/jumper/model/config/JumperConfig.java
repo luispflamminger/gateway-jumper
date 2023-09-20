@@ -6,7 +6,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jumper.Constants;
-import jumper.service.HeaderUtilService;
+import jumper.service.HeaderUtil;
+import jumper.service.OauthTokenUtil;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -25,14 +26,22 @@ public class JumperConfig {
     private GatewayClient gatewayClient;
 
     String scopes;
-    String consumerToken;
     String apiBasePath;
     String consumer;
+    String consumerOriginStargate;
+    String consumerOriginZone;
+    String consumerToken;
     String externalTokenEndpoint;
     String internalTokenEndpoint;
     String clientId;
     String clientSecret;
     Boolean accessTokenForwarding;
+    String realmName;
+    String remoteApiUrl;
+    String envName;
+    String xSpacegateClientId;
+    String xSpacegateClientSecret;
+    String xSpacegateScope;
 
     /*
         String token_endpoint;
@@ -77,18 +86,34 @@ public class JumperConfig {
 
     @JsonIgnore
     public void fillWithLegacyHeaders(ServerHttpRequest request) {
-        scopes = HeaderUtilService.getLastValueFromHeaderField(request, Constants.HEADER_CLIENT_SCOPES);
-        consumerToken = HeaderUtilService.getLastValueFromHeaderField(request, Constants.HEADER_AUTHORIZATION);
-        apiBasePath = HeaderUtilService.getLastValueFromHeaderField(request, Constants.HEADER_API_BASE_PATH);
-        externalTokenEndpoint = HeaderUtilService.getLastValueFromHeaderField(request, Constants.HEADER_TOKEN_ENDPOINT);
-        internalTokenEndpoint = HeaderUtilService.getLastValueFromHeaderField(request, Constants.HEADER_ISSUER);
-        clientId = HeaderUtilService.getLastValueFromHeaderField(request, Constants.HEADER_CLIENT_ID);
-        clientSecret = HeaderUtilService.getLastValueFromHeaderField(request, Constants.HEADER_CLIENT_SECRET);
+        setScopes(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_CLIENT_SCOPES));
+        setApiBasePath(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_API_BASE_PATH));
+        setExternalTokenEndpoint(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_TOKEN_ENDPOINT));
+        setInternalTokenEndpoint(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_ISSUER));
+        setClientId(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_CLIENT_ID));
+        setClientSecret(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_CLIENT_SECRET));
 
         if (request.getHeaders().containsKey(Constants.HEADER_ACCESS_TOKEN_FORWARDING)) {
-            accessTokenForwarding = Boolean.valueOf(HeaderUtilService.getLastValueFromHeaderField(request, Constants.HEADER_ACCESS_TOKEN_FORWARDING));
+            setAccessTokenForwarding(Boolean.valueOf(
+                    HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_ACCESS_TOKEN_FORWARDING)
+            ));
         }
 
+        setConsumerToken(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_AUTHORIZATION));
+        setConsumer(OauthTokenUtil.getClaimFromToken(consumerToken,Constants.TOKEN_CLAIM_CLIENT_ID));
+        setConsumerOriginStargate(OauthTokenUtil.getClaimFromToken(consumerToken,Constants.TOKEN_CLAIM_ORIGIN_STARGATE));
+        setConsumerOriginZone(OauthTokenUtil.getClaimFromToken(consumerToken,Constants.TOKEN_CLAIM_ORIGIN_ZONE));
+
+        setRealmName(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_REALM));
+        if (StringUtils.isBlank(getRealmName())) {
+            setRealmName(Constants.DEFAULT_REALM);
+        }
+
+        setRemoteApiUrl(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_REMOTE_API_URL));
+        setEnvName(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_ENVIRONMENT));
+        setXSpacegateClientId(HeaderUtil.getFirstValueFromHeaderField(request, Constants.HEADER_X_SPACEGATE_CLIENT_ID));
+        setXSpacegateClientSecret(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_SPACEGATE_CLIENT_SECRET));
+        setXSpacegateScope(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_SPACEGATE_SCOPE));
 
 
 /*
@@ -117,7 +142,7 @@ public class JumperConfig {
     public static JumperConfig parseConfigFrom(ServerHttpRequest request) {
 
         JumperConfig jc;
-        String jumperConfigBase64 = HeaderUtilService.getLastValueFromHeaderField(request, Constants.HEADER_JUMPER_CONFIG);
+        String jumperConfigBase64 = HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_JUMPER_CONFIG);
 
         if (StringUtils.isNotBlank(jumperConfigBase64)) {
             jc = JumperConfig.fromBase64(jumperConfigBase64);

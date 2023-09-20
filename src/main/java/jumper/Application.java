@@ -44,7 +44,7 @@ public class Application {
                                    SpectreRoutingFilter spectreRoutingFilter,
                                    SpectreBodyRewrite spectreBodyRewrite) {
 
-        Set<String> headerList = new HashSet<>(
+        Set<String> headerRemovalList = new HashSet<>(
                 Arrays.asList(
                         Constants.HEADER_JUMPER_CONFIG,
                         Constants.HEADER_TOKEN_ENDPOINT,
@@ -69,7 +69,7 @@ public class Application {
                         .path(Constants.PROXY_ROOT_PATH_PREFIX + "/**")
                         .filters(filterSpec -> filterSpec
                                 .filter(requestFilter.apply(new RequestFilter.Config(Constants.PROXY_ROOT_PATH_PREFIX)))
-                                .filter(removeRequestHeader.apply(config -> config.setHeaders(headerList)))
+                                .filter(removeRequestHeader.apply(config -> config.setHeaders(headerRemovalList)))
                                 .filter(responseFilter.apply(config -> {}))
                         )
                         .uri("no://op"))
@@ -79,7 +79,7 @@ public class Application {
                         .path(Constants.LISTENER_ROOT_PATH_PREFIX + "/**")
                         .filters(filterSpec -> filterSpec
                                 .filter(requestFilter.apply(new RequestFilter.Config(Constants.LISTENER_ROOT_PATH_PREFIX)))
-                                .filter(removeRequestHeader.apply(config -> config.setHeaders(headerList)))
+                                .filter(removeRequestHeader.apply(config -> config.setHeaders(headerRemovalList)))
                                 .filter(requestTransformationFilter)
                                 .filter(spectreRequestFilter.apply(config -> {}))
                                 .filter(responseFilter.apply(config -> {}))
@@ -110,10 +110,6 @@ public class Application {
 
                 .build();
     }
-
-
-
-
 
 }
 

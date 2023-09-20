@@ -3,7 +3,7 @@ package jumper.util;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import jumper.model.config.KeyInfo;
-import jumper.service.OauthTokenUtilService;
+import jumper.service.OauthTokenUtil;
 import lombok.Builder;
 
 import java.io.IOException;
@@ -58,7 +58,7 @@ public class AccessToken {
         Date expiration = new Date(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(5));
         KeyInfo keyInfo = null;
         try {
-            keyInfo = OauthTokenUtilService.loadKeyinfo();
+            keyInfo = OauthTokenUtil.loadKeyinfo();
         } catch (IOException e) {
             e.getStackTrace();
         }
