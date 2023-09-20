@@ -19,6 +19,7 @@ import jumper.model.config.KeyInfo;
 import jumper.model.config.OauthCredentials;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -26,7 +27,6 @@ import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -42,6 +42,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -71,7 +72,7 @@ public class OauthTokenUtil {
 
     public static String getTokenWithoutSignature(String consumerToken) {
 
-		if (consumerToken == null){
+		if (Objects.isNull(consumerToken)) {
 			throw new IllegalStateException("Consumer token not provided, but expected");
 		}
 
@@ -83,7 +84,7 @@ public class OauthTokenUtil {
 
     private String getSignature(String consumerToken) {
 
-        if (consumerToken == null){
+        if (Objects.isNull(consumerToken)) {
             throw new IllegalStateException("Consumer token not provided, but expected");
         }
 
@@ -124,7 +125,6 @@ public class OauthTokenUtil {
         Jwt<Header, Claims> gatewayTokenclaims = getAllClaimsFromToken(consumerTokenWithoutSignature);
 
         Date issuedAt = gatewayTokenclaims.getBody().getIssuedAt();
-
         Date expiration = gatewayTokenclaims.getBody().getExpiration();
         String clientId = gatewayTokenclaims.getBody().get("clientId", String.class);
         String consumerOriginZone = gatewayTokenclaims.getBody().get("originZone", String.class);
@@ -139,16 +139,25 @@ public class OauthTokenUtil {
         claims.put("requestPath", requestPath);
         claims.put("operation", operation);
         claims.put("clientId", clientId);
-        claims.put("env", envName);
         claims.put("originZone", consumerOriginZone);
         claims.put("originStargate", consumerOriginStargate);
-        if (scope != null) claims.put("scope", scope);
-        if (publisherId != null) claims.put("publisherId", publisherId);
-        if (subscriberId != null) {
+
+        claims.put("env", envName);
+
+        if (Objects.nonNull(scope)) {
+            claims.put("scope", scope);
+        }
+
+        if (Objects.nonNull(publisherId)) {
+            claims.put("publisherId", publisherId);
+        }
+
+        if (Objects.nonNull(subscriberId)) {
             claims.put("subscriberId", subscriberId);
             claims.put("aud", subscriberId);
         }
-        if (StringUtils.hasLength(aud)) {
+
+        if (StringUtils.isNotBlank(aud)) {
             claims.put("aud", aud);
         }
 
@@ -159,7 +168,6 @@ public class OauthTokenUtil {
 
 
         String consumerTokenWithoutSignature = getTokenWithoutSignature(consumerToken);
-        String consumerTokenSignature = getSignature(consumerToken);
 
         Jwt<Header, Claims> gatewayTokenclaims = getAllClaimsFromToken(consumerTokenWithoutSignature);
 
@@ -177,13 +185,16 @@ public class OauthTokenUtil {
         claims.put("sub", sub);
         claims.put("requestPath", requestPath);
         claims.put("operation", operation);
-        claims.put("accessTokenSignature", consumerTokenSignature);
+        claims.put("clientId", clientId);
         claims.put("originZone", consumerOriginZone);
         claims.put("originStargate", consumerOriginStargate);
-        claims.put("clientId", clientId);
-        if (StringUtils.hasLength(aud)) {
+
+        if (StringUtils.isNotBlank(aud)) {
             claims.put("aud", aud);
         }
+
+        String consumerTokenSignature = getSignature(consumerToken);
+        claims.put("accessTokenSignature", consumerTokenSignature);
 
         return generateToken(claims, issuer, expiration, issuedAt);
     }
@@ -248,7 +259,7 @@ public class OauthTokenUtil {
             claims.add("client_secret", clientSecret);
             claims.add("grant_type", AuthorizationGrantType.CLIENT_CREDENTIALS.getValue());
 
-            if (scope != null && !scope.isEmpty()) {
+            if (StringUtils.isNotBlank(scope)) {
                 claims.add("scope", scope);
             }
 

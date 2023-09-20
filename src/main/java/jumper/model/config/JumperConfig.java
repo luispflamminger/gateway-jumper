@@ -43,28 +43,10 @@ public class JumperConfig {
     String xSpacegateClientSecret;
     String xSpacegateScope;
 
-    //calculated routing stuff
+    //calculated routing stuff within requestFilter
     String requestPath;
     String routingPath;
 
-
-    /*
-        String token_endpoint;
-        String tif_remote_issuer;
-        String tif_clientID;
-        String tif_clientSecret;
-        String access_token_forwarding;
-        String realmName;
-        String envName;
-        String xB3TraceId;
-        String xTardisTraceId;
-        String xBusinessContext;
-        String xRequestId;
-        String xCorrelationId;
-        String requestPath;
-        String remote_api_url;
-        String debugHeader;
-    */
     @JsonIgnore
     public static String toBase64(JumperConfig jc) {
         String jsonConfigBase64 = null;
@@ -91,6 +73,7 @@ public class JumperConfig {
 
     @JsonIgnore
     public void fillWithLegacyHeaders(ServerHttpRequest request) {
+
         setScopes(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_CLIENT_SCOPES));
         setApiBasePath(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_API_BASE_PATH));
         setExternalTokenEndpoint(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_TOKEN_ENDPOINT));
@@ -119,28 +102,6 @@ public class JumperConfig {
         setXSpacegateClientId(HeaderUtil.getFirstValueFromHeaderField(request, Constants.HEADER_X_SPACEGATE_CLIENT_ID));
         setXSpacegateClientSecret(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_SPACEGATE_CLIENT_SECRET));
         setXSpacegateScope(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_SPACEGATE_SCOPE));
-
-
-/*
-        token_endpoint = request.getHeaders().getFirst( Constants.HEADER_TOKEN_ENDPOINT);
-        tif_remote_issuer = request.getHeaders().getFirst( Constants.HEADER_ISSUER);
-        tif_clientID = request.getHeaders().getFirst( Constants.HEADER_CLIENT_ID);
-        tif_clientSecret = request.getHeaders().getFirst( Constants.HEADER_CLIENT_SECRET);
-        access_token_forwarding = request.getHeaders().getFirst( Constants.HEADER_ACCESS_TOKEN_FORWARDING);
-        realmName = request.getHeaders().getFirst( Constants.HEADER_REALM);
-        envName = request.getHeaders().getFirst( Constants.HEADER_ENVIRONMENT);
-
-        xB3TraceId = request.getHeaders().getFirst( Constants.HEADER_X_B3_TRACE_ID);
-        xTardisTraceId = request.getHeaders().getFirst( Constants.HEADER_X_TARDIS_TRACE_ID);
-        xBusinessContext = request.getHeaders().getFirst( Constants.HEADER_X_BUSINESS_CONTEXT);
-        xRequestId = request.getHeaders().getFirst( Constants.HEADER_X_BUSINESS_CONTEXT);
-        xCorrelationId = request.getHeaders().getFirst( Constants.HEADER_X_CORRELATION_ID);
-
-        requestPath = api_base_path + api_resource;
-        remote_api_url = request.getHeaders().getFirst( Constants.HEADER_REMOTE_API_URL);
-
-        debugHeader = request.getHeaders().getFirst( Constants.HEADER_DEBUG_RESPONSE_HEADER);
- */
     }
 
     @JsonIgnore
