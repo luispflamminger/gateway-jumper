@@ -48,7 +48,6 @@ public class JumperInfoRequest {
             sb.append(lineSeparator);
         }
 
-
         return sb.toString();
 
     }

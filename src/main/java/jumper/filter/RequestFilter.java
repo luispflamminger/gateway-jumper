@@ -16,7 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
-import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.OrderedGatewayFilter;
 import org.springframework.cloud.gateway.filter.RouteToRequestUrlFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
@@ -70,50 +69,29 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
                 ServerHttpRequest request = exchange.getRequest();
 
-                //checking to prevent later nullPointer on inconsistent state from Kong
+                // checking to prevent later nullPointer on inconsistent state from Kong
                 if (!request.getHeaders().containsKey(Constants.HEADER_REMOTE_API_URL)) {
                     throw new RuntimeException("missing mandatory header " + Constants.HEADER_REMOTE_API_URL);
                 }
 
                 // Prepare and extract JumperConfigValues
                 JumperConfig jumperConfig = JumperConfig.parseConfigFrom(request);
-
-                // Prepare the routing stuff
-                String routing_path;
-                String requestPath = jumperConfig.getApiBasePath();
-                String lastmileSecurityToken = null;
-
-
                 log.debug("JumperConfig encodedAsBase64: {}", JumperConfig.toBase64(jumperConfig));
                 log.debug("JumperConfig decoded: {}", jumperConfig);
 
-                //store enhanced jumper_config for usage in Spectre
+                // calculate routing stuff and add it to exchange and JumperConfig
+                calculateRoutingStuff(request, exchange, config.getRoutePathPrefix(), jumperConfig);
+
+                // store enhanced jumper_config for usage in Spectre
                 exchange.getAttributes().put(Constants.HEADER_JUMPER_CONFIG, JumperConfig.toBase64(jumperConfig));
 
                 JumperInfoRequest jumperInfoRequest = null;
-                if (isInfoLogLevelEnabled()){
+                if (isInfoLogLevelEnabled()) {
                     jumperInfoRequest = new JumperInfoRequest();
                     jumperInfoRequest.setEnvironment(jumperConfig.getEnvName());
                 }
 
-                String finalApiUrl = "";
-                try {
-                    URI _uri = request.getURI();
-                    String _query = _uri.getRawQuery();
-                    String _fragment = _uri.getFragment();
-                    routing_path = _uri.getRawPath().replaceFirst("^" + config.getRoutePathPrefix(), ""); //for token should be also decoded
-                    if (requestPath != null) requestPath += routing_path;
-                    if (_query != null) routing_path = routing_path + "?" + _query;
-                    if (_fragment != null) routing_path = routing_path + "#" + _fragment;
 
-                    finalApiUrl = jumperConfig.getRemoteApiUrl().replaceAll("/$", "") + routing_path;
-
-                    log.debug("Routing set to: " + finalApiUrl);
-
-                    exchange.getAttributes().put(ServerWebExchangeUtils.GATEWAY_REQUEST_URL_ATTR, new URI(finalApiUrl));
-                } catch (URISyntaxException e) {
-                    throw new RuntimeException("can not construct URL from " + finalApiUrl, e);
-                }
 
                 if (!jumperConfig.getRemoteApiUrl().startsWith(Constants.LOCALHOST_ISSUER_SERVICE)) {
                     if (Objects.isNull(jumperConfig.getInternalTokenEndpoint())) {
@@ -153,7 +131,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                                     TokenInfo tokenInfo = oauthTokenUtil.getAccessToken(jumperConfig.getExternalTokenEndpoint(), jumperConfig.getOauth().get(jumperConfig.getConsumer()), jumperConfig.getConsumer());
                                     HeaderUtil.addHeader(exchange, Constants.HEADER_AUTHORIZATION, Constants.BEARER + " " + tokenInfo.getAccessToken());
                                 } else {
-                                    clientCredentialsFlow_legacy(exchange, chain, jumperConfig);
+                                    clientCredentialsFlow_legacy(exchange, jumperConfig);
                                 }
 
 
@@ -167,12 +145,12 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                                     jumperInfoRequest.setBasicAuth(false);
                                 }
 
-                                lastmileSecurityToken = oauthTokenUtil.generateExtGatewayToken(jumperConfig.getEnvName(),
+                                String lastmileSecurityToken = oauthTokenUtil.generateExtGatewayToken(jumperConfig.getEnvName(),
                                         jumperConfig.getConsumerToken(),
                                         request.getMethod().toString(),
-                                        requestPath,
+                                        jumperConfig.getRequestPath(),
                                         lmsIssuer,
-                                        setSecurityScopes(jumperConfig),
+                                        getSecurityScopes(jumperConfig),
                                         request.getHeaders().getFirst(Constants.HEADER_X_PUBSUB_PUBLISHER_ID),
                                         request.getHeaders().getFirst(Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID)
                                 );
@@ -188,7 +166,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                                     jumperInfoRequest.setBasicAuth(false);
                                 }
 
-                                lastmileSecurityToken = oauthTokenUtil.generateGatewayToken(jumperConfig.getEnvName(), jumperConfig.getConsumerToken(), request.getMethod().toString(), requestPath, lmsIssuer);
+                                String lastmileSecurityToken = oauthTokenUtil.generateGatewayToken(jumperConfig.getEnvName(), jumperConfig.getConsumerToken(), request.getMethod().toString(), jumperConfig.getRequestPath(), lmsIssuer);
 
                                 HeaderUtil.addHeader(exchange, Constants.HEADER_LASTMILE_SECURITY_TOKEN, Constants.BEARER + " " + lastmileSecurityToken);
                                 log.debug("lastMileSecurityToken: " + lastmileSecurityToken);
@@ -214,7 +192,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                             HeaderUtil.addHeader(exchange, Constants.HEADER_AUTHORIZATION, "Bearer " + meshTokenInfo.getAccessToken());
                             HeaderUtil.addHeader(exchange, Constants.HEADER_CONSUMER_TOKEN, jumperConfig.getConsumerToken());
 
-                            checkForSpaceZone(exchange, chain, jumperConfig.getConsumerOriginZone(), jumperConfig.getConsumerToken());
+                            checkForSpaceZone(exchange, jumperConfig.getConsumerOriginZone(), jumperConfig.getConsumerToken());
 
                     }
 
@@ -229,15 +207,15 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                     incReq.setBasePath(jumperConfig.getApiBasePath());
                     incReq.setHost(jumperConfig.getRemoteApiUrl());
                     incReq.setMethod(request.getMethodValue());
-                    incReq.setResource(routing_path);
+                    incReq.setResource(jumperConfig.getRoutingPath());
 
                     OutgoingRequest outgoingRequest = new OutgoingRequest();
                     outgoingRequest.setHost(jumperConfig.getRemoteApiUrl());
                     outgoingRequest.setBasePath(null);
-                    outgoingRequest.setResource(routing_path);
+                    outgoingRequest.setResource(jumperConfig.getRoutingPath());
                     outgoingRequest.setMethod(request.getMethod().toString());
 
-                    HashMap<String, String> logEntries = new HashMap<String, String>();
+                    HashMap<String, String> logEntries = new HashMap<>();
                     logEntries.put("Thread name", Thread.currentThread().getName());
 
                     incReq.setLogEntries(logEntries);
@@ -253,7 +231,40 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         }, RouteToRequestUrlFilter.ROUTE_TO_URL_FILTER_ORDER + 1);
     }
 
-    private void clientCredentialsFlow_legacy(ServerWebExchange exchange, GatewayFilterChain chain, JumperConfig jc) {
+    private void calculateRoutingStuff(ServerHttpRequest request, ServerWebExchange exchange, String routePathPrefix, JumperConfig jumperConfig) {
+
+        try {
+            URI uri = request.getURI();
+            String queryParameterPart = uri.getRawQuery();
+            String fragmentPart = uri.getFragment();
+            String routingPath = uri.getRawPath().replaceFirst("^" + routePathPrefix, "");
+
+            String requestPath = jumperConfig.getApiBasePath() + routingPath;
+
+            if (Objects.nonNull(queryParameterPart)) {
+                routingPath += "?" + queryParameterPart;
+            }
+
+            if (Objects.nonNull(fragmentPart)) {
+                routingPath += "#" + fragmentPart;
+            }
+
+            String finalApiUrl = jumperConfig.getRemoteApiUrl().replaceAll("/$", "") + routingPath;
+
+            // store final destination url to exchange
+            log.debug("Routing set to: " + finalApiUrl);
+            exchange.getAttributes().put(ServerWebExchangeUtils.GATEWAY_REQUEST_URL_ATTR, new URI(finalApiUrl));
+
+            // add calculated stuff to jumperConfig
+            jumperConfig.setRequestPath(requestPath);
+            jumperConfig.setRoutingPath(routingPath);
+
+        } catch (URISyntaxException e) {
+            throw new RuntimeException("can not construct URL from " + request.getURI(), e);
+        }
+    }
+
+    private void clientCredentialsFlow_legacy(ServerWebExchange exchange, JumperConfig jc) {
 
         String clientScope = "";
         String consumer = jc.getConsumer();
@@ -327,43 +338,13 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         }
     }
 
-    private String getLastValueFromHeaderField(ServerHttpRequest request, String headerName) {
-        return request.getHeaders().getValuesAsList(headerName)
-                .stream()
-                .reduce((first, last) -> last)
-                .orElse(null);
-    }
-
-    private void checkForSpaceZone(ServerWebExchange exchange, GatewayFilterChain chain, String zone, String token ) {
-        if(zone != null && Constants.SPACE_ZONES.contains(zone)) {
+    private void checkForSpaceZone(ServerWebExchange exchange, String zone, String token ) {
+        if (zone != null && Constants.SPACE_ZONES.contains(zone)) {
             HeaderUtil.addHeader(exchange, Constants.HEADER_X_SPACEGATE_TOKEN, token);
         }
     }
 
-    private void addTracingInfo(ServerHttpRequest request) {
-
-        String xTardisTraceId = request.getHeaders().getFirst( Constants.HEADER_X_TARDIS_TRACE_ID);
-
-        String contentLength = request.getHeaders().getFirst("Content-Length");
-
-        Span incomingRequestSpan = tracer.currentSpan();
-        incomingRequestSpan.name("Incoming Request");
-
-        if (contentLength == null) {
-            incomingRequestSpan.tag("message.size", "0");//todo would prefer to set NA for this (chunked transfer?) scenario
-        } else {
-            incomingRequestSpan.tag("message.size", contentLength);
-        }
-
-        if( xTardisTraceId != null){
-            incomingRequestSpan.tag( Constants.HEADER_X_TARDIS_TRACE_ID, xTardisTraceId);
-        }
-
-        incomingRequestSpan.remoteServiceName(applicationName);
-        incomingRequestSpan.event("jrqf");
-    }
-
-    private String setSecurityScopes(JumperConfig jumperConfig){
+    private String getSecurityScopes(JumperConfig jumperConfig){
 
         String consumer = jumperConfig.getConsumer();
 
@@ -372,6 +353,25 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         }
 
         return null;
+    }
+
+    private void addTracingInfo(ServerHttpRequest request) {
+
+        String xTardisTraceId = HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_TARDIS_TRACE_ID);
+        String contentLength = HeaderUtil.getLastValueFromHeaderField(request, "Content-Length");
+
+        Span incomingRequestSpan = tracer.currentSpan();
+        incomingRequestSpan.name("Incoming Request");
+
+        //todo would prefer to set NA for this (chunked transfer?) scenario
+        incomingRequestSpan.tag("message.size", Objects.requireNonNullElse(contentLength, "0"));
+
+        if ( xTardisTraceId != null) {
+            incomingRequestSpan.tag( Constants.HEADER_X_TARDIS_TRACE_ID, xTardisTraceId);
+        }
+
+        incomingRequestSpan.remoteServiceName(applicationName);
+        incomingRequestSpan.event("jrqf");
     }
 
     private boolean isInfoLogLevelEnabled(){

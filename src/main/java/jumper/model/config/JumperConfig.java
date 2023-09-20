@@ -43,6 +43,11 @@ public class JumperConfig {
     String xSpacegateClientSecret;
     String xSpacegateScope;
 
+    //calculated routing stuff
+    String requestPath;
+    String routingPath;
+
+
     /*
         String token_endpoint;
         String tif_remote_issuer;
