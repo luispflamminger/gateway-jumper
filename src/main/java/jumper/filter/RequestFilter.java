@@ -6,7 +6,6 @@ import jumper.model.config.BasicAuthCredentials;
 import jumper.model.config.JumperConfig;
 import jumper.model.request.IncomingRequest;
 import jumper.model.request.JumperInfoRequest;
-import jumper.model.request.OutgoingRequest;
 import jumper.service.BasicAuthUtilService;
 import jumper.service.HeaderUtil;
 import jumper.service.OauthTokenUtil;
@@ -34,6 +33,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Objects;
+import java.util.Optional;
 
 import static net.logstash.logback.argument.StructuredArguments.value;
 
@@ -85,13 +85,9 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                 // store enhanced jumper_config for usage in Spectre
                 exchange.getAttributes().put(Constants.HEADER_JUMPER_CONFIG, JumperConfig.toBase64(jumperConfig));
 
-                JumperInfoRequest jumperInfoRequest = null;
-                if (isInfoLogLevelEnabled()) {
-                    jumperInfoRequest = new JumperInfoRequest();
-                    jumperInfoRequest.setEnvironment(jumperConfig.getEnvName());
-                }
 
-
+                // handle request
+                Optional<JumperInfoRequest> jumperInfoRequest = initializeJumperInfoRequest(jumperConfig);
 
                 if (!jumperConfig.getRemoteApiUrl().startsWith(Constants.LOCALHOST_ISSUER_SERVICE)) {
                     if (Objects.isNull(jumperConfig.getInternalTokenEndpoint())) {
@@ -99,13 +95,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
                         if (jumperConfig.getBasicAuth() != null && (jumperConfig.getBasicAuth().containsKey(jumperConfig.getConsumer()) || jumperConfig.getBasicAuth().containsKey(Constants.BASIC_AUTH_PROVIDER_KEY))) {
                             log.debug("----------------BASIC AUTH HEADER-------------");
-                            if (isInfoLogLevelEnabled()) {
-                                jumperInfoRequest.setLastMileSecurity(false);
-                                jumperInfoRequest.setLastMileSecurityEnhanced(false);
-                                jumperInfoRequest.setMeshActivated(false);
-                                jumperInfoRequest.setExternalAuthorization(false);
-                                jumperInfoRequest.setBasicAuth(true);
-                            }
+                            jumperInfoRequest.ifPresent(i -> i.setInfoScenario(false, false, false, false, true));
 
                             BasicAuthCredentials basicAuthCredentials = jumperConfig.getBasicAuth().containsKey(jumperConfig.getConsumer()) ? jumperConfig.getBasicAuth().get(jumperConfig.getConsumer()) : jumperConfig.getBasicAuth().get(Constants.BASIC_AUTH_PROVIDER_KEY);
                             HeaderUtil.addHeader(exchange, Constants.HEADER_AUTHORIZATION, Constants.BASIC + " " + basicAuthUtilService.encodeBasicAuth(basicAuthCredentials.getUsername(), basicAuthCredentials.getPassword()));
@@ -117,13 +107,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                             // Egress
                             if (Objects.nonNull(jumperConfig.getExternalTokenEndpoint())) {
                                 log.debug("----------------EXTERNAL AUTHORIZATION-------------");
-                                if (isInfoLogLevelEnabled()) {
-                                    jumperInfoRequest.setLastMileSecurity(false);
-                                    jumperInfoRequest.setLastMileSecurityEnhanced(false);
-                                    jumperInfoRequest.setMeshActivated(false);
-                                    jumperInfoRequest.setExternalAuthorization(true);
-                                    jumperInfoRequest.setBasicAuth(false);
-                                }
+                                jumperInfoRequest.ifPresent(i -> i.setInfoScenario(false, false, false, true, false));
 
                                 log.debug("Remote TokenEndpoint is set to: {}", jumperConfig.getExternalTokenEndpoint());
 
@@ -137,17 +121,11 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
                             } else if (Objects.nonNull(jumperConfig.getAccessTokenForwarding()) && Boolean.FALSE.equals(jumperConfig.getAccessTokenForwarding())) {
                                 log.debug("----------------LAST MILE SECURITY (ONE TOKEN)-------------");
-                                if (isInfoLogLevelEnabled()) {
-                                    jumperInfoRequest.setLastMileSecurity(true);
-                                    jumperInfoRequest.setLastMileSecurityEnhanced(true);
-                                    jumperInfoRequest.setMeshActivated(false);
-                                    jumperInfoRequest.setExternalAuthorization(false);
-                                    jumperInfoRequest.setBasicAuth(false);
-                                }
+                                jumperInfoRequest.ifPresent(i -> i.setInfoScenario(true, true, false, false, false));
 
                                 String lastmileSecurityToken = oauthTokenUtil.generateExtGatewayToken(jumperConfig.getEnvName(),
                                         jumperConfig.getConsumerToken(),
-                                        request.getMethod().toString(),
+                                        String.valueOf(request.getMethod()),
                                         jumperConfig.getRequestPath(),
                                         lmsIssuer,
                                         getSecurityScopes(jumperConfig),
@@ -158,15 +136,9 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                                 log.debug("lastMileSecurityToken: " + lastmileSecurityToken);
                             } else {
                                 log.debug("----------------LAST MILE SECURITY (LEGACY)-------------");
-                                if (isInfoLogLevelEnabled()) {
-                                    jumperInfoRequest.setLastMileSecurity(true);
-                                    jumperInfoRequest.setLastMileSecurityEnhanced(false);
-                                    jumperInfoRequest.setMeshActivated(false);
-                                    jumperInfoRequest.setExternalAuthorization(false);
-                                    jumperInfoRequest.setBasicAuth(false);
-                                }
+                                jumperInfoRequest.ifPresent(i -> i.setInfoScenario(true, false, false, false, false));
 
-                                String lastmileSecurityToken = oauthTokenUtil.generateGatewayToken(jumperConfig.getEnvName(), jumperConfig.getConsumerToken(), request.getMethod().toString(), jumperConfig.getRequestPath(), lmsIssuer);
+                                String lastmileSecurityToken = oauthTokenUtil.generateGatewayToken(jumperConfig.getEnvName(), jumperConfig.getConsumerToken(), String.valueOf(request.getMethod()), jumperConfig.getRequestPath(), lmsIssuer);
 
                                 HeaderUtil.addHeader(exchange, Constants.HEADER_LASTMILE_SECURITY_TOKEN, Constants.BEARER + " " + lastmileSecurityToken);
                                 log.debug("lastMileSecurityToken: " + lastmileSecurityToken);
@@ -177,14 +149,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                     } else {
                             /** GW-2-GW MESH TOKEN GENERATION **/
                             log.debug("----------------GATEWAY MESH-------------");
-
-                            if (isInfoLogLevelEnabled()) {
-                                jumperInfoRequest.setLastMileSecurity(false);
-                                jumperInfoRequest.setLastMileSecurityEnhanced(false);
-                                jumperInfoRequest.setMeshActivated(true);
-                                jumperInfoRequest.setExternalAuthorization(false);
-                                jumperInfoRequest.setBasicAuth(false);
-                            }
+                            jumperInfoRequest.ifPresent(i -> i.setInfoScenario(false, false, true, false, false));
 
                             TokenInfo meshTokenInfo = oauthTokenUtil.getInternalMeshAccessToken(jumperConfig);
 
@@ -202,33 +167,42 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                 HeaderUtil.addHeader(exchange, Constants.HEADER_X_ORIGIN_ZONE, jumperConfig.getConsumerOriginZone());
                 HeaderUtil.rewriteXForwardedHeader(exchange, jumperConfig);
 
-                if(isInfoLogLevelEnabled()) {
-                    IncomingRequest incReq = new IncomingRequest();
-                    incReq.setBasePath(jumperConfig.getApiBasePath());
-                    incReq.setHost(jumperConfig.getRemoteApiUrl());
-                    incReq.setMethod(request.getMethodValue());
-                    incReq.setResource(jumperConfig.getRoutingPath());
-
-                    OutgoingRequest outgoingRequest = new OutgoingRequest();
-                    outgoingRequest.setHost(jumperConfig.getRemoteApiUrl());
-                    outgoingRequest.setBasePath(null);
-                    outgoingRequest.setResource(jumperConfig.getRoutingPath());
-                    outgoingRequest.setMethod(request.getMethod().toString());
-
-                    HashMap<String, String> logEntries = new HashMap<>();
-                    logEntries.put("Thread name", Thread.currentThread().getName());
-
-                    incReq.setLogEntries(logEntries);
-                    jumperInfoRequest.setIncomingRequest(incReq);
-
-                    log.info("logging request: {}", value("jumperInfo", jumperInfoRequest));
-                }
+                jumperInfoRequest.ifPresent(infoRequest -> {
+                    IncomingRequest incReq = createIncomingRequest(jumperConfig, request);
+                    infoRequest.setIncomingRequest(incReq);
+                    log.info("logging request: {}", value("jumperInfo", infoRequest));
+                });
 
                 addTracingInfo(request);
 
             });
             return chain.filter(exchange);
         }, RouteToRequestUrlFilter.ROUTE_TO_URL_FILTER_ORDER + 1);
+    }
+
+    private Optional<JumperInfoRequest> initializeJumperInfoRequest(JumperConfig jumperConfig) {
+
+        if (log.isInfoEnabled()) {
+            JumperInfoRequest jumperInfoRequest = new JumperInfoRequest();
+            jumperInfoRequest.setEnvironment(jumperConfig.getEnvName());
+            return Optional.of(jumperInfoRequest);
+        }
+
+        return Optional.empty();
+    }
+
+    private IncomingRequest createIncomingRequest(JumperConfig jumperConfig, ServerHttpRequest request) {
+        IncomingRequest incReq = new IncomingRequest();
+        incReq.setBasePath(jumperConfig.getApiBasePath());
+        incReq.setHost(jumperConfig.getRemoteApiUrl());
+        incReq.setMethod(String.valueOf(request.getMethod()));
+        incReq.setResource(jumperConfig.getRoutingPath());
+
+        HashMap<String, String> logEntries = new HashMap<>();
+        logEntries.put("Thread name", Thread.currentThread().getName());
+
+        incReq.setLogEntries(logEntries);
+        return incReq;
     }
 
     private void calculateRoutingStuff(ServerHttpRequest request, ServerWebExchange exchange, String routePathPrefix, JumperConfig jumperConfig) {
@@ -372,10 +346,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
         incomingRequestSpan.remoteServiceName(applicationName);
         incomingRequestSpan.event("jrqf");
-    }
-
-    private boolean isInfoLogLevelEnabled(){
-        return log.isInfoEnabled();
     }
 
     @AllArgsConstructor
