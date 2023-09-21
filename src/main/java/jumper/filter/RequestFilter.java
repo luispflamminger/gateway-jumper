@@ -82,8 +82,10 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                 // calculate routing stuff and add it to exchange and JumperConfig
                 calculateRoutingStuff(request, exchange, config.getRoutePathPrefix(), jumperConfig);
 
-                // store enhanced jumper_config for usage in Spectre
-                exchange.getAttributes().put(Constants.HEADER_JUMPER_CONFIG, JumperConfig.toBase64(jumperConfig));
+                if (config.getRoutePathPrefix().equals(Constants.LISTENER_ROOT_PATH_PREFIX)) {
+                    // ListenerRoute was called, jumperConfig is stored in exchange for later usage within Spectre
+                    exchange.getAttributes().put(Constants.HEADER_JUMPER_CONFIG, JumperConfig.toBase64(jumperConfig));
+                }
 
 
                 // handle request
@@ -91,6 +93,8 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
                 if (!jumperConfig.getRemoteApiUrl().startsWith(Constants.LOCALHOST_ISSUER_SERVICE)) {
                     if (Objects.isNull(jumperConfig.getInternalTokenEndpoint())) {
+
+
                         /** ALL NON MESH SCENARIOS **/
 
                         if (jumperConfig.getBasicAuth() != null && (jumperConfig.getBasicAuth().containsKey(jumperConfig.getConsumer()) || jumperConfig.getBasicAuth().containsKey(Constants.BASIC_AUTH_PROVIDER_KEY))) {
@@ -112,7 +116,10 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                                 log.debug("Remote TokenEndpoint is set to: {}", jumperConfig.getExternalTokenEndpoint());
 
                                 if (jumperConfig.getOauth() != null && jumperConfig.getOauth().containsKey(jumperConfig.getConsumer()) && jumperConfig.getOauth().get(jumperConfig.getConsumer()).getGrantType() != null && !jumperConfig.getOauth().get(jumperConfig.getConsumer()).getGrantType().isBlank()) {
-                                    TokenInfo tokenInfo = oauthTokenUtil.getAccessToken(jumperConfig.getExternalTokenEndpoint(), jumperConfig.getOauth().get(jumperConfig.getConsumer()), jumperConfig.getConsumer());
+                                    TokenInfo tokenInfo = oauthTokenUtil.getAccessToken(
+                                            jumperConfig.getExternalTokenEndpoint(),
+                                            jumperConfig.getOauth().get(jumperConfig.getConsumer()),
+                                            jumperConfig.getConsumer());
                                     HeaderUtil.addHeader(exchange, Constants.HEADER_AUTHORIZATION, Constants.BEARER + " " + tokenInfo.getAccessToken());
                                 } else {
                                     clientCredentialsFlow_legacy(exchange, jumperConfig);
@@ -123,7 +130,8 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                                 log.debug("----------------LAST MILE SECURITY (ONE TOKEN)-------------");
                                 jumperInfoRequest.ifPresent(i -> i.setInfoScenario(true, true, false, false, false));
 
-                                String lastmileSecurityToken = oauthTokenUtil.generateExtGatewayToken(jumperConfig.getEnvName(),
+                                String enhancedLastmileSecurityToken = oauthTokenUtil.generateExtGatewayToken(
+                                        jumperConfig.getEnvName(),
                                         jumperConfig.getConsumerToken(),
                                         String.valueOf(request.getMethod()),
                                         jumperConfig.getRequestPath(),
@@ -132,16 +140,24 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                                         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_PUBSUB_PUBLISHER_ID),
                                         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID)
                                 );
-                                HeaderUtil.addHeader(exchange, Constants.HEADER_AUTHORIZATION, Constants.BEARER + " " + lastmileSecurityToken);
-                                log.debug("lastMileSecurityToken: " + lastmileSecurityToken);
+                                HeaderUtil.addHeader(exchange, Constants.HEADER_AUTHORIZATION, Constants.BEARER + " " + enhancedLastmileSecurityToken);
+                                log.debug("lastMileSecurityToken: " + enhancedLastmileSecurityToken);
+
                             } else {
                                 log.debug("----------------LAST MILE SECURITY (LEGACY)-------------");
                                 jumperInfoRequest.ifPresent(i -> i.setInfoScenario(true, false, false, false, false));
 
-                                String lastmileSecurityToken = oauthTokenUtil.generateGatewayToken(jumperConfig.getEnvName(), jumperConfig.getConsumerToken(), String.valueOf(request.getMethod()), jumperConfig.getRequestPath(), lmsIssuer);
+                                String legacyLastmileSecurityToken = oauthTokenUtil.generateGatewayToken(
+                                        jumperConfig.getEnvName(),
+                                        jumperConfig.getConsumerToken(),
+                                        String.valueOf(request.getMethod()),
+                                        jumperConfig.getRequestPath(),
+                                        lmsIssuer);
 
-                                HeaderUtil.addHeader(exchange, Constants.HEADER_LASTMILE_SECURITY_TOKEN, Constants.BEARER + " " + lastmileSecurityToken);
-                                log.debug("lastMileSecurityToken: " + lastmileSecurityToken);
+
+                                HeaderUtil.addHeader(exchange, Constants.HEADER_LASTMILE_SECURITY_TOKEN, Constants.BEARER + " " + legacyLastmileSecurityToken);
+                                log.debug("lastMileSecurityToken: " + legacyLastmileSecurityToken);
+
                             }
 
                         }
