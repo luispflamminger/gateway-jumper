@@ -33,7 +33,7 @@ public class SpectreRequestFilter extends AbstractGatewayFilterFactory<SpectreRe
             log.debug("Request: headers={}, payload={}", request.getHeaders().toSingleValueMap(), requestBody);
 
             JumperConfig jc = JumperConfig.parseConfigFrom( exchange);
-            if (!spectreService.isListenerMatched(jc)) {
+            if (!jc.isListenerMatched()) {
                 return chain.filter(exchange.mutate().request(request).build());
             }
 

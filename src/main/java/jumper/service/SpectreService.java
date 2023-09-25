@@ -53,11 +53,7 @@ public class SpectreService {
     WebClient webClient = WebClient.create();
 
 
-    public boolean isListenerMatched( JumperConfig jc) {
 
-        String consumer = jc.getConsumer();
-        return Objects.nonNull(jc.getRouteListener()) && Objects.nonNull(jc.getRouteListener().get( consumer));
-    }
 
     public void handleEvent(JumperConfig jc, ServerWebExchange exchange, Object http, RouteListener listener, String payload) {
         WebFluxSleuthOperators.withSpanInScope(tracer, currentTraceContext, exchange, () ->

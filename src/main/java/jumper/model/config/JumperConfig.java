@@ -15,6 +15,8 @@ import org.springframework.web.server.ServerWebExchange;
 
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.Objects;
+import java.util.Optional;
 
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -132,5 +134,33 @@ public class JumperConfig {
         } else {
             return new JumperConfig();
         }
+    }
+
+    public boolean isListenerMatched() {
+        return Objects.nonNull(getRouteListener()) && Objects.nonNull(getRouteListener().get( getConsumer()));
+    }
+
+    public Optional<BasicAuthCredentials> getBasicAuthCredentials() {
+        if (Objects.nonNull(getBasicAuth())) {
+
+            if (getBasicAuth().containsKey(getConsumer())) {
+                return Optional.of(getBasicAuth().get(getConsumer()));
+            }
+
+            if (getBasicAuth().containsKey(Constants.BASIC_AUTH_PROVIDER_KEY)) {
+                return Optional.of(getBasicAuth().get(Constants.BASIC_AUTH_PROVIDER_KEY));
+            }
+
+        }
+
+        return Optional.empty();
+    }
+
+    public Optional<OauthCredentials> getOauthCredentials() {
+        if (Objects.nonNull(getOauth()) && getOauth().containsKey(getConsumer())) {
+            return Optional.of(getOauth().get(getConsumer()));
+        }
+
+        return Optional.empty();
     }
 }

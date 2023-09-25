@@ -46,7 +46,7 @@ public class SpectreResponseFilter extends AbstractGatewayFilterFactory<Abstract
 
                 //use jumperConfig passed with exchange
                 JumperConfig jumperConfig = JumperConfig.parseConfigFrom(exchange);
-                if (spectreService.isListenerMatched(jumperConfig)) {
+                if (jumperConfig.isListenerMatched()) {
                     RouteListener listener = jumperConfig.getRouteListener().get(jumperConfig.getConsumer());
                     spectreService.handleEvent(jumperConfig, exchange, exchange.getResponse(), listener, responseBody);
                 }
