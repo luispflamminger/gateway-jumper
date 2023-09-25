@@ -179,7 +179,8 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                                         localIssuerUrl + "/" + jumperConfig.getRealmName(),
                                         getSecurityScopes(jumperConfig),
                                         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_PUBSUB_PUBLISHER_ID),
-                                        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID)
+                                        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID),
+                                        false
                                 );
 
                                 HeaderUtil.addHeader(exchange, Constants.HEADER_AUTHORIZATION, Constants.BEARER + " " + enhancedLastmileSecurityToken);
@@ -196,12 +197,17 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                                         false,
                                         false));
 
-                                String legacyLastmileSecurityToken = oauthTokenUtil.generateLegacyLastMileGatewayToken(
+                                String legacyLastmileSecurityToken = oauthTokenUtil.generateEnhancedLastMileGatewayToken(
                                         jumperConfig.getEnvName(),
                                         jumperConfig.getConsumerToken(),
                                         String.valueOf(request.getMethod()),
                                         jumperConfig.getRequestPath(),
-                                        localIssuerUrl + "/" + jumperConfig.getRealmName());
+                                        localIssuerUrl + "/" + jumperConfig.getRealmName(),
+                                        getSecurityScopes(jumperConfig),
+                                        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_PUBSUB_PUBLISHER_ID),
+                                        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID),
+                                        true
+                                );
 
                                 HeaderUtil.addHeader(exchange, Constants.HEADER_LASTMILE_SECURITY_TOKEN, Constants.BEARER + " " + legacyLastmileSecurityToken);
                                 log.debug("lastMileSecurityToken: " + legacyLastmileSecurityToken);
@@ -379,13 +385,8 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
     private String getSecurityScopes(JumperConfig jumperConfig){
 
-        String consumer = jumperConfig.getConsumer();
-
-        if (Objects.nonNull(jumperConfig.getOauth()) && jumperConfig.getOauth().containsKey(consumer)) {
-            return jumperConfig.getOauth().get(consumer).getScopes();
-        }
-
-        return null;
+        Optional<OauthCredentials> oauthCredentials = jumperConfig.getOauthCredentials();
+        return oauthCredentials.map(OauthCredentials::getScopes).orElse(null);
     }
 
     private void addTracingInfo(ServerHttpRequest request) {

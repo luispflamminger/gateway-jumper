@@ -117,7 +117,7 @@ public class OauthTokenUtil {
         throw new IllegalStateException("Was not able to parse consumer token");
     }
 
-    public String generateEnhancedLastMileGatewayToken(String envName, String consumerToken, String operation, String requestPath, String issuer, String scope, String publisherId, String subscriberId) {
+    public String generateEnhancedLastMileGatewayToken(String envName, String consumerToken, String operation, String requestPath, String issuer, String scope, String publisherId, String subscriberId, boolean legacy) {
         //nearly to pass additional claims as a map, so far scope + publisher
 
         String consumerTokenWithoutSignature = getTokenWithoutSignature(consumerToken);
@@ -126,84 +126,59 @@ public class OauthTokenUtil {
 
         Date issuedAt = gatewayTokenclaims.getBody().getIssuedAt();
         Date expiration = gatewayTokenclaims.getBody().getExpiration();
-        String clientId = gatewayTokenclaims.getBody().get("clientId", String.class);
+        String clientId = gatewayTokenclaims.getBody().get(Constants.TOKEN_CLAIM_CLIENT_ID, String.class);
         String consumerOriginZone = gatewayTokenclaims.getBody().get("originZone", String.class);
         String consumerOriginStargate = gatewayTokenclaims.getBody().get("originStargate", String.class);
-        String sub = gatewayTokenclaims.getBody().get("sub", String.class);
-        String aud = gatewayTokenclaims.getBody().get("aud", String.class);
+        String sub = gatewayTokenclaims.getBody().get(Constants.TOKEN_CLAIM_SUB, String.class);
+        String aud = gatewayTokenclaims.getBody().get(Constants.TOKEN_CLAIM_AUD, String.class);
 
         HashMap<String, String> claims = new HashMap<String, String>();
-        claims.put("typ", "Bearer");
-        claims.put("azp", "stargate");
-        claims.put("sub", sub);
-        claims.put("requestPath", requestPath);
-        claims.put("operation", operation);
-        claims.put("clientId", clientId);
-        claims.put("originZone", consumerOriginZone);
-        claims.put("originStargate", consumerOriginStargate);
+        claims.put(Constants.TOKEN_CLAIM_TYP, "Bearer");
+        claims.put(Constants.TOKEN_CLAIM_AZP, "stargate");
+        claims.put(Constants.TOKEN_CLAIM_SUB, sub);
+        claims.put(Constants.TOKEN_CLAIM_REQUEST_PATH, requestPath);
+        claims.put(Constants.TOKEN_CLAIM_OPERATION, operation);
+        claims.put(Constants.TOKEN_CLAIM_CLIENT_ID, clientId);
+        claims.put(Constants.TOKEN_CLAIM_ORIGIN_ZONE, consumerOriginZone);
+        claims.put(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, consumerOriginStargate);
 
-        claims.put("env", envName);
+        if (legacy) {
+            if (StringUtils.isNotBlank(aud)) {
+                claims.put(Constants.TOKEN_CLAIM_AUD, aud);
+            }
 
-        if (Objects.nonNull(scope)) {
-            claims.put("scope", scope);
+            String consumerTokenSignature = getSignature(consumerToken);
+            claims.put(Constants.TOKEN_CLAIM_ACCESS_TOKEN_SIGNATURE, consumerTokenSignature);
+
+        } else {
+            claims.put(Constants.TOKEN_CLAIM_ACCESS_TOKEN_ENVIRONMENT, envName);
+
+            if (Objects.nonNull(scope)) {
+                claims.put(Constants.TOKEN_CLAIM_SCOPE, scope);
+            }
+
+            if (Objects.nonNull(publisherId)) {
+                claims.put(Constants.TOKEN_CLAIM_ACCESS_TOKEN_PUBLISHER_ID, publisherId);
+            }
+
+            if (Objects.nonNull(subscriberId)) {
+                claims.put(Constants.TOKEN_CLAIM_ACCESS_TOKEN_SUBSCRIBER_ID, subscriberId);
+                claims.put(Constants.TOKEN_CLAIM_AUD, subscriberId);
+            }
+
+            if (StringUtils.isNotBlank(aud)) {
+                claims.put(Constants.TOKEN_CLAIM_AUD, aud);
+            }
         }
-
-        if (Objects.nonNull(publisherId)) {
-            claims.put("publisherId", publisherId);
-        }
-
-        if (Objects.nonNull(subscriberId)) {
-            claims.put("subscriberId", subscriberId);
-            claims.put("aud", subscriberId);
-        }
-
-        if (StringUtils.isNotBlank(aud)) {
-            claims.put("aud", aud);
-        }
-
-        return generateToken(claims, issuer, expiration, issuedAt);
-    }
-
-    public String generateLegacyLastMileGatewayToken(String envName, String consumerToken, String operation, String requestPath, String issuer) {
-
-
-        String consumerTokenWithoutSignature = getTokenWithoutSignature(consumerToken);
-
-        Jwt<Header, Claims> gatewayTokenclaims = getAllClaimsFromToken(consumerTokenWithoutSignature);
-
-        Date issuedAt = gatewayTokenclaims.getBody().getIssuedAt();
-        Date expiration = gatewayTokenclaims.getBody().getExpiration();
-        String clientId = gatewayTokenclaims.getBody().get("clientId", String.class);
-        String consumerOriginZone = gatewayTokenclaims.getBody().get("originZone", String.class);
-        String consumerOriginStargate = gatewayTokenclaims.getBody().get("originStargate", String.class);
-        String sub = gatewayTokenclaims.getBody().get("sub", String.class);
-        String aud = gatewayTokenclaims.getBody().get("aud", String.class);
-
-        HashMap<String, String> claims = new HashMap<String, String>();
-        claims.put("typ", "Bearer");
-        claims.put("azp", "stargate");
-        claims.put("sub", sub);
-        claims.put("requestPath", requestPath);
-        claims.put("operation", operation);
-        claims.put("clientId", clientId);
-        claims.put("originZone", consumerOriginZone);
-        claims.put("originStargate", consumerOriginStargate);
-
-        if (StringUtils.isNotBlank(aud)) {
-            claims.put("aud", aud);
-        }
-
-        String consumerTokenSignature = getSignature(consumerToken);
-        claims.put("accessTokenSignature", consumerTokenSignature);
 
         return generateToken(claims, issuer, expiration, issuedAt);
     }
 
     public String generateGatewayTokenForPublisher(String issuer) {
         HashMap<String, String> claims = new HashMap<>();
-        claims.put("typ", "Bearer");
-        claims.put("azp", "stargate");
-        claims.put("clientId", "gateway");
+        claims.put(Constants.TOKEN_CLAIM_TYP, "Bearer");
+        claims.put(Constants.TOKEN_CLAIM_AZP, "stargate");
+        claims.put(Constants.TOKEN_CLAIM_CLIENT_ID, "gateway");
 
         return generateToken(claims,
                 issuer,
@@ -255,16 +230,16 @@ public class OauthTokenUtil {
         // try to get valid token from tokenCache...
         return tokenCache.getToken(tokenKey).orElseGet(() -> {  // ...otherwise retrieve a new one
 
-            MultiValueMap<String, String> claims = new LinkedMultiValueMap<>();
-            claims.add("client_id", clientID);
-            claims.add("client_secret", clientSecret);
-            claims.add("grant_type", AuthorizationGrantType.CLIENT_CREDENTIALS.getValue());
+            MultiValueMap<String, String> requestParameter = new LinkedMultiValueMap<>();
+            requestParameter.add(Constants.TOKEN_REQUEST_PARAMETER_CLIENT_ID, clientID);
+            requestParameter.add(Constants.TOKEN_REQUEST_PARAMETER_CLIENT_SECRET, clientSecret);
+            requestParameter.add(Constants.TOKEN_REQUEST_PARAMETER_GRANT_TYPE, AuthorizationGrantType.CLIENT_CREDENTIALS.getValue());
 
             if (StringUtils.isNotBlank(scope)) {
-                claims.add("scope", scope);
+                requestParameter.add(Constants.TOKEN_REQUEST_PARAMETER_SCOPE, scope);
             }
 
-            return getAccessTokenQuery(tokenEndpoint, tokenKey, claims, null);
+            return getAccessTokenQuery(tokenEndpoint, tokenKey, requestParameter, null);
 
         });
 
@@ -277,7 +252,7 @@ public class OauthTokenUtil {
         // try to get valid token from tokenCache...
         return tokenCache.getToken(tokenKey).orElseGet(() -> { // ...otherwise retrieve a new one
 
-            MultiValueMap<String, String> cc = new LinkedMultiValueMap<>();
+            MultiValueMap<String, String> requestParameter = new LinkedMultiValueMap<>();
             String basicAuth = null;
 
             if (StringUtils.isNotBlank(oauthCredentials.getClientId())
@@ -290,25 +265,25 @@ public class OauthTokenUtil {
             if (StringUtils.isNotBlank(oauthCredentials.getUsername())
                     && StringUtils.isNotBlank(oauthCredentials.getPassword())) {
 
-                cc.add("username", oauthCredentials.getUsername());
-                cc.add("password", oauthCredentials.getPassword());
+                requestParameter.add(Constants.TOKEN_REQUEST_PARAMETER_USERNAME, oauthCredentials.getUsername());
+                requestParameter.add(Constants.TOKEN_REQUEST_PARAMETER_PASSWORD, oauthCredentials.getPassword());
             }
 
             if (StringUtils.isNotBlank(oauthCredentials.getRefreshToken())) {
-                cc.add("refresh_token", oauthCredentials.getRefreshToken());
+                requestParameter.add(Constants.TOKEN_REQUEST_PARAMETER_REFRESH_TOKEN, oauthCredentials.getRefreshToken());
             }
 
             if (StringUtils.isNotEmpty(oauthCredentials.getScopes())) {
-                cc.add("scope", oauthCredentials.getScopes());
+                requestParameter.add(Constants.TOKEN_REQUEST_PARAMETER_SCOPE, oauthCredentials.getScopes());
             }
 
-            cc.add("grant_type", oauthCredentials.getGrantType());
+            requestParameter.add(Constants.TOKEN_REQUEST_PARAMETER_GRANT_TYPE, oauthCredentials.getGrantType());
 
-            return getAccessTokenQuery(tokenEndpoint, tokenKey, cc, basicAuth);
+            return getAccessTokenQuery(tokenEndpoint, tokenKey, requestParameter, basicAuth);
         });
     }
 
-    private TokenInfo getAccessTokenQuery(String tokenEndpoint, String tokenKey, MultiValueMap<String, String> claims, String basicAuthHeader) {
+    private TokenInfo getAccessTokenQuery(String tokenEndpoint, String tokenKey, MultiValueMap<String, String> formData, String basicAuthHeader) {
 
         Mono<TokenInfo> tokenInfoMono = webClient.post()
                 .uri(tokenEndpoint)
@@ -318,7 +293,7 @@ public class OauthTokenUtil {
                             if (basicAuthHeader != null) httpHeaders.setBasicAuth(basicAuthHeader);
                         }
                 )
-                .body(BodyInserters.fromFormData(claims))
+                .body(BodyInserters.fromFormData(formData))
                 .retrieve()
                 .onStatus(HttpStatus::is4xxClientError,
                         response -> {

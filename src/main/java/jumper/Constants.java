@@ -58,9 +58,29 @@ public class Constants {
 	public static final String DEFAULT_REALM = "default";
 	public static final String BEARER = "Bearer";
 	public static final String BASIC = "Basic";
+
+	public static final String TOKEN_REQUEST_PARAMETER_SCOPE = "scope";
+	public static final String TOKEN_REQUEST_PARAMETER_CLIENT_ID = "client_id";
+	public static final String TOKEN_REQUEST_PARAMETER_CLIENT_SECRET = "client_secret";
+	public static final String TOKEN_REQUEST_PARAMETER_GRANT_TYPE = "grant_type";
+	public static final String TOKEN_REQUEST_PARAMETER_USERNAME = "username";
+	public static final String TOKEN_REQUEST_PARAMETER_PASSWORD = "password";
+	public static final String TOKEN_REQUEST_PARAMETER_REFRESH_TOKEN = "refresh_token";
+
 	public static final String TOKEN_CLAIM_CLIENT_ID = "clientId";
 	public static final String TOKEN_CLAIM_ORIGIN_STARGATE = "originStargate";
 	public static final String TOKEN_CLAIM_ORIGIN_ZONE = "originZone";
+	public static final String TOKEN_CLAIM_SCOPE = "scope";
+	public static final String TOKEN_CLAIM_SUB = "sub";
+	public static final String TOKEN_CLAIM_AUD = "aud";
+	public static final String TOKEN_CLAIM_TYP = "typ";
+	public static final String TOKEN_CLAIM_AZP = "azp";
+	public static final String TOKEN_CLAIM_OPERATION = "operation";
+	public static final String TOKEN_CLAIM_REQUEST_PATH = "requestPath";
+	public static final String TOKEN_CLAIM_ACCESS_TOKEN_SIGNATURE = "accessTokenSignature";
+	public static final String TOKEN_CLAIM_ACCESS_TOKEN_ENVIRONMENT = "env";
+	public static final String TOKEN_CLAIM_ACCESS_TOKEN_PUBLISHER_ID = "publisherId";
+	public static final String TOKEN_CLAIM_ACCESS_TOKEN_SUBSCRIBER_ID = "subscriberId";
 
     public static final List<String> SPACE_ZONES = List.of("space", "spacex", "canis", "aries");
 
