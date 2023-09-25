@@ -132,7 +132,7 @@ public class OauthTokenUtil {
         String sub = gatewayTokenclaims.getBody().get(Constants.TOKEN_CLAIM_SUB, String.class);
         String aud = gatewayTokenclaims.getBody().get(Constants.TOKEN_CLAIM_AUD, String.class);
 
-        HashMap<String, String> claims = new HashMap<String, String>();
+        HashMap<String, String> claims = new HashMap<>();
         claims.put(Constants.TOKEN_CLAIM_TYP, "Bearer");
         claims.put(Constants.TOKEN_CLAIM_AZP, "stargate");
         claims.put(Constants.TOKEN_CLAIM_SUB, sub);
@@ -189,7 +189,7 @@ public class OauthTokenUtil {
 
 
     private String generateToken(HashMap<String, String> claims, String issuer, Date expiration, Date issuedAt) {
-        KeyInfo keyInfo = null;
+        KeyInfo keyInfo;
 
         try {
             log.debug("GatewayToken or OneToken: Loading keyInfo");
