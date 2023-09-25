@@ -24,67 +24,66 @@ import static net.logstash.logback.argument.StructuredArguments.value;
 @Slf4j
 public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.Config> {
 
-	private final CurrentTraceContext currentTraceContext;
-	private final Tracer tracer;
+    private final CurrentTraceContext currentTraceContext;
+    private final Tracer tracer;
 
-	public ResponseFilter(CurrentTraceContext currentTraceContext, Tracer tracer) {
+    public ResponseFilter(CurrentTraceContext currentTraceContext, Tracer tracer) {
         super(Config.class);
-		this.currentTraceContext = currentTraceContext;
-		this.tracer = tracer;
-	}
+        this.currentTraceContext = currentTraceContext;
+        this.tracer = tracer;
+    }
 
-	@Override
-	public GatewayFilter apply(Config config) {
-		return new OrderedGatewayFilter((exchange, chain) -> {
+    @Override
+    public GatewayFilter apply(Config config) {
+        return new OrderedGatewayFilter((exchange, chain) ->
 
-			return chain.filter(exchange).then(Mono.fromRunnable(() -> {
+                chain.filter(exchange)
+                        .then(Mono.fromRunnable(() -> WebFluxSleuthOperators.withSpanInScope(
+                                tracer, currentTraceContext, exchange, () -> {
 
-				WebFluxSleuthOperators.withSpanInScope(tracer, currentTraceContext, exchange, () -> {
+                                    ServerHttpResponse response = exchange.getResponse();
+                                    ServerHttpRequest request = exchange.getRequest();
 
-					ServerHttpResponse response = exchange.getResponse();
-					ServerHttpRequest request = exchange.getRequest();
+                                    if (isLogLevelEnabled()) {
+                                        JumperInfoResponse jumperInfoResponse = new JumperInfoResponse();
+                                        IncomingResponse incomingResponse = new IncomingResponse();
 
-					if (isLogLevelEnabled()) {
-						JumperInfoResponse jumperInfoResponse = new JumperInfoResponse();
-						IncomingResponse incomingResponse = new IncomingResponse();
+                                        incomingResponse.setPath(request.getPath().toString());
+                                        incomingResponse.setHttpStatusCode(response.getStatusCode().value());
 
-						incomingResponse.setPath(request.getPath().toString());
-						incomingResponse.setHttpStatusCode(response.getStatusCode().value());
+                                        jumperInfoResponse.setIncomingResponse(incomingResponse);
 
-						jumperInfoResponse.setIncomingResponse(incomingResponse);
+                                        log.info("logging response: {}", value("jumperInfo", jumperInfoResponse));
+                                    }
 
-						log.info("logging response: {}", value("jumperInfo", jumperInfoResponse));
-					}
+                                    Long contentLength = response.getHeaders().getContentLength();
 
-					Long contentLength = response.getHeaders().getContentLength();
+                                    Span span = tracer.currentSpan();
 
-					Span span = tracer.currentSpan();
+                                    if (contentLength == null || contentLength.toString().equals("-1")) {
+                                        span.tag("message.size_response", "0");
+                                    } else {
+                                        span.tag("message.size_response", contentLength.toString());
+                                    }
 
-					if (contentLength == null || contentLength.toString().equals("-1")) {
-						span.tag("message.size_response", "0");
-					} else {
-						span.tag("message.size_response", contentLength.toString());
-					}
+                                    span.event("jrpf");
 
-					span.event("jrpf");
+                                }
+                        )))
 
-				});
+                , RequestFilter.REQUEST_FILTER_ORDER);
+    }
 
-			}));
-
-		}, RequestFilter.REQUEST_FILTER_ORDER);
-	}
-
-	private boolean isLogLevelEnabled(){
-		return log.isInfoEnabled();
-	}
+    private boolean isLogLevelEnabled() {
+        return log.isInfoEnabled();
+    }
 
 
-	@Getter
-	@Setter
-	@AllArgsConstructor
-	public static class Config extends AbstractGatewayFilterFactory.NameConfig{
+    @Getter
+    @Setter
+    @AllArgsConstructor
+    public static class Config extends AbstractGatewayFilterFactory.NameConfig {
 
-	}
+    }
 
 }
