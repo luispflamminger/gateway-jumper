@@ -1,22 +1,21 @@
 package jumper.filter;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Header;
-import io.jsonwebtoken.Jwt;
 import jumper.Constants;
 import jumper.model.TokenInfo;
 import jumper.model.config.BasicAuthCredentials;
 import jumper.model.config.JumperConfig;
+import jumper.model.config.OauthCredentials;
 import jumper.model.request.IncomingRequest;
 import jumper.model.request.JumperInfoRequest;
-import jumper.model.request.OutgoingRequest;
-import jumper.utilities.OauthTokenUtil;
+import jumper.service.BasicAuthUtilService;
+import jumper.service.HeaderUtil;
+import jumper.service.OauthTokenUtil;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
-import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.OrderedGatewayFilter;
 import org.springframework.cloud.gateway.filter.RouteToRequestUrlFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
@@ -30,19 +29,23 @@ import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
-import reactor.core.publisher.Mono;
 
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.HashMap;
+import java.util.Objects;
+import java.util.Optional;
 
 import static net.logstash.logback.argument.StructuredArguments.value;
 
 @Component
 @Slf4j
 public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Config> {
+
+    private final CurrentTraceContext currentTraceContext;
+    private final Tracer tracer;
+    private final OauthTokenUtil oauthTokenUtil;
+    private final BasicAuthUtilService basicAuthUtilService;
 
     @Value( "${jumper.issuer.url}")
     private String localIssuerUrl;
@@ -52,367 +55,352 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
     public static final int REQUEST_FILTER_ORDER = RouteToRequestUrlFilter.ROUTE_TO_URL_FILTER_ORDER + 1;
 
-    @Autowired
-    CurrentTraceContext currentTraceContext;
-
-    @Autowired
-    OauthTokenUtil oauthTokenUtil;
-
-    public RequestFilter() {
+    public RequestFilter(CurrentTraceContext currentTraceContext, Tracer tracer, OauthTokenUtil oauthTokenUtil, BasicAuthUtilService basicAuthUtilService) {
         super(Config.class);
+        this.currentTraceContext = currentTraceContext;
+        this.tracer = tracer;
+        this.oauthTokenUtil = oauthTokenUtil;
+        this.basicAuthUtilService = basicAuthUtilService;
     }
 
     @Override
     public GatewayFilter apply(Config config) {
         return new OrderedGatewayFilter((exchange, chain) -> {
-            WebFluxSleuthOperators.withSpanInScope(config.tracer, currentTraceContext, exchange, () -> {
+            WebFluxSleuthOperators.withSpanInScope(tracer, currentTraceContext, exchange, () -> {
 
                 ServerHttpRequest request = exchange.getRequest();
 
-                String client_scope = "";
-
-                String token_endpoint = getLastValueFromHeaderField(request, Constants.HEADER_TOKEN_ENDPOINT);
-                String tif_remote_issuer = getLastValueFromHeaderField(request, Constants.HEADER_ISSUER);
-                String tif_clientID = getLastValueFromHeaderField(request, Constants.HEADER_CLIENT_ID);
-                String tif_clientSecret = getLastValueFromHeaderField(request, Constants.HEADER_CLIENT_SECRET);
-                String consumerToken = request.getHeaders().getFirst(Constants.HEADER_AUTHORIZATION);
-                String api_base_path = getLastValueFromHeaderField(request, Constants.HEADER_API_BASE_PATH);
-                String access_token_forwarding = getLastValueFromHeaderField(request, Constants.HEADER_ACCESS_TOKEN_FORWARDING);
-                String realmName = getLastValueFromHeaderField(request, Constants.HEADER_REALM);
-
-                if (StringUtils.isBlank(realmName)) {
-                    realmName = Constants.DEFAULT_REALM;
+                // checking to prevent later nullPointer on inconsistent state from Kong
+                if (!request.getHeaders().containsKey(Constants.HEADER_REMOTE_API_URL)) {
+                    throw new RuntimeException("missing mandatory header " + Constants.HEADER_REMOTE_API_URL);
                 }
 
-                String envName = getLastValueFromHeaderField(request, Constants.HEADER_ENVIRONMENT);
+                // Prepare and extract JumperConfigValues
+                JumperConfig jumperConfig = JumperConfig.parseConfigFrom(request);
+                log.debug("JumperConfig encodedAsBase64: {}", JumperConfig.toBase64(jumperConfig));
+                log.debug("JumperConfig decoded: {}", jumperConfig);
 
-                String routing_path;
-                String requestPath = api_base_path;
-                String remote_api_url = getLastValueFromHeaderField(request, Constants.HEADER_REMOTE_API_URL);
-                String lastmileSecurityToken = null;
+                // calculate routing stuff and add it to exchange and JumperConfig
+                calculateRoutingStuff(request, exchange, config.getRoutePathPrefix(), jumperConfig);
 
-                //to prevent later nullPointer on inconsistent state from Kong
-                if (remote_api_url == null){
-                    throw new RuntimeException("missing mandatory header remote_api_url");
+                if (config.getRoutePathPrefix().equals(Constants.LISTENER_ROOT_PATH_PREFIX)) {
+                    // ListenerRoute was called, jumperConfig is stored in exchange for later usage within Spectre
+                    exchange.getAttributes().put(Constants.HEADER_JUMPER_CONFIG, JumperConfig.toBase64(jumperConfig));
                 }
 
-                String xSpacegateClientId = request.getHeaders().getFirst(Constants.HEADER_X_SPACEGATE_CLIENT_ID);
-                String xSpacegateClientSecret = request.getHeaders().getFirst(Constants.HEADER_X_SPACEGATE_CLIENT_SECRET);
-                String xSpacegateScope = request.getHeaders().getFirst(Constants.HEADER_X_SPACEGATE_SCOPE);
 
-                String jumper_config_Base64 = getLastValueFromHeaderField(request, Constants.HEADER_JUMPER_CONFIG);
+                // handle request
+                Optional<JumperInfoRequest> jumperInfoRequest = initializeJumperInfoRequest(jumperConfig);
 
-                String consumerTokenWithoutSignature = OauthTokenUtil.getTokenWithoutSignature(consumerToken);
-                Jwt<Header, Claims> consumerTokenclaims = OauthTokenUtil.getAllClaimsFromToken(consumerTokenWithoutSignature);
-                String consumer = consumerTokenclaims.getBody().get("clientId", String.class);
-                String consumerOriginStargate = consumerTokenclaims.getBody().get("originStargate", String.class);
-                String consumerOriginZone = consumerTokenclaims.getBody().get("originZone", String.class);
+                if (!jumperConfig.getRemoteApiUrl().startsWith(Constants.LOCALHOST_ISSUER_SERVICE)) {
 
-                // jumper config
-                JumperConfig jc = null;
-                if (StringUtils.isNotBlank(jumper_config_Base64)) {
-                    jc = JumperConfig.fromBase64(jumper_config_Base64);
-                } else {
-                    jc = new JumperConfig();
-                }
-                jc.fillWithLegacyHeaders(request);// TODO: remove as soon we have completely shifted to json_config
-                jc.setConsumer(consumer);
+                    if (Objects.nonNull(jumperConfig.getInternalTokenEndpoint())) {
+                        // GW-2-GW MESH TOKEN GENERATION
+                        log.debug("----------------GATEWAY MESH-------------");
+                        jumperInfoRequest.ifPresent(i -> i.setInfoScenario(
+                                false,
+                                false,
+                                true,
+                                false,
+                                false));
 
-                log.debug("JumperConfig encodedAsBase64: {}", JumperConfig.toBase64(jc));
-                log.debug("JumperConfig decoded: {}", jc.toString());
+                        TokenInfo meshTokenInfo = oauthTokenUtil.getInternalMeshAccessToken(jumperConfig);
 
-                //store enhanced jumper_config for usage in SpectreFilters
-                exchange.getAttributes().put(Constants.HEADER_JUMPER_CONFIG, JumperConfig.toBase64(jc));
+                        // set gw and consumer tokens correctly
+                        HeaderUtil.addHeader(exchange, Constants.HEADER_AUTHORIZATION, "Bearer " + meshTokenInfo.getAccessToken());
+                        HeaderUtil.addHeader(exchange, Constants.HEADER_CONSUMER_TOKEN, jumperConfig.getConsumerToken());
 
-                // Pre-processing
-                if (config.isPreLogger()) {
-                    log.debug("Pre GatewayFilter logging");
-                }
+                        checkForSpaceZone(exchange, jumperConfig.getConsumerOriginZone(), jumperConfig.getConsumerToken());
 
-                JumperInfoRequest jumperInfoRequest = null;
-                if (isLogLevelEnabled()){
-                    jumperInfoRequest = new JumperInfoRequest();
-                    jumperInfoRequest.setEnvironment(envName);
-                }
 
-                String finalApiUrl = "";
-                try {
-                    URI _uri = request.getURI();
-                    String _query = _uri.getRawQuery();
-                    String _fragment = _uri.getFragment();
-                    routing_path = _uri.getRawPath().replaceFirst("^/(proxy|listener)", ""); //for token should be also decoded
-                    if (requestPath != null) requestPath += routing_path;
-                    if (_query != null) routing_path = routing_path + "?" + _query;
-                    if (_fragment != null) routing_path = routing_path + "#" + _fragment;
+                    } else {
+                        // ALL NON MESH SCENARIOS
 
-                    finalApiUrl = remote_api_url.replaceAll("/$", "") + routing_path;
-
-                    log.debug("Routing set to: " + finalApiUrl);
-
-                    exchange.getAttributes().put(ServerWebExchangeUtils.GATEWAY_REQUEST_URL_ATTR, new URI(finalApiUrl));
-                } catch (URISyntaxException e) {
-                    throw new RuntimeException("can not construct URL from " + finalApiUrl, e);
-                }
-
-                if (remote_api_url != null && !remote_api_url.startsWith(Constants.LOCALHOST_ISSUER_SERVICE)) {
-                    if (tif_remote_issuer == null) {
-                        /** ALL NON MESH SCENARIOS **/
-
-                        if (jc.getBasicAuth() != null && (jc.getBasicAuth().containsKey(consumer) || jc.getBasicAuth().containsKey(Constants.BASIC_AUTH_PROVIDER_KEY))) {
+                        Optional<BasicAuthCredentials> basicAuthCredentials = jumperConfig.getBasicAuthCredentials();
+                        if (basicAuthCredentials.isPresent()) {
+                            // External Authorization with BasicAuth
                             log.debug("----------------BASIC AUTH HEADER-------------");
-                            if (isLogLevelEnabled()) {
-                                jumperInfoRequest.setLastMileSecurity(false);
-                                jumperInfoRequest.setLastMileSecurityEnhanced(false);
-                                jumperInfoRequest.setMeshActivated(false);
-                                jumperInfoRequest.setExternalAuthorization(false);
-                                jumperInfoRequest.setBasicAuth(true);
-                            }
+                            jumperInfoRequest.ifPresent(i -> i.setInfoScenario(
+                                    false,
+                                    false,
+                                    false,
+                                    false,
+                                    true));
 
-                            BasicAuthCredentials basicAuthCredentials = jc.getBasicAuth().containsKey(consumer) ? jc.getBasicAuth().get(consumer) : jc.getBasicAuth().get(Constants.BASIC_AUTH_PROVIDER_KEY);
-                            addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BASIC + " " + OauthTokenUtil.encodeBasicAuth(basicAuthCredentials.getUsername(), basicAuthCredentials.getPassword()));
+                            String encodedBasicAuth = basicAuthUtilService.encodeBasicAuth(
+                                    basicAuthCredentials.get().getUsername(), basicAuthCredentials.get().getPassword());
+
+                            HeaderUtil.addHeader( exchange, Constants.HEADER_AUTHORIZATION,Constants.BASIC + " " + encodedBasicAuth);
+
+
                         } else {
 
-
-                            String lmsIssuer = localIssuerUrl + "/" + realmName;
-
-                            // Egress
-                            if (token_endpoint != null) {
+                            if (Objects.nonNull(jumperConfig.getExternalTokenEndpoint())) {
+                                // External Authorization with OAuth
                                 log.debug("----------------EXTERNAL AUTHORIZATION-------------");
-                                if (isLogLevelEnabled()) {
-                                    jumperInfoRequest.setLastMileSecurity(false);
-                                    jumperInfoRequest.setLastMileSecurityEnhanced(false);
-                                    jumperInfoRequest.setMeshActivated(false);
-                                    jumperInfoRequest.setExternalAuthorization(true);
-                                    jumperInfoRequest.setBasicAuth(false);
-                                }
+                                log.debug("Remote TokenEndpoint is set to: {}", jumperConfig.getExternalTokenEndpoint());
+                                jumperInfoRequest.ifPresent(i -> i.setInfoScenario(
+                                        false,
+                                        false,
+                                        false,
+                                        true,
+                                        false));
 
-                                log.debug("Remote TokenEndpoint is set to: %s", token_endpoint);
+                                Optional<OauthCredentials> oauthCredentials = jumperConfig.getOauthCredentials();
+                                if (oauthCredentials.isPresent() && StringUtils.isNotBlank(oauthCredentials.get().getGrantType())) {
 
-                                if (jc.getOauth() != null && jc.getOauth().containsKey(consumer) && jc.getOauth().get(consumer).getGrantType() != null && !jc.getOauth().get(consumer).getGrantType().isBlank()) {
-                                    TokenInfo tokenInfo = oauthTokenUtil.getAccessToken(token_endpoint, jc.getOauth().get(consumer), consumer);
-                                    addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER + " " + tokenInfo.getAccessToken());
+                                    TokenInfo tokenInfo = oauthTokenUtil.getAccessTokenWithOauthCredentialsObject(
+                                            jumperConfig.getExternalTokenEndpoint(),
+                                            oauthCredentials.get(),
+                                            jumperConfig.getConsumer());
+
+                                    HeaderUtil.addHeader(exchange, Constants.HEADER_AUTHORIZATION, Constants.BEARER + " " + tokenInfo.getAccessToken());
+
                                 } else {
-                                    clientCredentialsFlow_legacy(exchange, chain, client_scope, token_endpoint, tif_clientID, tif_clientSecret, xSpacegateClientId, xSpacegateClientSecret, xSpacegateScope, consumer, jc);
+                                    getAccessTokenFromExternalIdpLegacy(exchange, jumperConfig);
                                 }
 
 
-                            } else if (access_token_forwarding != null && access_token_forwarding.equals("false")) {
+                            } else if (Boolean.FALSE.equals(jumperConfig.getAccessTokenForwarding())) {
+                                // Enhanced Last Mile Security Token scenario
                                 log.debug("----------------LAST MILE SECURITY (ONE TOKEN)-------------");
-                                if (isLogLevelEnabled()) {
-                                    jumperInfoRequest.setLastMileSecurity(true);
-                                    jumperInfoRequest.setLastMileSecurityEnhanced(true);
-                                    jumperInfoRequest.setMeshActivated(false);
-                                    jumperInfoRequest.setExternalAuthorization(false);
-                                    jumperInfoRequest.setBasicAuth(false);
-                                }
+                                jumperInfoRequest.ifPresent(i -> i.setInfoScenario(
+                                        true,
+                                        true,
+                                        false,
+                                        false,
+                                        false));
 
-                                lastmileSecurityToken = OauthTokenUtil.generateExtGatewayToken(envName,
-                                        consumerToken,
-                                        request.getMethod().toString(),
-                                        requestPath,
-                                        lmsIssuer,
-                                        setSecurityScopes(jc, consumer),
-                                        request.getHeaders().getFirst(Constants.HEADER_X_PUBSUB_PUBLISHER_ID),
-                                        request.getHeaders().getFirst(Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID)
+                                String enhancedLastmileSecurityToken = oauthTokenUtil.generateEnhancedLastMileGatewayToken(
+                                        jumperConfig.getEnvName(),
+                                        jumperConfig.getConsumerToken(),
+                                        String.valueOf(request.getMethod()),
+                                        jumperConfig.getRequestPath(),
+                                        localIssuerUrl + "/" + jumperConfig.getRealmName(),
+                                        getSecurityScopes(jumperConfig),
+                                        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_PUBSUB_PUBLISHER_ID),
+                                        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID),
+                                        false
                                 );
-                                addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER + " " + lastmileSecurityToken);
-                                log.debug("lastMileSecurityToken: " + lastmileSecurityToken);
+
+                                HeaderUtil.addHeader(exchange, Constants.HEADER_AUTHORIZATION, Constants.BEARER + " " + enhancedLastmileSecurityToken);
+                                log.debug("lastMileSecurityToken: " + enhancedLastmileSecurityToken);
+
+
                             } else {
+                                // (Legacy) Last Mile Security Token scenario
                                 log.debug("----------------LAST MILE SECURITY (LEGACY)-------------");
-                                if (isLogLevelEnabled()) {
-                                    jumperInfoRequest.setLastMileSecurity(true);
-                                    jumperInfoRequest.setLastMileSecurityEnhanced(false);
-                                    jumperInfoRequest.setMeshActivated(false);
-                                    jumperInfoRequest.setExternalAuthorization(false);
-                                    jumperInfoRequest.setBasicAuth(false);
-                                }
+                                jumperInfoRequest.ifPresent(i -> i.setInfoScenario(
+                                        true,
+                                        false,
+                                        false,
+                                        false,
+                                        false));
 
-                                lastmileSecurityToken = OauthTokenUtil.generateGatewayToken(envName, consumerToken, request.getMethod().toString(), requestPath, lmsIssuer);
+                                String legacyLastmileSecurityToken = oauthTokenUtil.generateEnhancedLastMileGatewayToken(
+                                        jumperConfig.getEnvName(),
+                                        jumperConfig.getConsumerToken(),
+                                        String.valueOf(request.getMethod()),
+                                        jumperConfig.getRequestPath(),
+                                        localIssuerUrl + "/" + jumperConfig.getRealmName(),
+                                        getSecurityScopes(jumperConfig),
+                                        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_PUBSUB_PUBLISHER_ID),
+                                        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID),
+                                        true
+                                );
 
-                                addHeader(exchange, chain, Constants.HEADER_LASTMILE_SECURITY_TOKEN, Constants.BEARER + " " + lastmileSecurityToken);
-                                log.debug("lastMileSecurityToken: " + lastmileSecurityToken);
+                                HeaderUtil.addHeader(exchange, Constants.HEADER_LASTMILE_SECURITY_TOKEN, Constants.BEARER + " " + legacyLastmileSecurityToken);
+                                log.debug("lastMileSecurityToken: " + legacyLastmileSecurityToken);
+
                             }
-
                         }
-
-                    } else{
-                            /** GW-2-GW MESH TOKEN GENERATION **/
-                            log.debug("----------------GATEWAY MESH-------------");
-
-                            if (isLogLevelEnabled()) {
-                                jumperInfoRequest.setLastMileSecurity(false);
-                                jumperInfoRequest.setLastMileSecurityEnhanced(false);
-                                jumperInfoRequest.setMeshActivated(true);
-                                jumperInfoRequest.setExternalAuthorization(false);
-                                jumperInfoRequest.setBasicAuth(false);
-                            }
-
-                            tif_remote_issuer = tif_remote_issuer + Constants.ISSUER_SUFFIX;
-
-                            TokenInfo meshTokenInfo = oauthTokenUtil.getAccessToken(tif_remote_issuer, tif_clientID, tif_clientSecret);
-
-                            // set gw and consumer tokens correctly
-                            addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, "Bearer " + meshTokenInfo.getAccessToken());
-                            addHeader(exchange, chain, Constants.HEADER_CONSUMER_TOKEN, consumerToken);
-
-                            checkForSpaceZone(exchange, chain, consumerOriginZone, consumerToken);
-
-                        }
-
-                }
-
-                addHeader(exchange, chain, Constants.HEADER_X_ORIGIN_STARGATE, consumerOriginStargate);
-                addHeader(exchange, chain, Constants.HEADER_X_ORIGIN_ZONE, consumerOriginZone);
-
-                if (consumerOriginStargate != null) {
-                    String hostStargate = "";
-                    try {
-                        URL url = new URL(consumerOriginStargate);
-                        hostStargate = url.getHost();
-                    } catch (MalformedURLException e) {
-                        log.error(e.getMessage(), e);
                     }
-                    addHeader(exchange, chain, Constants.HEADER_X_FORWARDED_HOST, hostStargate);
                 }
 
-                rewriteXForwardedHeader(exchange, chain);
+                HeaderUtil.addHeader(exchange, Constants.HEADER_X_ORIGIN_STARGATE, jumperConfig.getConsumerOriginStargate());
+                HeaderUtil.addHeader(exchange, Constants.HEADER_X_ORIGIN_ZONE, jumperConfig.getConsumerOriginZone());
+                HeaderUtil.rewriteXForwardedHeader(exchange, jumperConfig);
 
-                if(isLogLevelEnabled()) {
-                    IncomingRequest incReq = new IncomingRequest();
-                    incReq.setBasePath(api_base_path);
-                    incReq.setHost(remote_api_url);
-                    incReq.setMethod(request.getMethodValue());
-                    incReq.setResource(routing_path);
+                jumperInfoRequest.ifPresent(infoRequest -> {
+                    IncomingRequest incReq = createIncomingRequest(jumperConfig, request);
+                    infoRequest.setIncomingRequest(incReq);
+                    log.info("logging request: {}", value("jumperInfo", infoRequest));
+                });
 
-                    OutgoingRequest outgoingRequest = new OutgoingRequest();
-                    outgoingRequest.setHost(remote_api_url);
-                    outgoingRequest.setBasePath(null);
-                    outgoingRequest.setResource(routing_path);
-                    outgoingRequest.setMethod(request.getMethod().toString());
-
-                    HashMap<String, String> logEntries = new HashMap<String, String>();
-                    logEntries.put("Thread name", Thread.currentThread().getName());
-
-                    incReq.setLogEntries(logEntries);
-                    jumperInfoRequest.setIncomingRequest(incReq);
-
-                    log.info("logging request", value("jumperInfo", jumperInfoRequest));
-                }
-
-                addTracingInfo(request, config.tracer);
-
+                addTracingInfo(request);
             });
-            return chain.filter(exchange)
-                    .then(Mono.fromRunnable(() -> {
-                        // Post-processing
 
-                        // do something with the response
-
-                        if (config.isPostLogger()) {
-                            log.debug("Post GatewayFilter logging");
-                        }
-                    }));
+            return chain.filter(exchange);
         }, RouteToRequestUrlFilter.ROUTE_TO_URL_FILTER_ORDER + 1);
     }
 
-    private void clientCredentialsFlow_legacy(ServerWebExchange exchange, GatewayFilterChain chain, String client_scope, String token_endpoint, String tif_clientID, String tif_clientSecret, String xSpacegateClientId, String xSpacegateClientSecret, String xSpacegateScope, String consumer, JumperConfig jc) {
-        if( xSpacegateClientId != null && !xSpacegateClientId.isBlank())
-        {
-            log.debug( "Using SubscriberClientId {} from xSpacegateClientId-Header", xSpacegateClientId);
-            tif_clientID = xSpacegateClientId;
-            removeHeader(exchange, chain, Constants.HEADER_X_SPACEGATE_CLIENT_ID);
-        }
-        else if( jc.getOauth() != null && jc.getOauth().containsKey(consumer) && jc.getOauth().get(consumer).getClientId() != null && !jc.getOauth().get(consumer).getClientId().isBlank())
-        {
-            log.debug( "Using SubscriberClientId {} from JumperConfig", jc.getOauth().get(consumer).getClientId());
-            tif_clientID = jc.getOauth().get(consumer).getClientId();
-        }
-        else
-        {
-            log.debug( "Using default ProviderClientId {}", tif_clientID);
+    private Optional<JumperInfoRequest> initializeJumperInfoRequest(JumperConfig jumperConfig) {
+
+        if (log.isInfoEnabled()) {
+            JumperInfoRequest jumperInfoRequest = new JumperInfoRequest();
+            jumperInfoRequest.setEnvironment(jumperConfig.getEnvName());
+            return Optional.of(jumperInfoRequest);
         }
 
-        // set clientSecret
-        if( xSpacegateClientSecret != null)
-        {
-            log.debug( "Using SubscriberClientSecret from xSpacegateClientSecret-Header");
-            tif_clientSecret = xSpacegateClientSecret;
-            removeHeader(exchange, chain, Constants.HEADER_X_SPACEGATE_CLIENT_SECRET);
-        }
-        else if( jc.getOauth() != null && jc.getOauth().containsKey(consumer) && jc.getOauth().get(consumer).getClientSecret() != null && !jc.getOauth().get(consumer).getClientSecret().isBlank())
-        {
-            log.debug( "Using SubscriberClientSecret from JumperConfig");
-            tif_clientSecret = jc.getOauth().get(consumer).getClientSecret();
-        }
-        else
-        {
-            log.debug( "Using default ProviderClientSecret");
-        }
+        return Optional.empty();
+    }
 
-        // set scope
-        if( xSpacegateScope != null)
-        {
-            log.debug( "Using Scope from xSpacegateScope-Header");
-            client_scope = xSpacegateScope;
-            removeHeader(exchange, chain, Constants.HEADER_X_SPACEGATE_SCOPE);
-        }
-        else if( jc.getOauth() != null && jc.getOauth().containsKey(consumer) && jc.getOauth().get(consumer).getScopes() != null && !jc.getOauth().get(consumer).getScopes().isBlank())
-        {
-            client_scope = jc.getOauth().get(consumer).getScopes();
-        }
-        else
-        {
-            log.debug("Using default Provider scope");
-            if(jc.getScopes() != null && !jc.getScopes().isEmpty())
-            {
-                client_scope = jc.getScopes();
+    private IncomingRequest createIncomingRequest(JumperConfig jumperConfig, ServerHttpRequest request) {
+        IncomingRequest incReq = new IncomingRequest();
+        incReq.setBasePath(jumperConfig.getApiBasePath());
+        incReq.setHost(jumperConfig.getRemoteApiUrl());
+        incReq.setMethod(String.valueOf(request.getMethod()));
+        incReq.setResource(jumperConfig.getRoutingPath());
+
+        HashMap<String, String> logEntries = new HashMap<>();
+        logEntries.put("Thread name", Thread.currentThread().getName());
+
+        incReq.setLogEntries(logEntries);
+        return incReq;
+    }
+
+    private void calculateRoutingStuff(ServerHttpRequest request, ServerWebExchange exchange, String routePathPrefix, JumperConfig jumperConfig) {
+
+        try {
+            URI uri = request.getURI();
+            String queryParameterPart = uri.getRawQuery();
+            String fragmentPart = uri.getFragment();
+            String routingPath = uri.getRawPath().replaceFirst("^" + routePathPrefix, "");
+
+            String requestPath = jumperConfig.getApiBasePath() + routingPath;
+
+            if (Objects.nonNull(queryParameterPart)) {
+                routingPath += "?" + queryParameterPart;
             }
+
+            if (Objects.nonNull(fragmentPart)) {
+                routingPath += "#" + fragmentPart;
+            }
+
+            String finalApiUrl = jumperConfig.getRemoteApiUrl().replaceAll("/$", "") + routingPath;
+
+            // store final destination url to exchange
+            log.debug("Routing set to: " + finalApiUrl);
+            exchange.getAttributes().put(ServerWebExchangeUtils.GATEWAY_REQUEST_URL_ATTR, new URI(finalApiUrl));
+
+            // add calculated stuff to jumperConfig
+            jumperConfig.setRequestPath(requestPath);
+            jumperConfig.setRoutingPath(routingPath);
+
+        } catch (URISyntaxException e) {
+            throw new RuntimeException("can not construct URL from " + request.getURI(), e);
         }
+    }
 
+    private void getAccessTokenFromExternalIdpLegacy(ServerWebExchange exchange, JumperConfig jc) {
 
-        log.debug( "Get token for consumer: {} with clientId: {}", consumer, tif_clientID);
-        if( tif_clientID != null && tif_clientSecret != null)
-        {
-            TokenInfo tokenInfo = oauthTokenUtil.getAccessToken(token_endpoint, tif_clientID, tif_clientSecret, client_scope, consumer);
-            addHeader(exchange, chain, Constants.HEADER_AUTHORIZATION, Constants.BEARER+" "+tokenInfo.getAccessToken());
+        String consumer = jc.getConsumer();
+        String tokenEndpoint = jc.getExternalTokenEndpoint();
 
-        }
-        else
-        {
+        Optional<OauthCredentials> oauthCredentials = jc.getOauthCredentials();
+
+        String clientId = determineClientId(exchange, jc, oauthCredentials);
+        String clientSecret = determineClientSecret(exchange, jc, oauthCredentials);
+        String clientScope = determineClientScope(exchange, jc, oauthCredentials);
+
+        log.debug( "Get token for consumer: {} with clientId: {}", consumer, clientId);
+        if ( Objects.nonNull(clientId) && Objects.nonNull(clientSecret)) {
+            TokenInfo tokenInfo = oauthTokenUtil.getAccessTokenWithClientCredentials(tokenEndpoint, clientId, clientSecret, clientScope, consumer);
+            HeaderUtil.addHeader(exchange, Constants.HEADER_AUTHORIZATION, Constants.BEARER+" "+tokenInfo.getAccessToken());
+
+        } else {
             log.warn( "not specified oauth config credentials for consumer: {}", consumer);
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing oauth config credentials for consumer " + consumer);
         }
     }
 
-    private String getLastValueFromHeaderField(ServerHttpRequest request, String headerName) {
-        return request.getHeaders().getValuesAsList(headerName)
-                .stream()
-                .reduce((first, last) -> last)
-                .orElse(null);
+    private static String determineClientScope(ServerWebExchange exchange, JumperConfig jc, Optional<OauthCredentials> oauthCredentials) {
+
+        String clientScope = "";
+        String xSpacegateScope = jc.getXSpacegateScope();
+
+        if (Objects.nonNull(xSpacegateScope)) {
+            log.debug( "Using Scope from xSpacegateScope-Header");
+            clientScope = xSpacegateScope;
+            HeaderUtil.removeHeader(exchange, Constants.HEADER_X_SPACEGATE_SCOPE);
+
+        } else if (oauthCredentials.isPresent() && StringUtils.isNotBlank(oauthCredentials.get().getScopes())) {
+            clientScope = oauthCredentials.get().getScopes();
+
+        } else {
+            log.debug("Using default Provider scope");
+            if (StringUtils.isNotBlank(jc.getScopes())) {
+                clientScope = jc.getScopes();
+            }
+        }
+        return clientScope;
     }
 
-    private void checkForSpaceZone(ServerWebExchange exchange, GatewayFilterChain chain, String zone, String token ) {
-        if(zone != null && Constants.SPACE_ZONES.contains(zone)) {
-            addHeader(exchange, chain, Constants.HEADER_X_SPACEGATE_TOKEN, token);
+    private static String determineClientSecret(ServerWebExchange exchange, JumperConfig jc, Optional<OauthCredentials> oauthCredentials) {
+
+        String clientSecret = jc.getClientSecret();
+        String xSpacegateClientSecret = jc.getXSpacegateClientSecret();
+
+        if (Objects.nonNull(xSpacegateClientSecret)) {
+            log.debug( "Using SubscriberClientSecret from xSpacegateClientSecret-Header");
+            clientSecret = xSpacegateClientSecret;
+            HeaderUtil.removeHeader(exchange, Constants.HEADER_X_SPACEGATE_CLIENT_SECRET);
+
+        } else if (oauthCredentials.isPresent() && StringUtils.isNotBlank(oauthCredentials.get().getClientSecret())) {
+            log.debug( "Using SubscriberClientSecret from JumperConfig");
+            clientSecret = oauthCredentials.get().getClientSecret();
+
+        } else {
+            log.debug( "Using default ProviderClientSecret");
+        }
+        return clientSecret;
+    }
+
+    private static String determineClientId(ServerWebExchange exchange, JumperConfig jc, Optional<OauthCredentials> oauthCredentials) {
+
+        String clientId = jc.getClientId();
+        String xSpacegateClientId = jc.getXSpacegateClientId();
+
+        if (StringUtils.isNotBlank(xSpacegateClientId)) {
+            log.debug( "Using SubscriberClientId {} from xSpacegateClientId-Header", xSpacegateClientId);
+            clientId = xSpacegateClientId;
+            HeaderUtil.removeHeader(exchange, Constants.HEADER_X_SPACEGATE_CLIENT_ID);
+
+        } else if (oauthCredentials.isPresent() && StringUtils.isNotBlank(oauthCredentials.get().getClientId())) {
+
+            log.debug( "Using SubscriberClientId {} from JumperConfig", oauthCredentials.get().getClientId());
+            clientId = oauthCredentials.get().getClientId();
+
+        } else {
+            log.debug( "Using default ProviderClientId {}", clientId);
+        }
+        return clientId;
+    }
+
+    private void checkForSpaceZone(ServerWebExchange exchange, String zone, String token ) {
+        if (zone != null && Constants.SPACE_ZONES.contains(zone)) {
+            HeaderUtil.addHeader(exchange, Constants.HEADER_X_SPACEGATE_TOKEN, token);
         }
     }
 
-    private void addTracingInfo(ServerHttpRequest request, Tracer tracer) {
+    private String getSecurityScopes(JumperConfig jumperConfig){
 
-        String xTardisTraceId = request.getHeaders().getFirst( Constants.HEADER_X_TARDIS_TRACE_ID);
+        Optional<OauthCredentials> oauthCredentials = jumperConfig.getOauthCredentials();
+        return oauthCredentials.map(OauthCredentials::getScopes).orElse(null);
+    }
 
-        String contentLength = request.getHeaders().getFirst("Content-Length");
+    private void addTracingInfo(ServerHttpRequest request) {
+
+        String xTardisTraceId = HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_TARDIS_TRACE_ID);
+        String contentLength = HeaderUtil.getLastValueFromHeaderField(request, "Content-Length");
 
         Span incomingRequestSpan = tracer.currentSpan();
         incomingRequestSpan.name("Incoming Request");
 
-        if (contentLength == null) {
-            incomingRequestSpan.tag("message.size", "0");//todo would prefer to set NA for this (chunked transfer?) scenario
-        } else {
-            incomingRequestSpan.tag("message.size", contentLength);
-        }
+        // todo would prefer to set NA for this (chunked transfer?) scenario
+        incomingRequestSpan.tag("message.size", Objects.requireNonNullElse(contentLength, "0"));
 
-        if( xTardisTraceId != null){
+        if ( xTardisTraceId != null) {
             incomingRequestSpan.tag( Constants.HEADER_X_TARDIS_TRACE_ID, xTardisTraceId);
         }
 
@@ -420,67 +408,9 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         incomingRequestSpan.event("jrqf");
     }
 
-    private void rewriteXForwardedHeader( ServerWebExchange exchange, GatewayFilterChain chain) {
-        addHeader(exchange, chain, Constants.HEADER_X_FORWARDED_PORT, Constants.HEADER_X_FORWARDED_PORT_PORT);
-        addHeader(exchange, chain, Constants.HEADER_X_FORWARDED_PROTO, Constants.HEADER_X_FORWARDED_PROTO_HTTPS);
-
-
-    }
-
-    private void addHeader(ServerWebExchange exchange, GatewayFilterChain chain, String headerName, String headerValue) {
-        ServerHttpRequest request = exchange.getRequest()
-                .mutate()
-                .header(headerName, headerValue)
-                .build();
-        ServerWebExchange exchange1 = exchange.mutate().request(request).build();
-        chain.filter(exchange1);
-    }
-
-    private void removeHeader(ServerWebExchange exchange, GatewayFilterChain chain, String headerName){
-        ServerHttpRequest request = exchange.getRequest()
-                .mutate()
-                .headers(httpHeaders -> httpHeaders.remove(headerName))
-                .build();
-        ServerWebExchange exchange1 = exchange.mutate().request(request).build();
-        chain.filter(exchange1);
-    }
-
-    private String setSecurityScopes(JumperConfig jumperConfig, String consumer){
-        if (jumperConfig.getOauth() != null && jumperConfig.getOauth().containsKey(consumer)){
-            return jumperConfig.getOauth().get(consumer).getScopes();
-        }
-        return null;
-    }
-
-    private boolean isLogLevelEnabled(){
-        return log.isInfoEnabled();
-    }
-
-    public static class Config {
-        private boolean preLogger;
-        private boolean postLogger;
-        private Tracer tracer;
-
-        public Config(boolean preLogger, boolean postLogger, Tracer tracer) {
-            this.preLogger = preLogger;
-            this.postLogger = postLogger;
-            this.tracer = tracer;
-        }
-
-        public boolean isPreLogger() {
-            return preLogger;
-        }
-
-        public void setPreLogger(boolean preLogger) {
-            this.preLogger = preLogger;
-        }
-
-        public boolean isPostLogger() {
-            return postLogger;
-        }
-
-        public void setPostLogger(boolean postLogger) {
-            this.postLogger = postLogger;
-        }
+    @AllArgsConstructor
+    @Getter
+    public static class Config extends AbstractGatewayFilterFactory.NameConfig {
+        private String routePathPrefix;
     }
 }

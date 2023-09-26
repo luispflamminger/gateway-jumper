@@ -1,8 +1,8 @@
 package jumper.filter;
 
 
-import jumper.utilities.ResponseBodyRewrite;
-import org.springframework.beans.factory.annotation.Autowired;
+import jumper.filter.rewrite.ResponseBodyRewrite;
+import lombok.RequiredArgsConstructor;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.factory.rewrite.ModifyResponseBodyGatewayFilterFactory;
@@ -12,10 +12,11 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 @Component
+@RequiredArgsConstructor
 public class ResponseTransformationFilter implements  GatewayFilter, Ordered{
-    @Autowired private ModifyResponseBodyGatewayFilterFactory modifyResponseBodyFilter;
-    @Autowired private ResponseBodyRewrite responseBodyRewrite;
 
+    private final ModifyResponseBodyGatewayFilterFactory modifyResponseBodyFilter;
+    private final ResponseBodyRewrite responseBodyRewrite;
 
     public static final int RESPONSE_TRANSFORM_FILTER_ORDER = SpectreResponseFilter.AUTO_EVENT_RESPONSE_FILTER_ORDER-1;
 

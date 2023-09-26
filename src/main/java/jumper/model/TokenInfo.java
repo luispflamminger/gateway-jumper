@@ -36,15 +36,14 @@ public class TokenInfo {
     private String scope;
 
     public void setExpiresIn(int expiresIn) {
-        setExpiration(new Date(System.currentTimeMillis() + expiresIn * 1000));
+        setExpiration(new Date(System.currentTimeMillis() + expiresIn * 1000L));
     }
 
     public void setExpiration(Date expiration) {
         this.expiration = expiration;
     }
-    
+
     public int getExpiresIn() {
-        return expiration != null ? Long.valueOf((expiration.getTime() - System.currentTimeMillis()) / 1000L)
-                .intValue() : 0;
+        return expiration != null ? (int) ((expiration.getTime() - System.currentTimeMillis()) / 1000L) : 0;
     }
 }

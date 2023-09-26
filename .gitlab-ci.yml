@@ -4,7 +4,6 @@ include:
   ref: 15.2.1
 variables:
   MTR_TARGET_IMAGE: ${CI_PROJECT_NAME}
-  MAVEN_ADD_OPTS: -DskipTests
 build docker image:
   extends: .build-docker-image-manual
 mtr to harbor:

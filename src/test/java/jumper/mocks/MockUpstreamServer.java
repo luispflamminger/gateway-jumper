@@ -3,7 +3,7 @@ package jumper.mocks;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Header;
 import io.jsonwebtoken.Jwt;
-import jumper.utilities.OauthTokenUtil;
+import jumper.service.OauthTokenUtil;
 import org.mockserver.client.MockServerClient;
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.matchers.Times;
@@ -22,15 +22,13 @@ import static org.mockserver.model.Parameter.param;
 
 public class MockUpstreamServer {
 
-    private final int upstreamLocalPort = 1080;
-
-    private final String upstreamLocalHost = "localhost";
-
     private ClientAndServer mockServer;
     private MockServerClient mockServerClient;
 
     public void startServer() {
+        int upstreamLocalPort = 1080;
         mockServer = startClientAndServer(upstreamLocalPort);
+        String upstreamLocalHost = "localhost";
         mockServerClient = new MockServerClient(upstreamLocalHost, upstreamLocalPort);
     }
 

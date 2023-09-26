@@ -7,8 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Data
-public class SpectreData
-{
+public class SpectreData {
     String consumer; // <consumer-app-id-1>
     String provider; // <provider-app-id-1>
     String issue; // <apiBasePath> | <eventType>

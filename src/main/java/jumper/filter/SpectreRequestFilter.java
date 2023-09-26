@@ -2,9 +2,8 @@ package jumper.filter;
 
 import jumper.model.config.JumperConfig;
 import jumper.model.config.RouteListener;
-import jumper.spectre.SpectreService;
+import jumper.service.SpectreService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.OrderedGatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
@@ -15,13 +14,13 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class SpectreRequestFilter extends AbstractGatewayFilterFactory<SpectreRequestFilter.Config> {
 
-    @Autowired
-    SpectreService aes;
+    private final SpectreService spectreService;
 
     public static final int AUTO_EVENT_REQUEST_FILTER_ORDER = RequestTransformationFilter.REQUEST_TRANSFORM_FILTER_ORDER+1;
 
-    public SpectreRequestFilter()  {
+    public SpectreRequestFilter(SpectreService spectreService)  {
         super(Config.class);
+        this.spectreService = spectreService;
     }
 
     @Override
@@ -33,27 +32,19 @@ public class SpectreRequestFilter extends AbstractGatewayFilterFactory<SpectreRe
             String requestBody = exchange.getAttribute("cachedRequestBodyObject");
             log.debug("Request: headers={}, payload={}", request.getHeaders().toSingleValueMap(), requestBody);
 
-            //JumperConfig jc = JumperConfig.parseConfigFrom( request);
             JumperConfig jc = JumperConfig.parseConfigFrom( exchange);
-            if(!aes.isListenerMatched(jc))
-            {
+            if (!jc.isListenerMatched()) {
                 return chain.filter(exchange.mutate().request(request).build());
             }
 
             RouteListener listener = jc.getRouteListener().get( jc.getConsumer());
-/*
-            // Create Event with additional information
-            Spectre eventReqMsg = aes.createEvent(jc, exchange, exchange.getRequest(), listener, requestBody);
 
-            // publish event (route to local Horizon)
-            aes.publishEvent(eventReqMsg, jc);
-*/
-            aes.handleEvent(jc, exchange, exchange.getRequest(), listener, requestBody);
+            spectreService.handleEvent(jc, exchange, exchange.getRequest(), listener, requestBody);
             return chain.filter(exchange);
 
         }, AUTO_EVENT_REQUEST_FILTER_ORDER);
     }
 
-    public static class Config {
+    public static class Config extends AbstractGatewayFilterFactory.NameConfig {
     }
 }
