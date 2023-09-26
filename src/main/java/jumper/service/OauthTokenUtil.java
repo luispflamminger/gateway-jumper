@@ -143,10 +143,6 @@ public class OauthTokenUtil {
         claims.put(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, consumerOriginStargate);
 
         if (legacy) {
-            if (StringUtils.isNotBlank(aud)) {
-                claims.put(Constants.TOKEN_CLAIM_AUD, aud);
-            }
-
             String consumerTokenSignature = getSignature(consumerToken);
             claims.put(Constants.TOKEN_CLAIM_ACCESS_TOKEN_SIGNATURE, consumerTokenSignature);
 
@@ -166,9 +162,11 @@ public class OauthTokenUtil {
                 claims.put(Constants.TOKEN_CLAIM_AUD, subscriberId);
             }
 
-            if (StringUtils.isNotBlank(aud)) {
-                claims.put(Constants.TOKEN_CLAIM_AUD, aud);
-            }
+
+        }
+
+        if (StringUtils.isNotBlank(aud)) {
+            claims.put(Constants.TOKEN_CLAIM_AUD, aud);
         }
 
         return generateToken(claims, issuer, expiration, issuedAt);
