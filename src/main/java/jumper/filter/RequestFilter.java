@@ -377,12 +377,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         }
     }
 
-    private String getSecurityScopes(JumperConfig jumperConfig){
-
-        Optional<OauthCredentials> oauthCredentials = jumperConfig.getOauthCredentials();
-        return oauthCredentials.map(OauthCredentials::getScopes).orElse(null);
-    }
-
     private void addTracingInfo(ServerHttpRequest request) {
 
         String xTardisTraceId = HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_TARDIS_TRACE_ID);
