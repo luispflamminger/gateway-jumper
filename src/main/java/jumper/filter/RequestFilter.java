@@ -172,12 +172,9 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                                         false));
 
                                 String enhancedLastmileSecurityToken = oauthTokenUtil.generateEnhancedLastMileGatewayToken(
-                                        jumperConfig.getEnvName(),
-                                        jumperConfig.getConsumerToken(),
+                                        jumperConfig,
                                         String.valueOf(request.getMethod()),
-                                        jumperConfig.getRequestPath(),
                                         localIssuerUrl + "/" + jumperConfig.getRealmName(),
-                                        getSecurityScopes(jumperConfig),
                                         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_PUBSUB_PUBLISHER_ID),
                                         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID),
                                         false
@@ -198,12 +195,9 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                                         false));
 
                                 String legacyLastmileSecurityToken = oauthTokenUtil.generateEnhancedLastMileGatewayToken(
-                                        jumperConfig.getEnvName(),
-                                        jumperConfig.getConsumerToken(),
+                                        jumperConfig,
                                         String.valueOf(request.getMethod()),
-                                        jumperConfig.getRequestPath(),
                                         localIssuerUrl + "/" + jumperConfig.getRealmName(),
-                                        getSecurityScopes(jumperConfig),
                                         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_PUBSUB_PUBLISHER_ID),
                                         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID),
                                         true

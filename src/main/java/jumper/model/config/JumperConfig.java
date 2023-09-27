@@ -163,4 +163,9 @@ public class JumperConfig {
 
         return Optional.empty();
     }
+
+    public String getSecurityScopes(){
+        Optional<OauthCredentials> oauthCredentials = getOauthCredentials();
+        return oauthCredentials.map(OauthCredentials::getScopes).orElse(null);
+    }
 }

@@ -117,10 +117,10 @@ public class OauthTokenUtil {
         throw new IllegalStateException("Was not able to parse consumer token");
     }
 
-    public String generateEnhancedLastMileGatewayToken(String envName, String consumerToken, String operation, String requestPath, String issuer, String scope, String publisherId, String subscriberId, boolean legacy) {
+    public String generateEnhancedLastMileGatewayToken(JumperConfig jc, String operation, String issuer, String publisherId, String subscriberId, boolean legacy) {
         //nearly to pass additional claims as a map, so far scope + publisher
 
-        String consumerTokenWithoutSignature = getTokenWithoutSignature(consumerToken);
+        String consumerTokenWithoutSignature = getTokenWithoutSignature(jc.getConsumerToken());
 
         Jwt<Header, Claims> gatewayTokenclaims = getAllClaimsFromToken(consumerTokenWithoutSignature);
 
@@ -136,21 +136,21 @@ public class OauthTokenUtil {
         claims.put(Constants.TOKEN_CLAIM_TYP, "Bearer");
         claims.put(Constants.TOKEN_CLAIM_AZP, "stargate");
         claims.put(Constants.TOKEN_CLAIM_SUB, sub);
-        claims.put(Constants.TOKEN_CLAIM_REQUEST_PATH, requestPath);
+        claims.put(Constants.TOKEN_CLAIM_REQUEST_PATH, jc.getRequestPath());
         claims.put(Constants.TOKEN_CLAIM_OPERATION, operation);
         claims.put(Constants.TOKEN_CLAIM_CLIENT_ID, clientId);
         claims.put(Constants.TOKEN_CLAIM_ORIGIN_ZONE, consumerOriginZone);
         claims.put(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, consumerOriginStargate);
 
         if (legacy) {
-            String consumerTokenSignature = getSignature(consumerToken);
+            String consumerTokenSignature = getSignature(jc.getConsumerToken());
             claims.put(Constants.TOKEN_CLAIM_ACCESS_TOKEN_SIGNATURE, consumerTokenSignature);
 
         } else {
-            claims.put(Constants.TOKEN_CLAIM_ACCESS_TOKEN_ENVIRONMENT, envName);
+            claims.put(Constants.TOKEN_CLAIM_ACCESS_TOKEN_ENVIRONMENT, jc.getEnvName());
 
-            if (Objects.nonNull(scope)) {
-                claims.put(Constants.TOKEN_CLAIM_SCOPE, scope);
+            if (Objects.nonNull(jc.getSecurityScopes())) {
+                claims.put(Constants.TOKEN_CLAIM_SCOPE, jc.getSecurityScopes());
             }
 
             if (Objects.nonNull(publisherId)) {
