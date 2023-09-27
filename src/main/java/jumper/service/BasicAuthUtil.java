@@ -7,7 +7,7 @@ import org.springframework.util.Base64Utils;
 
 @Service
 @RequiredArgsConstructor
-public class BasicAuthUtilService {
+public class BasicAuthUtil {
 
 
     public String encodeBasicAuth(String username, String password){

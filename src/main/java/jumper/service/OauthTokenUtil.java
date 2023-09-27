@@ -53,7 +53,7 @@ public class OauthTokenUtil {
 
     private final WebClient webClient;
     private final TokenCacheService tokenCache;
-    private final BasicAuthUtilService basicAuthUtilService;
+    private final BasicAuthUtil basicAuthUtil;
 
     private static String securityPath;
     private static String securityFile;
@@ -256,7 +256,7 @@ public class OauthTokenUtil {
             if (StringUtils.isNotBlank(oauthCredentials.getClientId())
                     && StringUtils.isNotBlank(oauthCredentials.getClientSecret())) {
 
-                basicAuth = basicAuthUtilService
+                basicAuth = basicAuthUtil
                         .encodeBasicAuth(oauthCredentials.getClientId(), oauthCredentials.getClientSecret());
             }
 

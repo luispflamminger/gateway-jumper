@@ -7,7 +7,7 @@ import jumper.model.config.JumperConfig;
 import jumper.model.config.OauthCredentials;
 import jumper.model.request.IncomingRequest;
 import jumper.model.request.JumperInfoRequest;
-import jumper.service.BasicAuthUtilService;
+import jumper.service.BasicAuthUtil;
 import jumper.service.HeaderUtil;
 import jumper.service.OauthTokenUtil;
 import lombok.AllArgsConstructor;
@@ -45,7 +45,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
     private final CurrentTraceContext currentTraceContext;
     private final Tracer tracer;
     private final OauthTokenUtil oauthTokenUtil;
-    private final BasicAuthUtilService basicAuthUtilService;
+    private final BasicAuthUtil basicAuthUtil;
 
     @Value( "${jumper.issuer.url}")
     private String localIssuerUrl;
@@ -55,12 +55,12 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
     public static final int REQUEST_FILTER_ORDER = RouteToRequestUrlFilter.ROUTE_TO_URL_FILTER_ORDER + 1;
 
-    public RequestFilter(CurrentTraceContext currentTraceContext, Tracer tracer, OauthTokenUtil oauthTokenUtil, BasicAuthUtilService basicAuthUtilService) {
+    public RequestFilter(CurrentTraceContext currentTraceContext, Tracer tracer, OauthTokenUtil oauthTokenUtil, BasicAuthUtil basicAuthUtil) {
         super(Config.class);
         this.currentTraceContext = currentTraceContext;
         this.tracer = tracer;
         this.oauthTokenUtil = oauthTokenUtil;
-        this.basicAuthUtilService = basicAuthUtilService;
+        this.basicAuthUtil = basicAuthUtil;
     }
 
     @Override
@@ -127,7 +127,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                                     false,
                                     true));
 
-                            String encodedBasicAuth = basicAuthUtilService.encodeBasicAuth(
+                            String encodedBasicAuth = basicAuthUtil.encodeBasicAuth(
                                     basicAuthCredentials.get().getUsername(), basicAuthCredentials.get().getPassword());
 
                             HeaderUtil.addHeader( exchange, Constants.HEADER_AUTHORIZATION,Constants.BASIC + " " + encodedBasicAuth);
