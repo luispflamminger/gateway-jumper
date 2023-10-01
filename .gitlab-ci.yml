@@ -1,7 +1,7 @@
 include:
 - project: dhei/teams/hyperion/dev/src/foundation-build
-  file: /pipelines/java-maven-docker-tag-pipeline.yaml
-  ref: 15.2.1
+  file: /pipelines/java-maven-docker-release-pipeline.yaml
+  ref: 15.7.0
 variables:
   MTR_TARGET_IMAGE: ${CI_PROJECT_NAME}
 build docker image:
