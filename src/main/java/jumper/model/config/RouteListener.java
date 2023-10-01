@@ -4,7 +4,6 @@ import lombok.Data;
 
 @Data
 public class RouteListener {
-    private String issue;
-    private String serviceOwner;
+  private String issue;
+  private String serviceOwner;
 }
-

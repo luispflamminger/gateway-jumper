@@ -8,5 +8,4 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles("test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureWebTestClient(timeout = "PT10S") // PT65S - PT = Period time, S = seconds
-public class CucumberContextConfiguration {
-}
+public class CucumberContextConfiguration {}

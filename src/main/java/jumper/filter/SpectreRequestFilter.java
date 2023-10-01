@@ -12,39 +12,43 @@ import org.springframework.stereotype.Component;
 
 @Component
 @Slf4j
-public class SpectreRequestFilter extends AbstractGatewayFilterFactory<SpectreRequestFilter.Config> {
+public class SpectreRequestFilter
+    extends AbstractGatewayFilterFactory<SpectreRequestFilter.Config> {
 
-    private final SpectreService spectreService;
+  private final SpectreService spectreService;
 
-    public static final int AUTO_EVENT_REQUEST_FILTER_ORDER = RequestTransformationFilter.REQUEST_TRANSFORM_FILTER_ORDER+1;
+  public static final int AUTO_EVENT_REQUEST_FILTER_ORDER =
+      RequestTransformationFilter.REQUEST_TRANSFORM_FILTER_ORDER + 1;
 
-    public SpectreRequestFilter(SpectreService spectreService)  {
-        super(Config.class);
-        this.spectreService = spectreService;
-    }
+  public SpectreRequestFilter(SpectreService spectreService) {
+    super(Config.class);
+    this.spectreService = spectreService;
+  }
 
-    @Override
-    public GatewayFilter apply(Config config) {
-        return new OrderedGatewayFilter((exchange, chain) -> {
+  @Override
+  public GatewayFilter apply(Config config) {
+    return new OrderedGatewayFilter(
+        (exchange, chain) -> {
+          ServerHttpRequest request = exchange.getRequest();
 
-            ServerHttpRequest request = exchange.getRequest();
+          String requestBody = exchange.getAttribute("cachedRequestBodyObject");
+          log.debug(
+              "Request: headers={}, payload={}",
+              request.getHeaders().toSingleValueMap(),
+              requestBody);
 
-            String requestBody = exchange.getAttribute("cachedRequestBodyObject");
-            log.debug("Request: headers={}, payload={}", request.getHeaders().toSingleValueMap(), requestBody);
+          JumperConfig jc = JumperConfig.parseConfigFrom(exchange);
+          if (!jc.isListenerMatched()) {
+            return chain.filter(exchange.mutate().request(request).build());
+          }
 
-            JumperConfig jc = JumperConfig.parseConfigFrom( exchange);
-            if (!jc.isListenerMatched()) {
-                return chain.filter(exchange.mutate().request(request).build());
-            }
+          RouteListener listener = jc.getRouteListener().get(jc.getConsumer());
 
-            RouteListener listener = jc.getRouteListener().get( jc.getConsumer());
+          spectreService.handleEvent(jc, exchange, exchange.getRequest(), listener, requestBody);
+          return chain.filter(exchange);
+        },
+        AUTO_EVENT_REQUEST_FILTER_ORDER);
+  }
 
-            spectreService.handleEvent(jc, exchange, exchange.getRequest(), listener, requestBody);
-            return chain.filter(exchange);
-
-        }, AUTO_EVENT_REQUEST_FILTER_ORDER);
-    }
-
-    public static class Config extends AbstractGatewayFilterFactory.NameConfig {
-    }
+  public static class Config extends AbstractGatewayFilterFactory.NameConfig {}
 }

@@ -8,15 +8,17 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 @Configuration
 public class SecurityConfiguration {
 
-    @Bean
-    public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
+  @Bean
+  public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
 
-        return http
-                .httpBasic().disable()
-                .formLogin().disable()
-                .csrf().disable()
-                .logout().disable()
-
-                .build();
-    }
+    return http.httpBasic()
+        .disable()
+        .formLogin()
+        .disable()
+        .csrf()
+        .disable()
+        .logout()
+        .disable()
+        .build();
+  }
 }

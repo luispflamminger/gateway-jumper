@@ -17,33 +17,32 @@ import reactor.core.publisher.Mono;
 @Slf4j
 @RequiredArgsConstructor
 public class RequestTransformationFilter implements GatewayFilter, Ordered {
-    private final ModifyRequestBodyGatewayFilterFactory modifyRequestBodyFilter;
-    private final RequestBodyRewrite requestBodyRewrite;
+  private final ModifyRequestBodyGatewayFilterFactory modifyRequestBodyFilter;
+  private final RequestBodyRewrite requestBodyRewrite;
 
-    @Value("${spring.codec.max-in-memory-size}")
-    private int limit;
+  @Value("${spring.codec.max-in-memory-size}")
+  private int limit;
 
-    public static final int REQUEST_TRANSFORM_FILTER_ORDER = RemoveRequestHeaderFilter.REMOVE_REQUEST_HEADER_FILTER_ORDER + 1;
+  public static final int REQUEST_TRANSFORM_FILTER_ORDER =
+      RemoveRequestHeaderFilter.REMOVE_REQUEST_HEADER_FILTER_ORDER + 1;
 
-    @Override
-    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+  @Override
+  public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
 
-        ServerHttpRequest request = exchange.getRequest();
-        if (request.getHeaders().getContentLength() > limit) {
-            log.warn("limit {} exceeded, will not store request payload", limit);
-            return chain.filter(exchange);
-        }
-
-        return modifyRequestBodyFilter
-                .apply(
-                        new ModifyRequestBodyGatewayFilterFactory.Config()
-                                .setRewriteFunction(byte[].class, byte[].class, requestBodyRewrite))
-                .filter(exchange, chain);
+    ServerHttpRequest request = exchange.getRequest();
+    if (request.getHeaders().getContentLength() > limit) {
+      log.warn("limit {} exceeded, will not store request payload", limit);
+      return chain.filter(exchange);
     }
 
-    public int getOrder() {
-        return REQUEST_TRANSFORM_FILTER_ORDER;
-    }
+    return modifyRequestBodyFilter
+        .apply(
+            new ModifyRequestBodyGatewayFilterFactory.Config()
+                .setRewriteFunction(byte[].class, byte[].class, requestBodyRewrite))
+        .filter(exchange, chain);
+  }
 
+  public int getOrder() {
+    return REQUEST_TRANSFORM_FILTER_ORDER;
+  }
 }
-

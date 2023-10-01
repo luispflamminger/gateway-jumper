@@ -4,7 +4,7 @@ import lombok.Data;
 
 @Data
 public class GatewayClient {
-    private String id;
-    private String secret;
-    private String issuer;
+  private String id;
+  private String secret;
+  private String issuer;
 }
