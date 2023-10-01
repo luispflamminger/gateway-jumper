@@ -1,5 +1,7 @@
 package jumper.filter;
 
+import static net.logstash.logback.argument.StructuredArguments.value;
+
 import jumper.model.response.IncomingResponse;
 import jumper.model.response.JumperInfoResponse;
 import lombok.AllArgsConstructor;
@@ -18,72 +20,74 @@ import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
-import static net.logstash.logback.argument.StructuredArguments.value;
-
 @Component
 @Slf4j
 public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.Config> {
 
-    private final CurrentTraceContext currentTraceContext;
-    private final Tracer tracer;
+  private final CurrentTraceContext currentTraceContext;
+  private final Tracer tracer;
 
-    public ResponseFilter(CurrentTraceContext currentTraceContext, Tracer tracer) {
-        super(Config.class);
-        this.currentTraceContext = currentTraceContext;
-        this.tracer = tracer;
-    }
+  public ResponseFilter(CurrentTraceContext currentTraceContext, Tracer tracer) {
+    super(Config.class);
+    this.currentTraceContext = currentTraceContext;
+    this.tracer = tracer;
+  }
 
-    @Override
-    public GatewayFilter apply(Config config) {
-        return new OrderedGatewayFilter((exchange, chain) ->
+  @Override
+  public GatewayFilter apply(Config config) {
+    return new OrderedGatewayFilter(
+        (exchange, chain) ->
+            chain
+                .filter(exchange)
+                .then(
+                    Mono.fromRunnable(
+                        () ->
+                            WebFluxSleuthOperators.withSpanInScope(
+                                tracer,
+                                currentTraceContext,
+                                exchange,
+                                () -> {
+                                  ServerHttpResponse response = exchange.getResponse();
+                                  ServerHttpRequest request = exchange.getRequest();
 
-                chain.filter(exchange)
-                        .then(Mono.fromRunnable(() -> WebFluxSleuthOperators.withSpanInScope(
-                                tracer, currentTraceContext, exchange, () -> {
+                                  if (isLogLevelEnabled()) {
+                                    JumperInfoResponse jumperInfoResponse =
+                                        new JumperInfoResponse();
+                                    IncomingResponse incomingResponse = new IncomingResponse();
 
-                                    ServerHttpResponse response = exchange.getResponse();
-                                    ServerHttpRequest request = exchange.getRequest();
+                                    incomingResponse.setPath(request.getPath().toString());
+                                    incomingResponse.setHttpStatusCode(
+                                        response.getStatusCode().value());
 
-                                    if (isLogLevelEnabled()) {
-                                        JumperInfoResponse jumperInfoResponse = new JumperInfoResponse();
-                                        IncomingResponse incomingResponse = new IncomingResponse();
+                                    jumperInfoResponse.setIncomingResponse(incomingResponse);
 
-                                        incomingResponse.setPath(request.getPath().toString());
-                                        incomingResponse.setHttpStatusCode(response.getStatusCode().value());
+                                    log.info(
+                                        "logging response: {}",
+                                        value("jumperInfo", jumperInfoResponse));
+                                  }
 
-                                        jumperInfoResponse.setIncomingResponse(incomingResponse);
+                                  Long contentLength = response.getHeaders().getContentLength();
 
-                                        log.info("logging response: {}", value("jumperInfo", jumperInfoResponse));
-                                    }
+                                  Span span = tracer.currentSpan();
 
-                                    Long contentLength = response.getHeaders().getContentLength();
+                                  if (contentLength == null
+                                      || contentLength.toString().equals("-1")) {
+                                    span.tag("message.size_response", "0");
+                                  } else {
+                                    span.tag("message.size_response", contentLength.toString());
+                                  }
 
-                                    Span span = tracer.currentSpan();
+                                  span.event("jrpf");
+                                }))),
+        RequestFilter.REQUEST_FILTER_ORDER);
+  }
 
-                                    if (contentLength == null || contentLength.toString().equals("-1")) {
-                                        span.tag("message.size_response", "0");
-                                    } else {
-                                        span.tag("message.size_response", contentLength.toString());
-                                    }
+  private boolean isLogLevelEnabled() {
+    return log.isInfoEnabled();
+  }
 
-                                    span.event("jrpf");
-
-                                }
-                        )))
-
-                , RequestFilter.REQUEST_FILTER_ORDER);
-    }
-
-    private boolean isLogLevelEnabled() {
-        return log.isInfoEnabled();
-    }
-
-
-    @Getter
-    @Setter
-    @AllArgsConstructor
-    public static class Config extends AbstractGatewayFilterFactory.NameConfig {
-
-    }
-
+  @Getter
+  @Setter
+  @AllArgsConstructor
+  public static class Config extends AbstractGatewayFilterFactory.NameConfig {}
 }

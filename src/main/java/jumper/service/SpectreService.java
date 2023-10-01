@@ -2,6 +2,10 @@ package jumper.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
 import jumper.Constants;
 import jumper.model.config.JumperConfig;
 import jumper.model.config.RouteListener;
@@ -27,196 +31,211 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class SpectreService {
 
-    private final OauthTokenUtil oauthTokenUtil;
-    private final Tracer tracer;
-    private final CurrentTraceContext currentTraceContext;
+  private final OauthTokenUtil oauthTokenUtil;
+  private final Tracer tracer;
+  private final CurrentTraceContext currentTraceContext;
 
-    @Value( "${jumper.stargate.url}")
-    private String stargateUrl;
+  @Value("${jumper.stargate.url}")
+  private String stargateUrl;
 
-    @Value( "${jumper.issuer.url}")
-    private String localIssuerUrl;
+  @Value("${jumper.issuer.url}")
+  private String localIssuerUrl;
 
-    @Value( "${horizon.publishEventUrl}")
-    private String publishEventUrl;
+  @Value("${horizon.publishEventUrl}")
+  private String publishEventUrl;
 
-    WebClient webClient = WebClient.create();
+  WebClient webClient = WebClient.create();
 
+  public void handleEvent(
+      JumperConfig jc,
+      ServerWebExchange exchange,
+      Object http,
+      RouteListener listener,
+      String payload) {
+    WebFluxSleuthOperators.withSpanInScope(
+        tracer,
+        currentTraceContext,
+        exchange,
+        () -> publishEvent(createEvent(jc, exchange, http, listener, payload), jc));
+  }
 
+  private Spectre createEvent(
+      JumperConfig jc,
+      ServerWebExchange exchange,
+      Object http,
+      RouteListener listener,
+      String payload) {
 
+    ServerHttpRequest rq = exchange.getRequest();
+    ServerHttpResponse rs = exchange.getResponse();
 
-    public void handleEvent(JumperConfig jc, ServerWebExchange exchange, Object http, RouteListener listener, String payload) {
-        WebFluxSleuthOperators.withSpanInScope(tracer, currentTraceContext, exchange, () ->
-                publishEvent(createEvent(jc, exchange, http, listener, payload), jc)
-        );
+    SpectreData data = new SpectreData();
+    String spanName = "Spectre request";
+
+    if (http instanceof ServerHttpRequest) {
+      Map<String, String> httpHeaders = new HashMap<>(rq.getHeaders().toSingleValueMap());
+      httpHeaders.replace(Constants.HEADER_AUTHORIZATION, jc.getConsumerToken());
+      httpHeaders.remove(Constants.HEADER_CONSUMER_TOKEN);
+      data.setHeader(httpHeaders);
+      data.setKind(SpectreKind.REQUEST.toString());
+      data.setPayload(parsePayload(rq.getHeaders().getContentType(), payload));
+      data.setParameters(rq.getQueryParams().toSingleValueMap());
+
+    } else if (http instanceof ServerHttpResponse) {
+      spanName = ("Spectre response");
+
+      Map<String, String> httpHeaders = new HashMap<>(rs.getHeaders().toSingleValueMap());
+      httpHeaders.put(
+          Constants.HEADER_X_TARDIS_TRACE_ID,
+          rq.getHeaders().getFirst(Constants.HEADER_X_TARDIS_TRACE_ID));
+      data.setHeader(httpHeaders);
+      data.setKind(SpectreKind.RESPONSE.toString());
+      data.setPayload(parsePayload(rs.getHeaders().getContentType(), payload));
+      data.setStatus(Objects.requireNonNull(rs.getStatusCode()).value());
     }
 
-    private Spectre createEvent(JumperConfig jc, ServerWebExchange exchange, Object http, RouteListener listener, String payload) {
+    data.setConsumer(jc.getConsumer());
+    data.setIssue(listener.getIssue());
+    data.setProvider(listener.getServiceOwner());
+    data.setMethod(Objects.requireNonNull(rq.getMethod()).toString());
 
-        ServerHttpRequest rq = exchange.getRequest();
-        ServerHttpResponse rs = exchange.getResponse();
+    Spectre event =
+        Spectre.builder()
+            .specversion("1.0")
+            .source(stargateUrl)
+            .id(UUID.randomUUID())
+            .datacontenttype("application/json")
+            .type("de.telekom.ei.listener")
+            .data(data)
+            .build();
 
-        SpectreData data = new SpectreData();
-        String spanName = "Spectre request";
+    String finalSpanName = spanName;
 
-        if (http instanceof ServerHttpRequest) {
-            Map<String, String> httpHeaders = new HashMap<>(rq.getHeaders().toSingleValueMap());
-            httpHeaders.replace(Constants.HEADER_AUTHORIZATION, jc.getConsumerToken());
-            httpHeaders.remove(Constants.HEADER_CONSUMER_TOKEN);
-            data.setHeader(httpHeaders);
-            data.setKind(SpectreKind.REQUEST.toString());
-            data.setPayload(parsePayload(rq.getHeaders().getContentType(), payload));
-            data.setParameters(rq.getQueryParams().toSingleValueMap());
+    Span newSpan = this.tracer.nextSpan().name(finalSpanName).start();
+    tracer.withSpan(newSpan);
 
-        } else if (http instanceof ServerHttpResponse) {
-            spanName = ("Spectre response");
+    event.setSpanId(newSpan.context().spanId());
 
-            Map<String, String> httpHeaders = new HashMap<>(rs.getHeaders().toSingleValueMap());
-            httpHeaders.put(Constants.HEADER_X_TARDIS_TRACE_ID, rq.getHeaders().getFirst(Constants.HEADER_X_TARDIS_TRACE_ID));
-            data.setHeader(httpHeaders);
-            data.setKind(SpectreKind.RESPONSE.toString());
-            data.setPayload(parsePayload(rs.getHeaders().getContentType(), payload));
-            data.setStatus(Objects.requireNonNull(rs.getStatusCode()).value());
-        }
+    newSpan.tag("spectre.issue", listener.getIssue());
+    newSpan.tag("spectre.provider", listener.getServiceOwner());
+    newSpan.tag("spectre.consumer", jc.getConsumer());
+    // newSpan.tag("span.kind", "client");
+    newSpan.end();
 
-        data.setConsumer(jc.getConsumer());
-        data.setIssue(listener.getIssue());
-        data.setProvider(listener.getServiceOwner());
-        data.setMethod(Objects.requireNonNull(rq.getMethod()).toString());
+    return event;
+  }
 
-        Spectre event = Spectre.builder()
-                .specversion("1.0")
-                .source(stargateUrl)
-                .id(UUID.randomUUID())
-                .datacontenttype("application/json")
-                .type("de.telekom.ei.listener")
-                .data(data)
-                .build();
+  private void publishEvent(Spectre event, JumperConfig jc) {
 
-        String finalSpanName = spanName;
-
-        Span newSpan = this.tracer.nextSpan().name(finalSpanName).start();
-        tracer.withSpan(newSpan);
-
-        event.setSpanId(newSpan.context().spanId());
-
-        newSpan.tag("spectre.issue",
-                listener.getIssue());
-        newSpan.tag("spectre.provider",
-                listener.getServiceOwner());
-        newSpan.tag("spectre.consumer",
-                jc.getConsumer());
-        //newSpan.tag("span.kind", "client");
-        newSpan.end();
-
-        return event;
+    String eventJson = null;
+    try {
+      eventJson = new ObjectMapper().writeValueAsString(event);
+    } catch (JsonProcessingException e1) {
+      e1.printStackTrace();
     }
 
+    // determine environment for local issuer and routing path on qa
+    String envName = determineEnvironment(jc);
 
-    private void publishEvent(Spectre event, JumperConfig jc) {
+    publishEventMono(
+            publishEventUrl.replaceFirst(Constants.ENVIRONMENT_PLACEHOLDER, envName),
+            eventJson,
+            oauthTokenUtil.generateGatewayTokenForPublisher(localIssuerUrl + "/" + envName),
+            event.getSpanId())
+        .subscribe();
+  }
 
-        String eventJson = null;
-        try {
-            eventJson = new ObjectMapper().writeValueAsString(event);
-        } catch (JsonProcessingException e1) {
-            e1.printStackTrace();
-        }
+  private String determineEnvironment(JumperConfig jc) {
 
-        //determine environment for local issuer and routing path on qa
-        String envName = determineEnvironment(jc);
+    // default fallback value
+    String envName = Constants.DEFAULT_REALM;
 
-        publishEventMono(
-                publishEventUrl.replaceFirst(Constants.ENVIRONMENT_PLACEHOLDER, envName),
-                eventJson,
-                oauthTokenUtil.generateGatewayTokenForPublisher(localIssuerUrl + "/" + envName),
-                event.getSpanId()
-        ).subscribe();
+    if (jc.getGatewayClient().getIssuer() != null) {
+      // for real route environment header is set, so also available within jc
+      envName = jc.getGatewayClient().getIssuer().replaceFirst(".*realms\\/", "");
 
+    } else if (jc.getConsumerToken() != null) {
+      // on proxy route we need to use token
+      envName =
+          OauthTokenUtil.getClaimFromToken(jc.getConsumerToken(), "iss")
+              .replaceFirst(".*realms\\/", "");
     }
 
-    private String determineEnvironment(JumperConfig jc) {
+    return envName;
+  }
 
-        //default fallback value
-        String envName = Constants.DEFAULT_REALM;
+  private Mono<Void> publishEventMono(String url, String eventJson, String token, String spanId) {
+    final Mono<Void> responseMono =
+        webClient
+            .post()
+            .uri(url)
+            .headers(
+                httpHeaders -> {
+                  httpHeaders.setBearerAuth(token);
 
-        if (jc.getGatewayClient().getIssuer() != null) {
-            //for real route environment header is set, so also available within jc
-            envName = jc.getGatewayClient().getIssuer().replaceFirst(".*realms\\/", "");
-
-        } else if (jc.getConsumerToken() != null) {
-            //on proxy route we need to use token
-            envName = OauthTokenUtil.getClaimFromToken(jc.getConsumerToken(), "iss").replaceFirst(".*realms\\/", "");
-        }
-
-        return envName;
-    }
-
-    private Mono<Void> publishEventMono(String url, String eventJson, String token, String spanId) {
-        final Mono<Void> responseMono = webClient.post()
-                .uri(url)
-                .headers(httpHeaders -> {
-                    httpHeaders.setBearerAuth(token);
-
-                    //pass tracing info from request to spectre, maybe also new client span should be created
-                    Span currentSpan = tracer.currentSpan();
-                    if (currentSpan != null) {
-                        httpHeaders.set(Constants.HEADER_X_B3_TRACE_ID, currentSpan.context().traceId());
-                        httpHeaders.set(Constants.HEADER_X_B3_SPAN_ID, spanId);
-                    }
+                  // pass tracing info from request to spectre, maybe also new client span should be
+                  // created
+                  Span currentSpan = tracer.currentSpan();
+                  if (currentSpan != null) {
+                    httpHeaders.set(
+                        Constants.HEADER_X_B3_TRACE_ID, currentSpan.context().traceId());
+                    httpHeaders.set(Constants.HEADER_X_B3_SPAN_ID, spanId);
+                  }
                 })
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromValue(eventJson))
-                .retrieve()
-                .onStatus(HttpStatus::isError, response -> {
-                    log.error("while publishing event got error status: {}", response.statusCode());
-                    logDebugResponse(response);
-                    return Mono.empty();
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(BodyInserters.fromValue(eventJson))
+            .retrieve()
+            .onStatus(
+                HttpStatus::isError,
+                response -> {
+                  log.error("while publishing event got error status: {}", response.statusCode());
+                  logDebugResponse(response);
+                  return Mono.empty();
                 })
-                .onStatus(status -> !HttpStatus.CREATED.equals(status), response -> {
-                    log.warn("while publishing event got unexpected status: {}", response.statusCode());
-                    logDebugResponse(response);
-                    return Mono.empty();
+            .onStatus(
+                status -> !HttpStatus.CREATED.equals(status),
+                response -> {
+                  log.warn(
+                      "while publishing event got unexpected status: {}", response.statusCode());
+                  logDebugResponse(response);
+                  return Mono.empty();
                 })
-                .bodyToMono(Void.class)
-                .doOnSuccess(status -> log.debug("publishEventMono success" ));
+            .bodyToMono(Void.class)
+            .doOnSuccess(status -> log.debug("publishEventMono success"));
 
-        return responseMono.then(Mono.defer(Mono::empty));
+    return responseMono.then(Mono.defer(Mono::empty));
+  }
+
+  private static void logDebugResponse(ClientResponse response) {
+    if (SpectreService.log.isDebugEnabled()) {
+      SpectreService.log.debug("Response headers: {}", response.headers().asHttpHeaders());
+      response
+          .bodyToMono(String.class)
+          .publishOn(Schedulers.boundedElastic())
+          .subscribe(body -> SpectreService.log.debug("Response body: {}", body));
+    }
+  }
+
+  private Object parsePayload(MediaType mediaType, String payload) {
+
+    if (Objects.nonNull(payload)
+        && mediaType != null
+        && mediaType.isCompatibleWith(MediaType.APPLICATION_JSON)) {
+
+      log.debug("json compatible content-type, will try to parse as json payload");
+      try {
+        // try to return payload as json
+        return new ObjectMapper().readTree(payload);
+      } catch (JsonProcessingException e) {
+        e.printStackTrace();
+      }
     }
 
-    private static void logDebugResponse(ClientResponse response) {
-        if (SpectreService.log.isDebugEnabled()) {
-            SpectreService.log.debug("Response headers: {}", response.headers().asHttpHeaders());
-            response.bodyToMono(String.class)
-                    .publishOn(Schedulers.boundedElastic())
-                    .subscribe(body -> SpectreService.log.debug("Response body: {}", body));
-        }
-    }
-
-    private Object parsePayload (MediaType mediaType, String payload){
-
-        if (Objects.nonNull(payload) && mediaType != null && mediaType.isCompatibleWith(MediaType.APPLICATION_JSON)) {
-
-            log.debug("json compatible content-type, will try to parse as json payload");
-            try {
-                // try to return payload as json
-                return new ObjectMapper().readTree(payload);
-            }
-            catch (JsonProcessingException e) {
-                e.printStackTrace();
-            }
-        }
-
-        return payload;
-    }
-
+    return payload;
+  }
 }

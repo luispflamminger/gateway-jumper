@@ -1,6 +1,5 @@
 package jumper.filter;
 
-
 import jumper.filter.rewrite.ResponseBodyRewrite;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
@@ -13,25 +12,24 @@ import reactor.core.publisher.Mono;
 
 @Component
 @RequiredArgsConstructor
-public class ResponseTransformationFilter implements  GatewayFilter, Ordered{
+public class ResponseTransformationFilter implements GatewayFilter, Ordered {
 
-    private final ModifyResponseBodyGatewayFilterFactory modifyResponseBodyFilter;
-    private final ResponseBodyRewrite responseBodyRewrite;
+  private final ModifyResponseBodyGatewayFilterFactory modifyResponseBodyFilter;
+  private final ResponseBodyRewrite responseBodyRewrite;
 
-    public static final int RESPONSE_TRANSFORM_FILTER_ORDER = SpectreResponseFilter.AUTO_EVENT_RESPONSE_FILTER_ORDER-1;
+  public static final int RESPONSE_TRANSFORM_FILTER_ORDER =
+      SpectreResponseFilter.AUTO_EVENT_RESPONSE_FILTER_ORDER - 1;
 
-        @Override
-        public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-            return modifyResponseBodyFilter
-                    .apply(
-                            new ModifyResponseBodyGatewayFilterFactory.Config()
-                                    .setRewriteFunction(byte[].class, byte[].class, responseBodyRewrite))
-                    .filter(exchange, chain);
-        }
+  @Override
+  public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+    return modifyResponseBodyFilter
+        .apply(
+            new ModifyResponseBodyGatewayFilterFactory.Config()
+                .setRewriteFunction(byte[].class, byte[].class, responseBodyRewrite))
+        .filter(exchange, chain);
+  }
 
-    public int getOrder() {
-        return RESPONSE_TRANSFORM_FILTER_ORDER;
-    }
-
+  public int getOrder() {
+    return RESPONSE_TRANSFORM_FILTER_ORDER;
+  }
 }
-
