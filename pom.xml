@@ -6,7 +6,7 @@
 
 	<groupId>de.telekom.ei.jumper</groupId>
 	<artifactId>jumper-sse</artifactId>
-	<version>3.6.3.fix-runners</version>
+	<version>3.6.4</version>
 
 	<parent>
 		<groupId>org.springframework.boot</groupId>
