@@ -3,12 +3,5 @@ include:
   file: /pipelines/java-maven-docker-release-pipeline.yaml
   ref: 15.7.0
 variables:
+  PUSH_TO_HARBOR: true
   MTR_TARGET_IMAGE: ${CI_PROJECT_NAME}
-build docker image:
-  extends: .build-docker-image-manual
-mtr to harbor:
-  extends: .mtr_to_harbor
-  needs:
-  - job: build_deploy
-    artifacts: true
-  - job: dockerize
