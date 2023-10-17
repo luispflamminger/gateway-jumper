@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.7.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.6.4...3.7.0) (2023-10-17)
+
+
+### 🚀 Features
+
+* **java17:** upgraded project to java17 and maven 3.8.3 in the image ([8ca66e3](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/8ca66e349e4694f1cf4911ca6ec1df2236c97b34))
+
+
+### Other
+
+* **java17fix:** fix version ([7ec654d](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/7ec654d44272f06715367e4a2e37dd3ff638f906))
+* **release:** 3.6.4 ([15d1564](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/15d156400e17dfc1a4e782d074c11779f1dd300d))
+* **release:** release 3.6.5 ([9828984](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/982898415f1178cfab1bbd8177cae20ac8699610))
+
 ## [3.6.4](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.6.3...3.6.4) (2023-10-09)
 
 
