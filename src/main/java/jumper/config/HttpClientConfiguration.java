@@ -7,6 +7,8 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import java.util.List;
 import java.util.stream.Stream;
 import javax.net.ssl.SSLException;
+
+import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.PropertyMapper;
@@ -20,16 +22,13 @@ import reactor.netty.http.client.HttpClient;
 import reactor.netty.transport.ProxyProvider;
 
 @Configuration
+@RequiredArgsConstructor
 public class HttpClientConfiguration {
 
   @Value("${CUSTOM_CIPHERS:}")
   List<String> customCiphers;
 
   private final HttpClientProperties properties;
-
-  public HttpClientConfiguration(HttpClientProperties properties) {
-    this.properties = properties;
-  }
 
   @Bean
   public HttpClientCustomizer httpClientCustomizer() {
