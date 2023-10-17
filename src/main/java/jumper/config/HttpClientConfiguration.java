@@ -7,7 +7,6 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import java.util.List;
 import java.util.stream.Stream;
 import javax.net.ssl.SSLException;
-
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
