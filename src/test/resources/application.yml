@@ -29,6 +29,10 @@ spring:
             statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE,GATEWAY_TIMEOUT
             methods: GET,POST,PUT,DELETE,PATCH,HEAD
       httpclient:
+        proxy:
+          host: ${FPA_PROXY_HOST:}
+          port: ${FPA_PROXY_PORT:}
+          non-proxy-hosts-pattern: ${FPA_NON_PROXY_HOSTS_REGEX:}
         pool:
           type: ELASTIC #default
         connect-timeout: 2000

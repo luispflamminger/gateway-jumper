@@ -5,22 +5,31 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.net.ssl.SSLException;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.PropertyMapper;
 import org.springframework.cloud.gateway.config.HttpClientCustomizer;
+import org.springframework.cloud.gateway.config.HttpClientProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
+import reactor.netty.transport.ProxyProvider;
 
 @Configuration
 public class HttpClientConfiguration {
 
   @Value("${CUSTOM_CIPHERS:}")
   List<String> customCiphers;
+
+  private final HttpClientProperties properties;
+
+  public HttpClientConfiguration(HttpClientProperties properties) {
+    this.properties = properties;
+  }
 
   @Bean
   public HttpClientCustomizer httpClientCustomizer() {
@@ -64,9 +73,7 @@ public class HttpClientConfiguration {
               .protocols("TLSv1.2", "TLSv1.3")
               .sslProvider(SslProvider.JDK)
               .ciphers(
-                  Stream.concat(dtCiphers.stream(), customCiphers.stream())
-                      .distinct()
-                      .collect(Collectors.toList()))
+                  Stream.concat(dtCiphers.stream(), customCiphers.stream()).distinct().toList())
               .build();
 
       return httpClient -> httpClient.secure(t -> t.sslContext(s));
@@ -82,7 +89,36 @@ public class HttpClientConfiguration {
   public WebClient createWebClient() throws SSLException {
     SslContext sslContext =
         SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+
     HttpClient httpClient = HttpClient.create().secure(t -> t.sslContext(sslContext));
+
+    httpClient = configureProxy(httpClient);
+
     return WebClient.builder().clientConnector(new ReactorClientHttpConnector(httpClient)).build();
+  }
+
+  private HttpClient configureProxy(HttpClient httpClient) {
+
+    // configure proxy if proxy host is set.
+    if (StringUtils.isNotBlank((properties.getProxy().getHost()))) {
+      HttpClientProperties.Proxy proxyProperties = properties.getProxy();
+      httpClient =
+          httpClient.proxy(proxySpec -> configureProxyProvider(proxyProperties, proxySpec));
+    }
+
+    return httpClient;
+  }
+
+  private ProxyProvider.Builder configureProxyProvider(
+      HttpClientProperties.Proxy proxyProperties, ProxyProvider.TypeSpec proxySpec) {
+
+    ProxyProvider.Builder builder =
+        proxySpec.type(proxyProperties.getType()).host(proxyProperties.getHost());
+
+    PropertyMapper map = PropertyMapper.get();
+    map.from(proxyProperties::getPort).whenNonNull().to(builder::port);
+    map.from(proxyProperties::getNonProxyHostsPattern).whenHasText().to(builder::nonProxyHosts);
+
+    return builder;
   }
 }
