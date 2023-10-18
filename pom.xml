@@ -6,7 +6,7 @@
 
 	<groupId>de.telekom.ei.jumper</groupId>
 	<artifactId>jumper-sse</artifactId>
-	<version>3.7.0</version>
+	<version>3.7.0.oauth-provider</version>
 
 	<parent>
 		<groupId>org.springframework.boot</groupId>
