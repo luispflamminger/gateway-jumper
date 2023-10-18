@@ -55,15 +55,17 @@ import reactor.util.retry.Retry;
 @RequiredArgsConstructor
 public class OauthTokenUtil {
 
-  ConnectionProvider provider = ConnectionProvider.builder("fixed")
+  ConnectionProvider provider =
+      ConnectionProvider.builder("fixed")
           .maxConnections(100)
           .maxIdleTime(Duration.ofSeconds(2))
           .maxLifeTime(Duration.ofSeconds(60))
           .pendingAcquireTimeout(Duration.ofSeconds(0))
-          //.evictInBackground(Duration.ofSeconds(120))
+          // .evictInBackground(Duration.ofSeconds(120))
           .build();
 
-  private final WebClient webClient = WebClient.builder()
+  private final WebClient webClient =
+      WebClient.builder()
           .clientConnector(new ReactorClientHttpConnector(HttpClient.create(provider)))
           .build();
 
@@ -361,11 +363,14 @@ public class OauthTokenUtil {
                           HttpStatus.UNAUTHORIZED,
                           "Failed to retrieve token from " + tokenEndpoint));
                 })
-                .bodyToMono(TokenInfo.class)
-                .doOnError(throwable -> log.error("XXX error occurred: " + throwable.getCause()))
+            .bodyToMono(TokenInfo.class)
+            .doOnError(throwable -> log.error("XXX error occurred: " + throwable.getCause()))
             .retryWhen(
                 Retry.max(2)
-                    .filter(throwable -> throwable instanceof ConnectTimeoutException || throwable instanceof WebClientRequestException)
+                    .filter(
+                        throwable ->
+                            throwable instanceof ConnectTimeoutException
+                                || throwable instanceof WebClientRequestException)
                     .onRetryExhaustedThrow(
                         (retryBackoffSpec, retrySignal) -> {
                           throw new ServerErrorException(
