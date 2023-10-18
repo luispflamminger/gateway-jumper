@@ -50,7 +50,7 @@ import reactor.util.retry.Retry;
 @RequiredArgsConstructor
 public class OauthTokenUtil {
 
-  private final WebClient webClient;
+  private final WebClient oauthTokenUtilWebClient;
   private final TokenCacheService tokenCache;
   private final BasicAuthUtil basicAuthUtil;
 
@@ -326,7 +326,7 @@ public class OauthTokenUtil {
       String basicAuthHeader) {
 
     Mono<TokenInfo> tokenInfoMono =
-        webClient
+        oauthTokenUtilWebClient
             .post()
             .uri(tokenEndpoint)
             .headers(

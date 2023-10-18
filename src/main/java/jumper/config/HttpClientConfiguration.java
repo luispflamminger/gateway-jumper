@@ -83,13 +83,17 @@ public class HttpClientConfiguration {
     return httpClient -> httpClient;
   }
 
-  @Bean
-  public WebClient createWebClient() throws SSLException {
+  @Bean("spectreServiceWebClient")
+  public WebClient createWebClientForSpectreService() {
+    return WebClient.create();
+  }
+
+  @Bean("oauthTokenUtilWebClient")
+  public WebClient createWebClientForOauthTokenUtil() throws SSLException {
     SslContext sslContext =
         SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
 
     HttpClient httpClient = HttpClient.create().secure(t -> t.sslContext(sslContext));
-
     httpClient = configureProxy(httpClient);
 
     return WebClient.builder().clientConnector(new ReactorClientHttpConnector(httpClient)).build();
