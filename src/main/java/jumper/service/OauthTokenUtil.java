@@ -364,7 +364,7 @@ public class OauthTokenUtil {
                           "Failed to retrieve token from " + tokenEndpoint));
                 })
             .bodyToMono(TokenInfo.class)
-            .doOnError(throwable -> log.error("XXX error occurred: " + throwable.getCause()))
+            .doOnError(throwable -> log.error("XXX error occurred: " + throwable.getMessage()))
             .retryWhen(
                 Retry.max(2)
                     .filter(

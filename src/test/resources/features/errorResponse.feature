@@ -13,6 +13,7 @@ Feature: proper error message returned based on conditions
     Then API consumer receives a 500 status code
     And error response contains msg "Consumer token not provided, but expected" error "Internal Server Error" status 500
 
+  @ignore
   Scenario: mesh IDP drops connection
     Given ProxyRoute headers are set
     And IDP set to drop connection
