@@ -16,7 +16,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Objects;
@@ -33,7 +32,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
@@ -41,13 +39,10 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientRequestException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerErrorException;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-import reactor.netty.http.client.HttpClient;
-import reactor.netty.resources.ConnectionProvider;
 import reactor.util.retry.Retry;
 
 @Slf4j
@@ -55,20 +50,7 @@ import reactor.util.retry.Retry;
 @RequiredArgsConstructor
 public class OauthTokenUtil {
 
-  ConnectionProvider provider =
-      ConnectionProvider.builder("fixed")
-          .maxConnections(100)
-          .maxIdleTime(Duration.ofSeconds(2))
-          .maxLifeTime(Duration.ofSeconds(60))
-          .pendingAcquireTimeout(Duration.ofSeconds(0))
-          // .evictInBackground(Duration.ofSeconds(120))
-          .build();
-
-  private final WebClient webClient =
-      WebClient.builder()
-          .clientConnector(new ReactorClientHttpConnector(HttpClient.create(provider)))
-          .build();
-
+  private final WebClient oauthTokenUtilWebClient;
   private final TokenCacheService tokenCache;
   private final BasicAuthUtil basicAuthUtil;
 
@@ -344,7 +326,7 @@ public class OauthTokenUtil {
       String basicAuthHeader) {
 
     Mono<TokenInfo> tokenInfoMono =
-        webClient
+        oauthTokenUtilWebClient
             .post()
             .uri(tokenEndpoint)
             .headers(
