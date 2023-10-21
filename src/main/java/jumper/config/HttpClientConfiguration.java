@@ -1,9 +1,11 @@
 package jumper.config;
 
+import io.netty.channel.ChannelOption;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import java.time.Duration;
 import java.util.List;
 import java.util.stream.Stream;
 import javax.net.ssl.SSLException;
@@ -18,6 +20,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
+import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.transport.ProxyProvider;
 
 @Configuration
@@ -43,7 +46,10 @@ public class HttpClientConfiguration {
   @Bean("oauthTokenUtilWebClient")
   public WebClient createWebClientForOauthTokenUtil() throws SSLException {
     SslContext sslContext = createSslContextWithCustomizedCiphers();
-    HttpClient httpClient = HttpClient.create().secure(t -> t.sslContext(sslContext));
+    HttpClient httpClient =
+        HttpClient.create(getProvider())
+            .secure(t -> t.sslContext(sslContext))
+            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000);
     httpClient = configureProxy(httpClient);
 
     return WebClient.builder().clientConnector(new ReactorClientHttpConnector(httpClient)).build();
@@ -116,5 +122,14 @@ public class HttpClientConfiguration {
     map.from(proxyProperties::getNonProxyHostsPattern).whenHasText().to(builder::nonProxyHosts);
 
     return builder;
+  }
+
+  private ConnectionProvider getProvider() {
+    return ConnectionProvider.builder("oauth")
+        .maxConnections(100)
+        .maxIdleTime(Duration.ofSeconds(5))
+        .maxLifeTime(Duration.ofSeconds(60))
+        .pendingAcquireMaxCount(-1)
+        .build();
   }
 }

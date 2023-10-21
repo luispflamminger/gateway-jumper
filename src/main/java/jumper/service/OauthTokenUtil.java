@@ -12,6 +12,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.SignatureException;
 import io.netty.channel.ConnectTimeoutException;
+import io.netty.handler.ssl.SslHandshakeTimeoutException;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -19,8 +20,7 @@ import java.nio.file.Path;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import jumper.Constants;
 import jumper.model.TokenInfo;
 import jumper.model.config.JumperConfig;
@@ -40,9 +40,9 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.server.ServerErrorException;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import reactor.netty.http.client.PrematureCloseException;
 import reactor.util.retry.Retry;
 
 @Slf4j
@@ -343,25 +343,60 @@ public class OauthTokenUtil {
                   return Mono.error(
                       new ResponseStatusException(
                           HttpStatus.UNAUTHORIZED,
-                          "Failed to retrieve token from " + tokenEndpoint));
+                          "Failed to retrieve token from "
+                              + tokenEndpoint
+                              + ", original status: "
+                              + response.statusCode()));
                 })
             .bodyToMono(TokenInfo.class)
-            .doOnError(throwable -> log.error("XXX error occurred: " + throwable.getMessage()))
+            .doOnError(
+                throwable ->
+                    log.error(
+                        "XXX error occurred class: {}, msg: {}",
+                        throwable.getClass().getSimpleName(),
+                        throwable.getMessage()))
             .retryWhen(
                 Retry.max(2)
                     .filter(
                         throwable ->
                             throwable instanceof ConnectTimeoutException
-                                || throwable instanceof WebClientRequestException)
+                                || throwable instanceof SslHandshakeTimeoutException
+                                || throwable.getCause() instanceof PrematureCloseException)
                     .onRetryExhaustedThrow(
                         (retryBackoffSpec, retrySignal) -> {
-                          throw new ServerErrorException(
-                              "Failed to connect to " + tokenEndpoint, (Throwable) null);
+                          throw new RuntimeException(
+                              "Failed to connect to "
+                                  + tokenEndpoint
+                                  + ", cause: "
+                                  + retrySignal.failure().getMessage());
                         }));
 
     CompletableFuture<TokenInfo> tokenInfoCompletableFuture =
         tokenInfoMono.toFuture().orTimeout(15, TimeUnit.SECONDS);
-    TokenInfo accessToken = tokenInfoCompletableFuture.join();
+    TokenInfo accessToken;
+
+    try {
+
+      accessToken = tokenInfoCompletableFuture.get();
+    } catch (ExecutionException e) {
+      String msg = e.getCause().getMessage();
+      if (e.getCause() instanceof ResponseStatusException)
+        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, msg);
+
+      if (e.getCause() instanceof TimeoutException)
+        throw new ResponseStatusException(
+            HttpStatus.GATEWAY_TIMEOUT,
+            "Timeout occurred while fetching token from " + tokenEndpoint);
+
+      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, msg);
+    } catch (InterruptedException e) {
+      throw new ResponseStatusException(
+          HttpStatus.INTERNAL_SERVER_ERROR,
+          "Error occurred while fetching token from " + tokenEndpoint);
+    }
+
+    // accessToken        = tokenInfoCompletableFuture.join();
+
     tokenCache.saveToken(tokenKey, accessToken);
 
     return accessToken;
