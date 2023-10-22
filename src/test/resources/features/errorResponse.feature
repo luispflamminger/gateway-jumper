@@ -28,6 +28,6 @@ Feature: proper error message returned based on conditions
     And IDP set to provide externalInvalidAuth token
     And API provider set to respond with a 200 status code
     When consumer calls the proxy route
-    And API consumer receives a 500 status code
-    And error response contains msg "org.springframework.web.server.ResponseStatusException: 401 UNAUTHORIZED \"Failed to retrieve token from http://localhost:1081/external\"" error "Internal Server Error" status 500
+    And API consumer receives a 401 status code
+    And error response contains msg "401 UNAUTHORIZED \"Failed to retrieve token from http://localhost:1081/external, original status: 401 UNAUTHORIZED\"" error "Unauthorized" status 401
 
