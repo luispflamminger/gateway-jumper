@@ -360,7 +360,7 @@ public class OauthTokenUtil {
                     .filter(
                         throwable ->
                             throwable instanceof ConnectTimeoutException
-                                || throwable instanceof SslHandshakeTimeoutException
+                                || throwable.getCause() instanceof SslHandshakeTimeoutException
                                 || throwable.getCause() instanceof PrematureCloseException)
                     .onRetryExhaustedThrow(
                         (retryBackoffSpec, retrySignal) -> {
