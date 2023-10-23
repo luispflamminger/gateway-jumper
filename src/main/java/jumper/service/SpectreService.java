@@ -39,6 +39,7 @@ public class SpectreService {
   private final OauthTokenUtil oauthTokenUtil;
   private final Tracer tracer;
   private final CurrentTraceContext currentTraceContext;
+  private final WebClient spectreServiceWebClient;
 
   @Value("${jumper.stargate.url}")
   private String stargateUrl;
@@ -48,8 +49,6 @@ public class SpectreService {
 
   @Value("${horizon.publishEventUrl}")
   private String publishEventUrl;
-
-  WebClient webClient = WebClient.create();
 
   public void handleEvent(
       JumperConfig jc,
@@ -171,7 +170,7 @@ public class SpectreService {
 
   private Mono<Void> publishEventMono(String url, String eventJson, String token, String spanId) {
     final Mono<Void> responseMono =
-        webClient
+        spectreServiceWebClient
             .post()
             .uri(url)
             .headers(

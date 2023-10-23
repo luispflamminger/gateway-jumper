@@ -262,7 +262,7 @@ public class MockIrisServer {
                 .withBody(
                     addIdSuffix("client_id=stargate", id)
                         + "&client_secret=secret&grant_type=client_credentials"),
-            exactly(1))
+            exactly(3))
         .error(HttpError.error().withDropConnection(true));
   }
 

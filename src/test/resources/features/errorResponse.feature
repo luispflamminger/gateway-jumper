@@ -19,7 +19,7 @@ Feature: proper error message returned based on conditions
     And API provider set to respond with a 200 status code
     When consumer calls the proxy route
     And API consumer receives a 500 status code
-    And error response contains msg "org.springframework.web.reactive.function.client.WebClientRequestException: Connection prematurely closed BEFORE response; nested exception is reactor.netty.http.client.PrematureCloseException: Connection prematurely closed BEFORE response" error "Internal Server Error" status 500
+    And error response contains msg "Failed to connect to http://localhost:1081/auth/realms/default/protocol/openid-connect/token, cause: Connection prematurely closed BEFORE response; nested exception is reactor.netty.http.client.PrematureCloseException: Connection prematurely closed BEFORE response" error "Internal Server Error" status 500
 
   Scenario: Consumer calls proxy route with jc with oauth, oauth wrong credential headers set
     Given RealRoute headers are set
@@ -28,6 +28,6 @@ Feature: proper error message returned based on conditions
     And IDP set to provide externalInvalidAuth token
     And API provider set to respond with a 200 status code
     When consumer calls the proxy route
-    And API consumer receives a 500 status code
-    And error response contains msg "org.springframework.web.server.ResponseStatusException: 401 UNAUTHORIZED \"Failed to retrieve token from http://localhost:1081/external\"" error "Internal Server Error" status 500
+    And API consumer receives a 401 status code
+    And error response contains msg "401 UNAUTHORIZED \"Failed to retrieve token from http://localhost:1081/external, original status: 401 UNAUTHORIZED\"" error "Unauthorized" status 401
 
