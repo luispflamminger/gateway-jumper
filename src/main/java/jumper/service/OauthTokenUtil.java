@@ -388,8 +388,8 @@ public class OauthTokenUtil {
 
       if (e.getCause() instanceof TimeoutException) {
         throw new ResponseStatusException(
-                HttpStatus.GATEWAY_TIMEOUT,
-                "Timeout occurred while fetching token from " + tokenEndpoint);
+            HttpStatus.GATEWAY_TIMEOUT,
+            "Timeout occurred while fetching token from " + tokenEndpoint);
       }
 
       throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, msg);
