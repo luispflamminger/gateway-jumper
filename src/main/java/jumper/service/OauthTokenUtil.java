@@ -373,32 +373,34 @@ public class OauthTokenUtil {
 
     CompletableFuture<TokenInfo> tokenInfoCompletableFuture =
         tokenInfoMono.toFuture().orTimeout(15, TimeUnit.SECONDS);
+
     TokenInfo accessToken;
 
     try {
-
       accessToken = tokenInfoCompletableFuture.get();
+
     } catch (ExecutionException e) {
       String msg = e.getCause().getMessage();
-      if (e.getCause() instanceof ResponseStatusException)
-        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, msg);
 
-      if (e.getCause() instanceof TimeoutException)
+      if (e.getCause() instanceof ResponseStatusException) {
+        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, msg);
+      }
+
+      if (e.getCause() instanceof TimeoutException) {
         throw new ResponseStatusException(
-            HttpStatus.GATEWAY_TIMEOUT,
-            "Timeout occurred while fetching token from " + tokenEndpoint);
+                HttpStatus.GATEWAY_TIMEOUT,
+                "Timeout occurred while fetching token from " + tokenEndpoint);
+      }
 
       throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, msg);
+
     } catch (InterruptedException e) {
       throw new ResponseStatusException(
           HttpStatus.INTERNAL_SERVER_ERROR,
           "Error occurred while fetching token from " + tokenEndpoint);
     }
 
-    // accessToken        = tokenInfoCompletableFuture.join();
-
     tokenCache.saveToken(tokenKey, accessToken);
-
     return accessToken;
   }
 
