@@ -1,9 +1,7 @@
 include:
 - project: dhei/teams/hyperion/dev/src/foundation-build
   file: /pipelines/java-maven-docker-release-pipeline.yaml
-  ref: 15.8.0
+  ref: 16.0.3
 variables:
   PUSH_TO_HARBOR: "true"
   MTR_TARGET_IMAGE: ${CI_PROJECT_NAME}
-
-image: "maven:3.8.3-openjdk-17"
