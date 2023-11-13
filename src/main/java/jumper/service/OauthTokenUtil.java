@@ -126,21 +126,15 @@ public class OauthTokenUtil {
       String publisherId,
       String subscriberId,
       boolean legacy) {
-    // nearly to pass additional claims as a map, so far scope + publisher
 
     String consumerTokenWithoutSignature = getTokenWithoutSignature(jc.getConsumerToken());
 
-    Jwt<Header, Claims> gatewayTokenclaims = getAllClaimsFromToken(consumerTokenWithoutSignature);
+    Jwt<Header, Claims> consumerTokenClaims = getAllClaimsFromToken(consumerTokenWithoutSignature);
 
-    Date issuedAt = gatewayTokenclaims.getBody().getIssuedAt();
-    Date expiration = gatewayTokenclaims.getBody().getExpiration();
-    String clientId =
-        gatewayTokenclaims.getBody().get(Constants.TOKEN_CLAIM_CLIENT_ID, String.class);
-    String consumerOriginZone = gatewayTokenclaims.getBody().get("originZone", String.class);
-    String consumerOriginStargate =
-        gatewayTokenclaims.getBody().get("originStargate", String.class);
-    String sub = gatewayTokenclaims.getBody().get(Constants.TOKEN_CLAIM_SUB, String.class);
-    String aud = gatewayTokenclaims.getBody().get(Constants.TOKEN_CLAIM_AUD, String.class);
+    Date issuedAt = consumerTokenClaims.getBody().getIssuedAt();
+    Date expiration = consumerTokenClaims.getBody().getExpiration();
+    String sub = consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_SUB, String.class);
+    String aud = consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_AUD, String.class);
 
     HashMap<String, String> claims = new HashMap<>();
     claims.put(Constants.TOKEN_CLAIM_TYP, "Bearer");
@@ -148,9 +142,9 @@ public class OauthTokenUtil {
     claims.put(Constants.TOKEN_CLAIM_SUB, sub);
     claims.put(Constants.TOKEN_CLAIM_REQUEST_PATH, jc.getRequestPath());
     claims.put(Constants.TOKEN_CLAIM_OPERATION, operation);
-    claims.put(Constants.TOKEN_CLAIM_CLIENT_ID, clientId);
-    claims.put(Constants.TOKEN_CLAIM_ORIGIN_ZONE, consumerOriginZone);
-    claims.put(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, consumerOriginStargate);
+    claims.put(Constants.TOKEN_CLAIM_CLIENT_ID, jc.getConsumer());
+    claims.put(Constants.TOKEN_CLAIM_ORIGIN_ZONE, jc.getConsumerOriginZone());
+    claims.put(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, jc.getConsumerOriginStargate());
 
     if (legacy) {
       String consumerTokenSignature = getSignature(jc.getConsumerToken());

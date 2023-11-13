@@ -5,6 +5,9 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Header;
+import io.jsonwebtoken.Jwt;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Objects;
@@ -96,11 +99,14 @@ public class JumperConfig {
 
     setConsumerToken(
         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_AUTHORIZATION));
-    setConsumer(OauthTokenUtil.getClaimFromToken(consumerToken, Constants.TOKEN_CLAIM_CLIENT_ID));
+    Jwt<Header, Claims> consumerTokenClaims =
+        OauthTokenUtil.getAllClaimsFromToken(
+            OauthTokenUtil.getTokenWithoutSignature(consumerToken));
+    setConsumer(consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_CLIENT_ID, String.class));
     setConsumerOriginStargate(
-        OauthTokenUtil.getClaimFromToken(consumerToken, Constants.TOKEN_CLAIM_ORIGIN_STARGATE));
+        consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, String.class));
     setConsumerOriginZone(
-        OauthTokenUtil.getClaimFromToken(consumerToken, Constants.TOKEN_CLAIM_ORIGIN_ZONE));
+        consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_ZONE, String.class));
 
     setRealmName(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_REALM));
     if (StringUtils.isBlank(getRealmName())) {
