@@ -144,7 +144,8 @@ public class SpectreService {
     publishEventMono(
             publishEventUrl.replaceFirst(Constants.ENVIRONMENT_PLACEHOLDER, envName),
             eventJson,
-            oauthTokenUtil.generateGatewayTokenForPublisher(localIssuerUrl + "/" + envName),
+            oauthTokenUtil.generateGatewayTokenForPublisher(
+                localIssuerUrl + "/" + envName, envName),
             event.getSpanId())
         .subscribe();
   }

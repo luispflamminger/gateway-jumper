@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import jumper.Constants;
 import jumper.model.config.KeyInfo;
 import jumper.service.OauthTokenUtil;
 import lombok.Builder;
@@ -56,7 +57,7 @@ public class AccessToken {
     Date expiration = new Date(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(5));
     KeyInfo keyInfo = null;
     try {
-      keyInfo = OauthTokenUtil.loadKeyinfo();
+      keyInfo = OauthTokenUtil.loadKeyInfo().get(Constants.DEFAULT_REALM);
     } catch (IOException e) {
       e.getStackTrace();
     }
