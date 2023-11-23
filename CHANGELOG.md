@@ -1,5 +1,32 @@
 # Changelog
 
+## [3.9.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.8.0...3.9.0) (2023-11-23)
+
+
+### 📔 Docs
+
+* update README.md ([58277e3](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/58277e3e7bf7108eb80eb5ada612998655639be7))
+
+
+### 🦊 CI/CD
+
+* updated pipeline ref ([d91570a](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/d91570a5dd4fe2c7954825593cc1a4468f558022))
+
+
+### 🚀 Features
+
+* extend key structure with env ([b183188](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/b18318844aa4fadb64db8b664b7559b02670d0d8))
+
+
+### 🛠 Fixes
+
+* utilize already set values, avoid not needed operations ([ba05df2](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/ba05df2b588f61ccec631d4ce4a5d95ebba24232))
+
+
+### Other
+
+* **release:** 3.8.0 ([26fcaca](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/26fcacaeb4d6c3abdcff8aa17c8e2bc5dfffe591))
+
 ## [3.8.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.7.0...3.8.0) (2023-10-23)
 
 
