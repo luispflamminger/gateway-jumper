@@ -1,5 +1,6 @@
 package jumper.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
@@ -19,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.*;
 import jumper.Constants;
@@ -62,7 +64,7 @@ public class OauthTokenUtil {
     securityPath = name;
   }
 
-  @Value("${jumper.security.file:key.json}")
+  @Value("${jumper.security.file:private.json}")
   private void setSecurityFile(String name) {
     securityFile = name;
   }
@@ -126,21 +128,15 @@ public class OauthTokenUtil {
       String publisherId,
       String subscriberId,
       boolean legacy) {
-    // nearly to pass additional claims as a map, so far scope + publisher
 
     String consumerTokenWithoutSignature = getTokenWithoutSignature(jc.getConsumerToken());
 
-    Jwt<Header, Claims> gatewayTokenclaims = getAllClaimsFromToken(consumerTokenWithoutSignature);
+    Jwt<Header, Claims> consumerTokenClaims = getAllClaimsFromToken(consumerTokenWithoutSignature);
 
-    Date issuedAt = gatewayTokenclaims.getBody().getIssuedAt();
-    Date expiration = gatewayTokenclaims.getBody().getExpiration();
-    String clientId =
-        gatewayTokenclaims.getBody().get(Constants.TOKEN_CLAIM_CLIENT_ID, String.class);
-    String consumerOriginZone = gatewayTokenclaims.getBody().get("originZone", String.class);
-    String consumerOriginStargate =
-        gatewayTokenclaims.getBody().get("originStargate", String.class);
-    String sub = gatewayTokenclaims.getBody().get(Constants.TOKEN_CLAIM_SUB, String.class);
-    String aud = gatewayTokenclaims.getBody().get(Constants.TOKEN_CLAIM_AUD, String.class);
+    Date issuedAt = consumerTokenClaims.getBody().getIssuedAt();
+    Date expiration = consumerTokenClaims.getBody().getExpiration();
+    String sub = consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_SUB, String.class);
+    String aud = consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_AUD, String.class);
 
     HashMap<String, String> claims = new HashMap<>();
     claims.put(Constants.TOKEN_CLAIM_TYP, "Bearer");
@@ -148,9 +144,9 @@ public class OauthTokenUtil {
     claims.put(Constants.TOKEN_CLAIM_SUB, sub);
     claims.put(Constants.TOKEN_CLAIM_REQUEST_PATH, jc.getRequestPath());
     claims.put(Constants.TOKEN_CLAIM_OPERATION, operation);
-    claims.put(Constants.TOKEN_CLAIM_CLIENT_ID, clientId);
-    claims.put(Constants.TOKEN_CLAIM_ORIGIN_ZONE, consumerOriginZone);
-    claims.put(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, consumerOriginStargate);
+    claims.put(Constants.TOKEN_CLAIM_CLIENT_ID, jc.getConsumer());
+    claims.put(Constants.TOKEN_CLAIM_ORIGIN_ZONE, jc.getConsumerOriginZone());
+    claims.put(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, jc.getConsumerOriginStargate());
 
     if (legacy) {
       String consumerTokenSignature = getSignature(jc.getConsumerToken());
@@ -177,10 +173,10 @@ public class OauthTokenUtil {
       claims.put(Constants.TOKEN_CLAIM_AUD, aud);
     }
 
-    return generateToken(claims, issuer, expiration, issuedAt);
+    return generateToken(claims, issuer, expiration, issuedAt, jc.getRealmName());
   }
 
-  public String generateGatewayTokenForPublisher(String issuer) {
+  public String generateGatewayTokenForPublisher(String issuer, String realm) {
     HashMap<String, String> claims = new HashMap<>();
     claims.put(Constants.TOKEN_CLAIM_TYP, "Bearer");
     claims.put(Constants.TOKEN_CLAIM_AZP, "stargate");
@@ -190,20 +186,25 @@ public class OauthTokenUtil {
         claims,
         issuer,
         new Date(System.currentTimeMillis() + 300 * 1000),
-        new Date(System.currentTimeMillis()));
+        new Date(System.currentTimeMillis()),
+        realm);
   }
 
   private String generateToken(
-      HashMap<String, String> claims, String issuer, Date expiration, Date issuedAt) {
-    KeyInfo keyInfo;
+      HashMap<String, String> claims, String issuer, Date expiration, Date issuedAt, String realm) {
+    Map<String, KeyInfo> keyInfoMap;
 
     try {
       log.debug("GatewayToken or OneToken: Loading keyInfo");
-      keyInfo = loadKeyinfo();
+      keyInfoMap = loadKeyInfo();
 
     } catch (IOException e1) {
       log.error("IOException", e1);
       throw new RuntimeException("Error while generating LMS token, key info missing");
+    }
+
+    if (!keyInfoMap.containsKey(realm)) {
+      throw new RuntimeException("key info missing for realm " + realm);
     }
 
     return Jwts.builder()
@@ -211,13 +212,13 @@ public class OauthTokenUtil {
         .setIssuer(issuer)
         .setExpiration(expiration)
         .setIssuedAt(issuedAt)
-        .signWith(keyInfo.getPk(), SignatureAlgorithm.RS256)
-        .setHeaderParam("kid", keyInfo.getKid())
+        .signWith(keyInfoMap.get(realm).getPk(), SignatureAlgorithm.RS256)
+        .setHeaderParam("kid", keyInfoMap.get(realm).getKid())
         .setHeaderParam("typ", "JWT")
         .compact();
   }
 
-  public static KeyInfo loadKeyinfo() throws IOException {
+  public static Map<String, KeyInfo> loadKeyInfo() throws IOException {
     Path kidFile =
         Path.of(
             System.getProperty("user.dir")
@@ -225,9 +226,12 @@ public class OauthTokenUtil {
                 + securityPath
                 + File.separator
                 + securityFile);
+
+    TypeReference<HashMap<String, KeyInfo>> typeRef = new TypeReference<>() {};
+
     return new ObjectMapper()
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-        .readValue(Files.readString(kidFile), KeyInfo.class);
+        .readValue(Files.readString(kidFile), typeRef);
   }
 
   public TokenInfo getInternalMeshAccessToken(JumperConfig jc) {

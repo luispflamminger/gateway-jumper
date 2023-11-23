@@ -39,7 +39,8 @@ public class SpectreRoutingFilter extends SetRequestHeaderGatewayFilterFactory {
       // minimalistic token with correct issuer
       String spectreToken =
           "Bearer "
-              + oauthTokenUtil.generateGatewayTokenForPublisher(localIssuerUrl + "/" + envName);
+              + oauthTokenUtil.generateGatewayTokenForPublisher(
+                  localIssuerUrl + "/" + envName, envName);
 
       // routing path is no longer fixed, so we set it here
       ServerHttpRequest request =

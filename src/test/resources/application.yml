@@ -72,7 +72,7 @@ jumper:
     url: ${STARGATE_URL:https://stargate-integration.test.dhei.telekom.de}
   security:
     dir: src/test/resources/keypair
-    file: key.json
+    file: private.json
 
 jumpercache.ttlOffset: 10
 jumpercache.cleanCacheInSeconds: 3600

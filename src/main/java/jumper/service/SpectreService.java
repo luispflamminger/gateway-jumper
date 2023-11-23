@@ -144,28 +144,21 @@ public class SpectreService {
     publishEventMono(
             publishEventUrl.replaceFirst(Constants.ENVIRONMENT_PLACEHOLDER, envName),
             eventJson,
-            oauthTokenUtil.generateGatewayTokenForPublisher(localIssuerUrl + "/" + envName),
+            oauthTokenUtil.generateGatewayTokenForPublisher(
+                localIssuerUrl + "/" + envName, envName),
             event.getSpanId())
         .subscribe();
   }
 
   private String determineEnvironment(JumperConfig jc) {
 
-    // default fallback value
-    String envName = Constants.DEFAULT_REALM;
-
+    // should be always available
     if (jc.getGatewayClient().getIssuer() != null) {
-      // for real route environment header is set, so also available within jc
-      envName = jc.getGatewayClient().getIssuer().replaceFirst(".*realms\\/", "");
-
-    } else if (jc.getConsumerToken() != null) {
-      // on proxy route we need to use token
-      envName =
-          OauthTokenUtil.getClaimFromToken(jc.getConsumerToken(), "iss")
-              .replaceFirst(".*realms\\/", "");
+      return jc.getGatewayClient().getIssuer().replaceFirst(".*realms/", "");
     }
 
-    return envName;
+    // as a fallback value we use realm already defined within jumper config
+    return jc.getRealmName();
   }
 
   private Mono<Void> publishEventMono(String url, String eventJson, String token, String spanId) {
