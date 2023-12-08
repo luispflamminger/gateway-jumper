@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: CC0-1.0
+
 ##############################
 ## Java
 ##############################
@@ -23,6 +27,7 @@ dependency-reduced-pom.xml
 buildNumber.properties
 .mvn/timing.properties
 .mvn/wrapper/maven-wrapper.jar
+.m2
 
 ##############################
 ## Gradle

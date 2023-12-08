@@ -1,7 +1,20 @@
+# SPDX-FileCopyrightText: 2023 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: CC0-1.0
+
 include:
-- project: dhei/teams/hyperion/dev/src/foundation-build
-  file: /pipelines/java-maven-docker-release-pipeline.yaml
-  ref: 16.0.3
+  - project: dhei/teams/hyperion/dev/src/foundation-build
+    file: /pipelines/java-maven-docker-release-pipeline.yaml
+    ref: main
+  - project: "dhei/teams/hyperion/dev/src/foundation-build"
+    file: "/pipelines/opensource-pipeline.yaml"
+    ref: main
+    rules:
+      - if: $CI_PROJECT_NAME == "stargate-jumper"
+
 variables:
   PUSH_TO_HARBOR: "true"
   MTR_TARGET_IMAGE: ${CI_PROJECT_NAME}
+  GITHUB_PROJECT_PATH: "telekom/stargate-jumper"
+  GITLAB_PROJECT_PATH: "dhei/teams/hyperion/dev/src/jumper-sse"
+  GITLAB_SOURCE_BRANCH: main
