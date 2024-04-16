@@ -7,7 +7,7 @@ server:
   max-http-header-size: 16384
   netty:
     max-initial-line-length: 8192
-    idle-timeout: 5000
+    idle-timeout: 60000
 
 management:
   endpoint:
