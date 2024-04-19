@@ -1,5 +1,28 @@
 # Changelog
 
+## [3.11.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.10.0...3.11.0) (2024-04-19)
+
+
+### 🦊 CI/CD
+
+* **dhei-12345:** graceful shutdown, enable pool metrics by default, configurable oauth pool ([28edc5e](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/28edc5e8008ccc2b3f32700332b54547c4514a1e))
+
+
+### 🚀 Features
+
+* configurable oauth, pool metrics enable by default ([5539f0f](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/5539f0fb5c4d19f24d4dcd60d696261316b97e58))
+
+
+### 🛠 Fixes
+
+* increase server idle-timeout ([e6149f6](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/e6149f6332e1424c504f4a7994289d6f97f70007))
+* use graceful shutdown ([5d70e45](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/5d70e451ff79b9d2c4cc3f161a9713bdd55f35cc))
+
+
+### Other
+
+* **release:** 3.10.0 ([f9af081](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/f9af0813c0b21e242a480a6b68421d8e2dedd6c8))
+
 ## [3.10.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.9.0...3.10.0) (2024-02-27)
 
 
