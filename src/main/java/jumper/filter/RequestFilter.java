@@ -8,14 +8,13 @@ import static net.logstash.logback.argument.StructuredArguments.value;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.HashMap;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import jumper.Constants;
 import jumper.model.TokenInfo;
 import jumper.model.config.BasicAuthCredentials;
 import jumper.model.config.JumperConfig;
 import jumper.model.config.OauthCredentials;
+import jumper.model.config.RoutingConfig;
 import jumper.model.request.IncomingRequest;
 import jumper.model.request.JumperInfoRequest;
 import jumper.service.BasicAuthUtil;
@@ -50,6 +49,8 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
   private final OauthTokenUtil oauthTokenUtil;
   private final BasicAuthUtil basicAuthUtil;
 
+  private Map<String, Boolean> disabledZones = new HashMap<>();
+
   @Value("${jumper.issuer.url}")
   private String localIssuerUrl;
 
@@ -82,16 +83,36 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
               () -> {
                 ServerHttpRequest request = exchange.getRequest();
 
-                // checking to prevent later nullPointer on inconsistent state from Kong
-                if (!request.getHeaders().containsKey(Constants.HEADER_REMOTE_API_URL)) {
-                  throw new RuntimeException(
-                      "missing mandatory header " + Constants.HEADER_REMOTE_API_URL);
+                JumperConfig jumperConfig;
+                // failover logic if routing_config header present
+                if (request.getHeaders().containsKey(Constants.HEADER_ROUTING_CONFIG)) {
+                  // evaluate routingConfig for failover scenario
+                  List<JumperConfig> jumperConfigList =
+                      RoutingConfig.parseConfigFromHeader(request);
+                  log.info("failover case, routing_config: {}", jumperConfigList);
+                  jumperConfig =
+                      evaluateTargetZone(
+                          jumperConfigList,
+                          request.getHeaders().getFirst(Constants.HEADER_X_FAILOVER_SKIP_ZONE));
+                  jumperConfig.fillProcessingInfo(request);
+                  log.info("failover case, enhanced jumper_config: {}", jumperConfig);
+
                 }
 
-                // Prepare and extract JumperConfigValues
-                JumperConfig jumperConfig = JumperConfig.parseConfigFrom(request);
-                log.debug("JumperConfig encodedAsBase64: {}", JumperConfig.toBase64(jumperConfig));
-                log.debug("JumperConfig decoded: {}", jumperConfig);
+                // no failover
+                else {
+                  // checking to prevent later nullPointer on inconsistent state from Kong
+                  if (!request.getHeaders().containsKey(Constants.HEADER_REMOTE_API_URL)) {
+                    throw new RuntimeException(
+                        "missing mandatory header " + Constants.HEADER_REMOTE_API_URL);
+                  }
+
+                  // Prepare and extract JumperConfigValues
+                  jumperConfig = JumperConfig.parseConfigFrom(request);
+                  log.debug(
+                      "JumperConfig encodedAsBase64: {}", JumperConfig.toBase64(jumperConfig));
+                  log.debug("JumperConfig decoded: {}", jumperConfig);
+                }
 
                 // calculate routing stuff and add it to exchange and JumperConfig
                 calculateRoutingStuff(request, exchange, config.getRoutePathPrefix(), jumperConfig);
@@ -422,6 +443,21 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
     return clientId;
   }
 
+  private JumperConfig evaluateTargetZone(
+      List<JumperConfig> jumperConfigList, String forceSkipZone) {
+    for (JumperConfig jc : jumperConfigList) {
+      if (StringUtils.isEmpty(jc.getTargetZone())
+          || !(jc.getTargetZone().equalsIgnoreCase(forceSkipZone)
+              || disabledZones.getOrDefault(jc.getTargetZone(), false))) {
+        return jc;
+      }
+    }
+    // todo which exception
+    throw new ResponseStatusException(
+        HttpStatus.SERVICE_UNAVAILABLE, "Non of defined failover zones available");
+  }
+
+  // && disabledZones.containsKey(jc.getTargetZone())
   private void checkForSpaceZone(ServerWebExchange exchange, String zone, String token) {
     if (zone != null && Constants.SPACE_ZONES.contains(zone)) {
       HeaderUtil.addHeader(exchange, Constants.HEADER_X_SPACEGATE_TOKEN, token);

@@ -6,6 +6,7 @@ package jumper.model.config;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,6 +34,7 @@ public class JumperConfig {
   private HashMap<String, RouteListener> routeListener;
   private GatewayClient gatewayClient;
 
+  String targetZone;
   String scopes;
   String apiBasePath;
   String consumer;
@@ -40,13 +42,22 @@ public class JumperConfig {
   String consumerOriginZone;
   String consumerToken;
   String externalTokenEndpoint;
+
+  @JsonProperty("issuer")
   String internalTokenEndpoint;
+
   String clientId;
   String clientSecret;
   Boolean accessTokenForwarding;
+
+  @JsonProperty("realm")
   String realmName;
+
   String remoteApiUrl;
+
+  @JsonProperty("environment")
   String envName;
+
   String xSpacegateClientId;
   String xSpacegateClientSecret;
   String xSpacegateScope;
@@ -84,23 +95,46 @@ public class JumperConfig {
   @JsonIgnore
   public void fillWithLegacyHeaders(ServerHttpRequest request) {
 
-    setScopes(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_CLIENT_SCOPES));
-    setApiBasePath(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_API_BASE_PATH));
-    setExternalTokenEndpoint(
-        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_TOKEN_ENDPOINT));
+    // proxy
+    setRemoteApiUrl(
+        HeaderUtil.getLastValueFromHeaderField(
+            request, Constants.HEADER_REMOTE_API_URL)); // also real
     setInternalTokenEndpoint(
         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_ISSUER));
-    setClientId(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_CLIENT_ID));
+    setClientId(
+        HeaderUtil.getLastValueFromHeaderField(
+            request, Constants.HEADER_CLIENT_ID)); // also external
     setClientSecret(
-        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_CLIENT_SECRET));
+        HeaderUtil.getLastValueFromHeaderField(
+            request, Constants.HEADER_CLIENT_SECRET)); // also external
 
+    // real
+    setApiBasePath(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_API_BASE_PATH));
     if (request.getHeaders().containsKey(Constants.HEADER_ACCESS_TOKEN_FORWARDING)) {
       setAccessTokenForwarding(
           Boolean.valueOf(
               HeaderUtil.getLastValueFromHeaderField(
                   request, Constants.HEADER_ACCESS_TOKEN_FORWARDING)));
     }
+    setRealmName(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_REALM));
+    if (StringUtils.isBlank(getRealmName())) {
+      setRealmName(Constants.DEFAULT_REALM);
+    }
+    setEnvName(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_ENVIRONMENT));
 
+    // external oauth
+    setScopes(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_CLIENT_SCOPES));
+    setExternalTokenEndpoint(
+        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_TOKEN_ENDPOINT));
+    setXSpacegateClientId(
+        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_SPACEGATE_CLIENT_ID));
+    setXSpacegateClientSecret(
+        HeaderUtil.getLastValueFromHeaderField(
+            request, Constants.HEADER_X_SPACEGATE_CLIENT_SECRET));
+    setXSpacegateScope(
+        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_SPACEGATE_SCOPE));
+
+    // processing
     setConsumerToken(
         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_AUTHORIZATION));
     Jwt<Header, Claims> consumerTokenClaims =
@@ -111,22 +145,20 @@ public class JumperConfig {
         consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, String.class));
     setConsumerOriginZone(
         consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_ZONE, String.class));
+  }
 
-    setRealmName(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_REALM));
-    if (StringUtils.isBlank(getRealmName())) {
-      setRealmName(Constants.DEFAULT_REALM);
-    }
-
-    setRemoteApiUrl(
-        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_REMOTE_API_URL));
-    setEnvName(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_ENVIRONMENT));
-    setXSpacegateClientId(
-        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_SPACEGATE_CLIENT_ID));
-    setXSpacegateClientSecret(
-        HeaderUtil.getLastValueFromHeaderField(
-            request, Constants.HEADER_X_SPACEGATE_CLIENT_SECRET));
-    setXSpacegateScope(
-        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_SPACEGATE_SCOPE));
+  @JsonIgnore
+  public void fillProcessingInfo(ServerHttpRequest request) {
+    setConsumerToken(
+        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_AUTHORIZATION));
+    Jwt<Header, Claims> consumerTokenClaims =
+        OauthTokenUtil.getAllClaimsFromToken(
+            OauthTokenUtil.getTokenWithoutSignature(consumerToken));
+    setConsumer(consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_CLIENT_ID, String.class));
+    setConsumerOriginStargate(
+        consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, String.class));
+    setConsumerOriginZone(
+        consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_ZONE, String.class));
   }
 
   @JsonIgnore

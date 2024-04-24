@@ -15,6 +15,8 @@ public class Constants {
   public static final String HEADER_X_SPACEGATE_CLIENT_SECRET = "X-Spacegate-Client-Secret";
   public static final String HEADER_X_SPACEGATE_SCOPE = "X-Spacegate-Scope";
   public static final String HEADER_JUMPER_CONFIG = "jumper_config";
+  public static final String HEADER_ROUTING_CONFIG = "routing_config";
+
   public static final String HEADER_ISSUER = "issuer";
   public static final String HEADER_TOKEN_ENDPOINT = "token_endpoint";
   public static final String HEADER_CLIENT_ID = "client_id";
@@ -50,6 +52,8 @@ public class Constants {
   public static final String HEADER_X_FORWARDED_PROTO = "X-Forwarded-Proto";
   public static final String HEADER_X_FORWARDED_PORT_PORT = "443";
   public static final String HEADER_X_FORWARDED_PROTO_HTTPS = "https";
+
+  public static final String HEADER_X_FAILOVER_SKIP_ZONE = "x-failover-skip-zone";
 
   public static final String QUERY_PARAM_LISTENER = "listener";
   public static final String LISTENER_ROOT_PATH_PREFIX = "/listener";
