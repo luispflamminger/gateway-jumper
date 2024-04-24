@@ -14,7 +14,6 @@ import jumper.model.TokenInfo;
 import jumper.model.config.BasicAuthCredentials;
 import jumper.model.config.JumperConfig;
 import jumper.model.config.OauthCredentials;
-import jumper.model.config.RoutingConfig;
 import jumper.model.request.IncomingRequest;
 import jumper.model.request.JumperInfoRequest;
 import jumper.service.BasicAuthUtil;
@@ -88,7 +87,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                 if (request.getHeaders().containsKey(Constants.HEADER_ROUTING_CONFIG)) {
                   // evaluate routingConfig for failover scenario
                   List<JumperConfig> jumperConfigList =
-                      RoutingConfig.parseConfigFromHeader(request);
+                      JumperConfig.parseJumperConfigListFromRequest(request);
                   log.info("failover case, routing_config: {}", jumperConfigList);
                   jumperConfig =
                       evaluateTargetZone(
@@ -108,7 +107,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                   }
 
                   // Prepare and extract JumperConfigValues
-                  jumperConfig = JumperConfig.parseConfigFrom(request);
+                  jumperConfig = JumperConfig.parseJumperConfigFrom(request);
                   log.debug(
                       "JumperConfig encodedAsBase64: {}", JumperConfig.toBase64(jumperConfig));
                   log.debug("JumperConfig decoded: {}", jumperConfig);

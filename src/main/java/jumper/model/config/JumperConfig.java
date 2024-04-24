@@ -8,15 +8,13 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Header;
 import io.jsonwebtoken.Jwt;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import jumper.Constants;
 import jumper.service.HeaderUtil;
 import jumper.service.OauthTokenUtil;
@@ -162,7 +160,7 @@ public class JumperConfig {
   }
 
   @JsonIgnore
-  public static JumperConfig parseConfigFrom(ServerHttpRequest request) {
+  public static JumperConfig parseJumperConfigFrom(ServerHttpRequest request) {
 
     JumperConfig jc;
     String jumperConfigBase64 =
@@ -182,13 +180,40 @@ public class JumperConfig {
   }
 
   @JsonIgnore
-  public static JumperConfig parseConfigFrom(ServerWebExchange exchange) {
+  public static JumperConfig parseJumperConfigFrom(ServerWebExchange exchange) {
     String jumperConfigBase64 = exchange.getAttribute(Constants.HEADER_JUMPER_CONFIG);
     if (jumperConfigBase64 != null && !jumperConfigBase64.isEmpty()) {
       return JumperConfig.fromBase64(jumperConfigBase64);
     } else {
       return new JumperConfig();
     }
+  }
+
+  public static List<JumperConfig> parseJumperConfigListFromRequest(ServerHttpRequest request) {
+
+    String routingConfigBase64 =
+        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_ROUTING_CONFIG);
+
+    if (StringUtils.isNotBlank(routingConfigBase64)) {
+      return JumperConfig.listFromBase64(routingConfigBase64);
+    }
+
+    return List.of();
+  }
+
+  public static List<JumperConfig> listFromBase64(String jsonConfigBase64) {
+    String decodedJson = new String(Base64.getDecoder().decode(jsonConfigBase64.getBytes()));
+
+    TypeReference<List<JumperConfig>> typeRef = new TypeReference<>() {};
+    try {
+      return new ObjectMapper()
+          .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true)
+          .readValue(decodedJson, typeRef);
+    } catch (JsonProcessingException e) {
+      e.printStackTrace();
+    }
+    assert false : "routing config can not be decoded";
+    return null;
   }
 
   public boolean isListenerMatched() {
