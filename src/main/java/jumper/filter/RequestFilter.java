@@ -445,9 +445,9 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
   private JumperConfig evaluateTargetZone(
       List<JumperConfig> jumperConfigList, String forceSkipZone) {
     for (JumperConfig jc : jumperConfigList) {
-      if (StringUtils.isEmpty(jc.getTargetZone())
-          || !(jc.getTargetZone().equalsIgnoreCase(forceSkipZone)
-              || disabledZones.getOrDefault(jc.getTargetZone(), false))) {
+      if (StringUtils.isEmpty(jc.getTargetZoneName())
+          || !(jc.getTargetZoneName().equalsIgnoreCase(forceSkipZone)
+              || disabledZones.getOrDefault(jc.getTargetZoneName(), false))) {
         return jc;
       }
     }

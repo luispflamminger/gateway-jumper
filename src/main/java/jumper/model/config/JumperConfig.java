@@ -32,7 +32,7 @@ public class JumperConfig {
   private HashMap<String, RouteListener> routeListener;
   private GatewayClient gatewayClient;
 
-  String targetZone;
+  String targetZoneName;
   String scopes;
   String apiBasePath;
   String consumer;
