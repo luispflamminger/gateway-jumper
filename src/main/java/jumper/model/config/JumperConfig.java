@@ -63,6 +63,9 @@ public class JumperConfig {
   // calculated routing stuff within requestFilter
   String requestPath;
   String routingPath;
+  String finalApiUrl;
+
+  Boolean auditLog = false;
 
   @JsonIgnore
   public static String toBase64(JumperConfig jc) {
@@ -78,20 +81,27 @@ public class JumperConfig {
   }
 
   @JsonIgnore
-  public static JumperConfig fromBase64(String jsonConfigBase64) {
+  private static <T> T fromBase64(String jsonConfigBase64, TypeReference<T> typeReference) {
     String decodedJson = new String(Base64.getDecoder().decode(jsonConfigBase64.getBytes()));
     try {
       return new ObjectMapper()
           .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-          .readValue(decodedJson, JumperConfig.class);
+          .readValue(decodedJson, typeReference);
     } catch (JsonProcessingException e) {
-      e.printStackTrace();
+      throw new RuntimeException("can not base64decode header: " + jsonConfigBase64);
+    }
+  }
+
+  private static JumperConfig fromBase64(String jsonConfigBase64) {
+    if (StringUtils.isNotBlank(jsonConfigBase64)) {
+      return JumperConfig.fromBase64(jsonConfigBase64, new TypeReference<>() {});
+    } else {
       return new JumperConfig();
     }
   }
 
   @JsonIgnore
-  public void fillWithLegacyHeaders(ServerHttpRequest request) {
+  private void fillWithLegacyHeaders(ServerHttpRequest request) {
 
     // proxy
     setRemoteApiUrl(
@@ -159,19 +169,24 @@ public class JumperConfig {
         consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_ZONE, String.class));
   }
 
-  @JsonIgnore
-  public static JumperConfig parseJumperConfigFrom(ServerHttpRequest request) {
+  public static List<JumperConfig> parseJumperConfigListFrom(ServerHttpRequest request) {
 
-    JumperConfig jc;
-    String jumperConfigBase64 =
-        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_JUMPER_CONFIG);
+    String routingConfigBase64 =
+        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_ROUTING_CONFIG);
 
-    if (StringUtils.isNotBlank(jumperConfigBase64)) {
-      jc = JumperConfig.fromBase64(jumperConfigBase64);
-
-    } else {
-      jc = new JumperConfig();
+    if (StringUtils.isNotBlank(routingConfigBase64)) {
+      return JumperConfig.fromBase64(routingConfigBase64, new TypeReference<>() {});
     }
+
+    throw new RuntimeException("can not base64decode header: " + routingConfigBase64);
+  }
+
+  @JsonIgnore
+  public static JumperConfig parseAndFillJumperConfigFrom(ServerHttpRequest request) {
+
+    JumperConfig jc =
+        JumperConfig.fromBase64(
+            HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_JUMPER_CONFIG));
 
     jc.fillWithLegacyHeaders(
         request); // TODO: remove as soon we have completely shifted to json_config
@@ -181,39 +196,8 @@ public class JumperConfig {
 
   @JsonIgnore
   public static JumperConfig parseJumperConfigFrom(ServerWebExchange exchange) {
-    String jumperConfigBase64 = exchange.getAttribute(Constants.HEADER_JUMPER_CONFIG);
-    if (jumperConfigBase64 != null && !jumperConfigBase64.isEmpty()) {
-      return JumperConfig.fromBase64(jumperConfigBase64);
-    } else {
-      return new JumperConfig();
-    }
-  }
 
-  public static List<JumperConfig> parseJumperConfigListFromRequest(ServerHttpRequest request) {
-
-    String routingConfigBase64 =
-        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_ROUTING_CONFIG);
-
-    if (StringUtils.isNotBlank(routingConfigBase64)) {
-      return JumperConfig.listFromBase64(routingConfigBase64);
-    }
-
-    return List.of();
-  }
-
-  public static List<JumperConfig> listFromBase64(String jsonConfigBase64) {
-    String decodedJson = new String(Base64.getDecoder().decode(jsonConfigBase64.getBytes()));
-
-    TypeReference<List<JumperConfig>> typeRef = new TypeReference<>() {};
-    try {
-      return new ObjectMapper()
-          .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true)
-          .readValue(decodedJson, typeRef);
-    } catch (JsonProcessingException e) {
-      e.printStackTrace();
-    }
-    assert false : "routing config can not be decoded";
-    return null;
+    return JumperConfig.fromBase64(exchange.getAttribute(Constants.HEADER_JUMPER_CONFIG));
   }
 
   public boolean isListenerMatched() {

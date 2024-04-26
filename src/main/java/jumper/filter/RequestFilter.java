@@ -16,6 +16,7 @@ import jumper.model.config.JumperConfig;
 import jumper.model.config.OauthCredentials;
 import jumper.model.request.IncomingRequest;
 import jumper.model.request.JumperInfoRequest;
+import jumper.service.AuditLogService;
 import jumper.service.BasicAuthUtil;
 import jumper.service.HeaderUtil;
 import jumper.service.OauthTokenUtil;
@@ -87,7 +88,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                 if (request.getHeaders().containsKey(Constants.HEADER_ROUTING_CONFIG)) {
                   // evaluate routingConfig for failover scenario
                   List<JumperConfig> jumperConfigList =
-                      JumperConfig.parseJumperConfigListFromRequest(request);
+                      JumperConfig.parseJumperConfigListFrom(request);
                   log.info("failover case, routing_config: {}", jumperConfigList);
                   jumperConfig =
                       evaluateTargetZone(
@@ -107,7 +108,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                   }
 
                   // Prepare and extract JumperConfigValues
-                  jumperConfig = JumperConfig.parseJumperConfigFrom(request);
+                  jumperConfig = JumperConfig.parseAndFillJumperConfigFrom(request);
                   log.debug(
                       "JumperConfig encodedAsBase64: {}", JumperConfig.toBase64(jumperConfig));
                   log.debug("JumperConfig decoded: {}", jumperConfig);
@@ -122,6 +123,11 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                   exchange
                       .getAttributes()
                       .put(Constants.HEADER_JUMPER_CONFIG, JumperConfig.toBase64(jumperConfig));
+                }
+
+                // write audit log if needed
+                if (jumperConfig.getAuditLog()) {
+                  AuditLogService.writeFailoverAuditLog(jumperConfig);
                 }
 
                 // handle request
@@ -338,6 +344,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
       // add calculated stuff to jumperConfig
       jumperConfig.setRequestPath(requestPath);
       jumperConfig.setRoutingPath(routingPath);
+      jumperConfig.setFinalApiUrl(finalApiUrl);
 
     } catch (URISyntaxException e) {
       throw new RuntimeException("can not construct URL from " + request.getURI(), e);
@@ -445,18 +452,21 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
   private JumperConfig evaluateTargetZone(
       List<JumperConfig> jumperConfigList, String forceSkipZone) {
     for (JumperConfig jc : jumperConfigList) {
-      if (StringUtils.isEmpty(jc.getTargetZoneName())
-          || !(jc.getTargetZoneName().equalsIgnoreCase(forceSkipZone)
-              || disabledZones.getOrDefault(jc.getTargetZoneName(), false))) {
+      // secondary route, failover in place => audit logs
+      if (StringUtils.isEmpty(jc.getTargetZoneName())) {
+        jc.setAuditLog(true);
+        return jc;
+      }
+      // targetZoneName present, check it against force skip header and zones state map
+      if (!(jc.getTargetZoneName().equalsIgnoreCase(forceSkipZone)
+          || disabledZones.getOrDefault(jc.getTargetZoneName(), false))) {
         return jc;
       }
     }
-    // todo which exception
     throw new ResponseStatusException(
         HttpStatus.SERVICE_UNAVAILABLE, "Non of defined failover zones available");
   }
 
-  // && disabledZones.containsKey(jc.getTargetZone())
   private void checkForSpaceZone(ServerWebExchange exchange, String zone, String token) {
     if (zone != null && Constants.SPACE_ZONES.contains(zone)) {
       HeaderUtil.addHeader(exchange, Constants.HEADER_X_SPACEGATE_TOKEN, token);
