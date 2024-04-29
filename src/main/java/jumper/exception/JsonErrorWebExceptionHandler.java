@@ -95,7 +95,12 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
             ? request.headers().firstHeader(Constants.HEADER_X_TARDIS_TRACE_ID)
             : "");
 
-    writeErrorSpan(error, errorAttributes);
+    WebFluxSleuthOperators.withSpanInScope(
+        tracer,
+        currentTraceContext,
+        request.exchange(),
+        () -> writeErrorSpan(error, errorAttributes));
+
     // should also evaluate include options (stacktrace, message, bindingErrors)
     return errorAttributes;
   }
@@ -202,16 +207,15 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
   }
 
   private void writeErrorSpan(Throwable error, Map<String, Object> errorAttributes) {
-    Span newSpan = this.tracer.nextSpan().name("Error").start();
-    tracer.withSpan(newSpan);
+    Span errorSpan = this.tracer.nextSpan().name("error").start();
+    tracer.withSpan(errorSpan);
 
-    newSpan.tag("service", (String) errorAttributes.get("service"));
-    newSpan.tag("message", (String) errorAttributes.get("message"));
-    newSpan.tag("error", (String) errorAttributes.get("error"));
-    newSpan.tag("status", errorAttributes.get("status").toString());
-    newSpan.tag("method", (String) errorAttributes.get("method"));
-    newSpan.error(error);
+    errorSpan.tag("message", (String) errorAttributes.get("message"));
+    errorSpan.tag("http.status_code", errorAttributes.get("status").toString());
+    errorSpan.tag("http.method", (String) errorAttributes.get("method"));
+    errorSpan.tag("x-tardis-traceid", (String) errorAttributes.get("tardisTraceId"));
+    errorSpan.error(error);
 
-    newSpan.end();
+    errorSpan.end();
   }
 }
