@@ -19,6 +19,7 @@ import org.springframework.boot.autoconfigure.web.reactive.error.DefaultErrorWeb
 import org.springframework.boot.web.error.ErrorAttributeOptions;
 import org.springframework.boot.web.reactive.error.ErrorAttributes;
 import org.springframework.cloud.sleuth.CurrentTraceContext;
+import org.springframework.cloud.sleuth.Span;
 import org.springframework.cloud.sleuth.Tracer;
 import org.springframework.cloud.sleuth.instrument.web.WebFluxSleuthOperators;
 import org.springframework.context.ApplicationContext;
@@ -94,6 +95,7 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
             ? request.headers().firstHeader(Constants.HEADER_X_TARDIS_TRACE_ID)
             : "");
 
+    writeErrorSpan(error, errorAttributes);
     // should also evaluate include options (stacktrace, message, bindingErrors)
     return errorAttributes;
   }
@@ -197,5 +199,19 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
         return Objects.nonNull(error.getMessage()) ? error.getMessage() : "";
       }
     }
+  }
+
+  private void writeErrorSpan(Throwable error, Map<String, Object> errorAttributes){
+    Span newSpan = this.tracer.nextSpan().name("Error").start();
+    tracer.withSpan(newSpan);
+
+    newSpan.tag("service", (String) errorAttributes.get("service"));
+    newSpan.tag("message", (String) errorAttributes.get("message"));
+    newSpan.tag("error", (String) errorAttributes.get("error"));
+    newSpan.tag("status", errorAttributes.get("status").toString());
+    newSpan.tag("method", (String) errorAttributes.get("method"));
+    newSpan.error(error);
+
+    newSpan.end();
   }
 }
