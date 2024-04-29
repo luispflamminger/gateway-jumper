@@ -201,7 +201,7 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
     }
   }
 
-  private void writeErrorSpan(Throwable error, Map<String, Object> errorAttributes){
+  private void writeErrorSpan(Throwable error, Map<String, Object> errorAttributes) {
     Span newSpan = this.tracer.nextSpan().name("Error").start();
     tracer.withSpan(newSpan);
 
