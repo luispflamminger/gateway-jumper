@@ -82,6 +82,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
               exchange,
               () -> {
                 ServerHttpRequest request = exchange.getRequest();
+                addTracingInfo(request);
 
                 JumperConfig jumperConfig;
                 // failover logic if routing_config header present
@@ -482,7 +483,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
     Span incomingRequestSpan = tracer.currentSpan();
     incomingRequestSpan.name("Incoming Request");
 
-    // todo would prefer to set NA for this (chunked transfer?) scenario
     incomingRequestSpan.tag("message.size", Objects.requireNonNullElse(contentLength, "0"));
 
     if (xTardisTraceId != null) {
@@ -490,7 +490,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
     }
 
     incomingRequestSpan.remoteServiceName(applicationName);
-    incomingRequestSpan.event("jrqf");
   }
 
   @AllArgsConstructor
