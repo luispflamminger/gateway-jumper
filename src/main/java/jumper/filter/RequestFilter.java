@@ -90,13 +90,13 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                   // evaluate routingConfig for failover scenario
                   List<JumperConfig> jumperConfigList =
                       JumperConfig.parseJumperConfigListFrom(request);
-                  log.info("failover case, routing_config: {}", jumperConfigList);
+                  log.debug("failover case, routing_config: {}", jumperConfigList);
                   jumperConfig =
                       evaluateTargetZone(
                           jumperConfigList,
                           request.getHeaders().getFirst(Constants.HEADER_X_FAILOVER_SKIP_ZONE));
                   jumperConfig.fillProcessingInfo(request);
-                  log.info("failover case, enhanced jumper_config: {}", jumperConfig);
+                  log.debug("failover case, enhanced jumper_config: {}", jumperConfig);
 
                 }
 
@@ -110,8 +110,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
                   // Prepare and extract JumperConfigValues
                   jumperConfig = JumperConfig.parseAndFillJumperConfigFrom(request);
-                  log.debug(
-                      "JumperConfig encodedAsBase64: {}", JumperConfig.toBase64(jumperConfig));
                   log.debug("JumperConfig decoded: {}", jumperConfig);
                 }
 
@@ -278,7 +276,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                       log.info("logging request: {}", value("jumperInfo", infoRequest));
                     });
 
-                addTracingInfo(request);
+                tracer.currentSpan().event("jrqf");
               });
 
           return chain.filter(exchange);

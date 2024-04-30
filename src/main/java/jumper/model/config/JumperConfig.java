@@ -167,6 +167,13 @@ public class JumperConfig {
         consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, String.class));
     setConsumerOriginZone(
         consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_ZONE, String.class));
+
+    // Spectre stuff
+    JumperConfig jc =
+        JumperConfig.fromBase64(
+            HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_JUMPER_CONFIG));
+    this.setRouteListener(jc.getRouteListener());
+    this.setGatewayClient(jc.getGatewayClient());
   }
 
   public static List<JumperConfig> parseJumperConfigListFrom(ServerHttpRequest request) {
