@@ -288,7 +288,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
     if (log.isInfoEnabled()) {
       JumperInfoRequest jumperInfoRequest = new JumperInfoRequest();
-      jumperInfoRequest.setEnvironment(jumperConfig.getEnvName());
       return Optional.of(jumperInfoRequest);
     }
 
@@ -298,15 +297,12 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
   private IncomingRequest createIncomingRequest(
       JumperConfig jumperConfig, ServerHttpRequest request) {
     IncomingRequest incReq = new IncomingRequest();
+    incReq.setConsumer(jumperConfig.getConsumer());
     incReq.setBasePath(jumperConfig.getApiBasePath());
-    incReq.setHost(jumperConfig.getRemoteApiUrl());
-    incReq.setMethod(String.valueOf(request.getMethod()));
-    incReq.setResource(jumperConfig.getRoutingPath());
+    incReq.setFinalApiUrl(jumperConfig.getFinalApiUrl());
+    incReq.setMethod((request.getMethodValue()));
+    incReq.setRequestPath(jumperConfig.getRequestPath());
 
-    HashMap<String, String> logEntries = new HashMap<>();
-    logEntries.put("Thread name", Thread.currentThread().getName());
-
-    incReq.setLogEntries(logEntries);
     return incReq;
   }
 

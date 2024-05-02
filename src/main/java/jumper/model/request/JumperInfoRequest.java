@@ -5,6 +5,7 @@
 package jumper.model.request;
 
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import lombok.Getter;
 import lombok.Setter;
@@ -19,10 +20,7 @@ public class JumperInfoRequest {
   private boolean externalAuthorization;
   private boolean basicAuth;
 
-  private String environment;
-
   private IncomingRequest incomingRequest;
-  private OutgoingRequest outgoingRequest;
 
   public void setInfoScenario(
       boolean lastMileSecurity,
@@ -63,19 +61,24 @@ public class JumperInfoRequest {
     sb.append("HTTP-Method: ").append(incomingRequest.getMethod());
     sb.append(lineSeparator);
 
-    sb.append("Host: ").append(incomingRequest.getHost());
+    sb.append("Consumer: ").append(incomingRequest.getConsumer());
     sb.append(lineSeparator);
 
     sb.append("BasePath: ").append(incomingRequest.getBasePath());
     sb.append(lineSeparator);
 
-    sb.append("Resource: ").append(incomingRequest.getResource());
+    sb.append("Resource: ").append(incomingRequest.getRequestPath());
     sb.append(lineSeparator);
 
-    Set<Entry<String, String>> entrySet = incomingRequest.getLogEntries().entrySet();
-    for (Entry<String, String> entry : entrySet) {
-      sb.append(entry.getKey()).append(": ").append(entry.getValue());
-      sb.append(lineSeparator);
+    sb.append("Host: ").append(incomingRequest.getFinalApiUrl());
+    sb.append(lineSeparator);
+
+    if (Objects.nonNull(incomingRequest.getLogEntries())) {
+      Set<Entry<String, String>> entrySet = incomingRequest.getLogEntries().entrySet();
+      for (Entry<String, String> entry : entrySet) {
+        sb.append(entry.getKey()).append(": ").append(entry.getValue());
+        sb.append(lineSeparator);
+      }
     }
 
     return sb.toString();
