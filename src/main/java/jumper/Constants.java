@@ -89,7 +89,7 @@ public class Constants {
   public static final String TOKEN_CLAIM_ACCESS_TOKEN_PUBLISHER_ID = "publisherId";
   public static final String TOKEN_CLAIM_ACCESS_TOKEN_SUBSCRIBER_ID = "subscriberId";
 
-  public static final List<String> SPACE_ZONES = List.of("space", "spacex", "canis", "aries");
+  public static final List<String> SPACE_ZONES = List.of("space", "canis", "aries");
 
   public static final String BASIC_AUTH_PROVIDER_KEY = "default";
 

@@ -68,10 +68,10 @@ public class JumperConfig {
   Boolean auditLog = false;
 
   @JsonIgnore
-  public static String toBase64(JumperConfig jc) {
+  public static String toBase64(Object o) {
     String jsonConfigBase64 = null;
     try {
-      String decodedJson = new ObjectMapper().writeValueAsString(jc);
+      String decodedJson = new ObjectMapper().writeValueAsString(o);
       jsonConfigBase64 = Base64.getEncoder().encodeToString(decodedJson.getBytes());
     } catch (JsonProcessingException e) {
       e.printStackTrace();

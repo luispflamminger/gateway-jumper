@@ -4,6 +4,7 @@
 
 package jumper;
 
+import static jumper.config.Config.*;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import io.cucumber.java.en.And;
@@ -46,6 +47,15 @@ public class BaseSteps {
   @And("API provider set to respond with a {int} status code")
   public void apiProviderWillRespondWithAStatusCode(int statusCode) {
     responseStatusCode = String.valueOf(statusCode);
+  }
+
+  @And("API provider set to respond on {word} path")
+  public void apiProviderWillRespondWithAStatusCodeOnPath(String path_case) {
+    switch (path_case) {
+      case "real" -> mockUpstreamServer.failoverRequest(REMOTE_BASE_PATH);
+      case "failover" -> mockUpstreamServer.failoverRequest(REMOTE_FAILOVER_BASE_PATH);
+      case "provider" -> mockUpstreamServer.failoverRequest(REMOTE_PROVIDER_BASE_PATH);
+    }
   }
 
   @And("Event provider set to respond with a {int} status code")
@@ -173,6 +183,11 @@ public class BaseSteps {
             .uri("/proxy/callback?statusCode=" + responseStatusCode)
             .headers(httpHeadersOfRequest)
             .exchange();
+  }
+
+  @When("consumer calls the proxy route without base path")
+  public void consumerCallsProxy() {
+    requestExchange = webTestClient.get().uri("/proxy").headers(httpHeadersOfRequest).exchange();
   }
 
   @When("consumer calls the proxy route and runs into timeout")
