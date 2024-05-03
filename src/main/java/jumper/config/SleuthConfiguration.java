@@ -30,16 +30,18 @@ public class SleuthConfiguration {
       String url = request.url();
       String xTardisTraceId = request.header(Constants.HEADER_X_TARDIS_TRACE_ID);
 
-      String spanName = "Provider";
-      if (request.header(Constants.HEADER_CONSUMER_TOKEN) != null) {
+      String spanName;
+      if (url.contains("token")) {
+        spanName = "Idp";
+      } else if (request.header(Constants.HEADER_CONSUMER_TOKEN) != null) {
         spanName = "Gateway";
+      } else {
+        spanName = "Provider";
       }
 
       span.name("Outgoing Request: " + spanName);
 
-      if (url != null) {
-        span.tag("http.url", url);
-      }
+      span.tag("http.url", url);
 
       if (xTardisTraceId != null) {
         span.tag(Constants.HEADER_X_TARDIS_TRACE_ID, xTardisTraceId);

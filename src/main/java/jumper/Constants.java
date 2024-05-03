@@ -15,6 +15,8 @@ public class Constants {
   public static final String HEADER_X_SPACEGATE_CLIENT_SECRET = "X-Spacegate-Client-Secret";
   public static final String HEADER_X_SPACEGATE_SCOPE = "X-Spacegate-Scope";
   public static final String HEADER_JUMPER_CONFIG = "jumper_config";
+  public static final String HEADER_ROUTING_CONFIG = "routing_config";
+
   public static final String HEADER_ISSUER = "issuer";
   public static final String HEADER_TOKEN_ENDPOINT = "token_endpoint";
   public static final String HEADER_CLIENT_ID = "client_id";
@@ -51,6 +53,8 @@ public class Constants {
   public static final String HEADER_X_FORWARDED_PORT_PORT = "443";
   public static final String HEADER_X_FORWARDED_PROTO_HTTPS = "https";
 
+  public static final String HEADER_X_FAILOVER_SKIP_ZONE = "x-failover-skip-zone";
+
   public static final String QUERY_PARAM_LISTENER = "listener";
   public static final String LISTENER_ROOT_PATH_PREFIX = "/listener";
   public static final String PROXY_ROOT_PATH_PREFIX = "/proxy";
@@ -85,7 +89,7 @@ public class Constants {
   public static final String TOKEN_CLAIM_ACCESS_TOKEN_PUBLISHER_ID = "publisherId";
   public static final String TOKEN_CLAIM_ACCESS_TOKEN_SUBSCRIBER_ID = "subscriberId";
 
-  public static final List<String> SPACE_ZONES = List.of("space", "spacex", "canis", "aries");
+  public static final List<String> SPACE_ZONES = List.of("space", "canis", "aries");
 
   public static final String BASIC_AUTH_PROVIDER_KEY = "default";
 
