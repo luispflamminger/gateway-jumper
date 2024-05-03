@@ -1,5 +1,47 @@
 # Changelog
 
+## [3.12.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.11.0...3.12.0) (2024-05-03)
+
+
+### :scissors: Refactor
+
+* logging revised ([1d750c9](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/1d750c9a90b20a87c91b3c7fb8ea4ee004b6cdb5))
+* merge RoutingConfig to JumperConfig ([28591ef](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/28591efc6a9d460972c1892f97e1fc350768246e))
+* targetZone variable rename ([565c119](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/565c11946a905fd0a2db23c19223bd12dd42a221))
+
+
+### 💈 Style
+
+* spotless friendly ([60958ae](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/60958aeb37773b63772280899f5e5e121239b1a9))
+
+
+### 🦊 CI/CD
+
+* **dhei-15533:** provider failover (routing part) ([cb08c2e](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/cb08c2eda4e2d70c12280c31a85a1b9a419a7c14))
+
+
+### 🧪 Tests
+
+* added tests for zone failover (routing part) ([dd31ce5](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/dd31ce5cc9ecb84668e5ea6db019e30d2974b669))
+
+
+### 🚀 Features
+
+* audit log for failover, refactoring of duplicate methods ([40afd74](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/40afd740095f71758c3adcb7a6f7eb7a0e36ea18))
+* error span draft ([358f2e8](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/358f2e8f0140cdc3cf58746025c27964c4b59f2e))
+* support Spectre related jumperConfig for failover ([84eef25](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/84eef25ebc58d3363602ec033811787e3616f054))
+
+
+### 🛠 Fixes
+
+* set scope for error span ([6db6030](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/6db60303d227b2d332b808aa8d21d52b23025fe1))
+* span names adjustment ([827f398](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/827f3985c9379dbc4abf1a3b23dcb59a7447521e))
+
+
+### Other
+
+* **release:** 3.11.0 ([be70acd](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/be70acd49ef655faeb4508934368f80d1f10eddb))
+
 ## [3.11.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.10.0...3.11.0) (2024-04-19)
 
 
