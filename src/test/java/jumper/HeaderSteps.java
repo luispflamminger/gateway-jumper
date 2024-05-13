@@ -30,7 +30,6 @@ public class HeaderSteps {
     baseSteps.setHttpHeadersOfRequest(TokenUtil.getProxyRouteHeadersWithXtokenExchange(baseSteps));
   }
 
-
   @Given("RealRoute headers are set")
   public void realRouteHeadersSet() {
     baseSteps.setHttpHeadersOfRequest(
