@@ -47,6 +47,30 @@ public class JumperConfigSteps {
             }));
   }
 
+  @And("jumperConfig with target zone {string} is set")
+  public void setJumperConfigTargetZone(String zone) {
+    baseSteps.setHttpHeadersOfRequest(
+        baseSteps.httpHeadersOfRequest.andThen(
+            httpHeaders -> {
+              switch (zone) {
+                case "space":
+                  httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcTargetZone("space"));
+                  break;
+                case "canis":
+                  httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcTargetZone("canis"));
+                  break;
+                case "cetus":
+                  httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcTargetZone("cetus"));
+                  break;
+                case "aws":
+                  httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcTargetZone("aws"));
+                  break;
+                default:
+                  httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcTargetZone("aries"));
+              }
+            }));
+  }
+
   @And("jumperConfig oauth {string} set")
   public void setJumperConfigOauth(String jc_case) {
     baseSteps.setHttpHeadersOfRequest(

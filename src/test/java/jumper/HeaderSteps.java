@@ -24,10 +24,23 @@ public class HeaderSteps {
     baseSteps.setHttpHeadersOfRequest(TokenUtil.getProxyRouteHeaders(baseSteps));
   }
 
+  @Given("ProxyRoute headers are set with x-token-exchange")
+  public void proxyRouteHeadersSetWithXtokenExchange() {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
+    baseSteps.setHttpHeadersOfRequest(TokenUtil.getProxyRouteHeadersWithXtokenExchange(baseSteps));
+  }
+
+
   @Given("RealRoute headers are set")
   public void realRouteHeadersSet() {
     baseSteps.setHttpHeadersOfRequest(
         TokenUtil.getRealRouteHeaders(TokenUtil.getConsumerAccessToken()));
+  }
+
+  @Given("RealRoute headers are set with x-token-exchange")
+  public void realRouteHeadersSetWithXtokenExchange() {
+    baseSteps.setHttpHeadersOfRequest(
+        TokenUtil.getRealRouteHeadersWithXtokenExchange(TokenUtil.getConsumerAccessToken()));
   }
 
   @Given("Secondary routing_config header set")

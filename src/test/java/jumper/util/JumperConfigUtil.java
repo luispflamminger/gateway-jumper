@@ -34,6 +34,12 @@ public class JumperConfigUtil {
     return toBase64(jc);
   }
 
+  public static String getJcTargetZone(String zone) {
+    JumperConfig jc = new JumperConfig();
+    jc.setTargetZoneName(zone);
+    return toBase64(jc);
+  }
+
   public static String getJcOauthWithScope(String id) {
     HashMap<String, OauthCredentials> oauth = new HashMap<>();
     OauthCredentials oc = new OauthCredentials();

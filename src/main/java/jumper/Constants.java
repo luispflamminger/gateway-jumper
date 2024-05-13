@@ -46,6 +46,7 @@ public class Constants {
   public static final String HEADER_X_PUBSUB_SUBSCRIBER_ID = "x-pubsub-subscriber-id";
   public static final String HEADER_B3 = "b3";
   public static final String HEADER_X_SPACEGATE_TOKEN = "X-Spacegate-Token";
+  public static final String HEADER_X_TOKEN_EXCHANGE = "X-Token-Exchange";
   public static final String HEADER_API_BASE_PATH = "api_base_path";
   public static final String HEADER_X_FORWARDED_HOST = "X-Forwarded-Host";
   public static final String HEADER_X_FORWARDED_PORT = "X-Forwarded-Port";
