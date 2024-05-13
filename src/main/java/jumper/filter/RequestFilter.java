@@ -8,7 +8,11 @@ import static net.logstash.logback.argument.StructuredArguments.value;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import jumper.Constants;
 import jumper.model.TokenInfo;
 import jumper.model.config.BasicAuthCredentials;
@@ -22,6 +26,7 @@ import jumper.service.HeaderUtil;
 import jumper.service.OauthTokenUtil;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,6 +47,7 @@ import org.springframework.web.server.ServerWebExchange;
 
 @Component
 @Slf4j
+@Setter
 public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Config> {
 
   private final CurrentTraceContext currentTraceContext;
@@ -53,6 +59,9 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
   @Value("${jumper.issuer.url}")
   private String localIssuerUrl;
+
+  @Value("${jumper.zone.name}")
+  private String currentZone;
 
   @Value("${spring.application.name}")
   private String applicationName;
@@ -165,7 +174,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                     if (HeaderUtil.getFirstValueFromHeaderField(
                                 request, Constants.HEADER_X_TOKEN_EXCHANGE)
                             != null
-                        && isSpaceZone(jumperConfig.getTargetZoneName())) {
+                        && isSpaceZone(currentZone)) {
 
                       log.debug("----------------X-TOKEN-EXCHANGE HEADER-------------");
                       jumperInfoRequest.ifPresent(
@@ -490,6 +499,11 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         Constants.HEADER_AUTHORIZATION,
         Constants.BEARER
             + " "
+            + HeaderUtil.getFirstValueFromHeaderField(
+                exchange.getRequest(), Constants.HEADER_X_TOKEN_EXCHANGE));
+
+    log.debug(
+        "x-token-exchange: "
             + HeaderUtil.getFirstValueFromHeaderField(
                 exchange.getRequest(), Constants.HEADER_X_TOKEN_EXCHANGE));
   }

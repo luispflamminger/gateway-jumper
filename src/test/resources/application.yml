@@ -74,6 +74,8 @@ jumper:
     url: ${JUMPER_ISSUER_URL:https://stargate-test.de/auth/realms}
   stargate:
     url: ${STARGATE_URL:https://stargate-integration.test.dhei.telekom.de}
+  zone:
+    name: ${JUMPER_ZONE_NAME:default}
   security:
     dir: src/test/resources/keypair
     file: private.json

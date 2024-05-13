@@ -8,11 +8,15 @@ import static jumper.util.JumperConfigUtil.*;
 
 import io.cucumber.java.en.And;
 import jumper.config.Config;
+import jumper.filter.RequestFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @RequiredArgsConstructor
 public class JumperConfigSteps {
   private final BaseSteps baseSteps;
+
+  @Autowired RequestFilter rf;
 
   @And("jumperConfig with {word} route listener set")
   public void setJumperConfigListener(String jc_case) {
@@ -47,28 +51,9 @@ public class JumperConfigSteps {
             }));
   }
 
-  @And("jumperConfig with target zone {string} is set")
-  public void setJumperConfigTargetZone(String zone) {
-    baseSteps.setHttpHeadersOfRequest(
-        baseSteps.httpHeadersOfRequest.andThen(
-            httpHeaders -> {
-              switch (zone) {
-                case "space":
-                  httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcTargetZone("space"));
-                  break;
-                case "canis":
-                  httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcTargetZone("canis"));
-                  break;
-                case "cetus":
-                  httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcTargetZone("cetus"));
-                  break;
-                case "aws":
-                  httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcTargetZone("aws"));
-                  break;
-                default:
-                  httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcTargetZone("aries"));
-              }
-            }));
+  @And("current zone is {string}")
+  public void setCurrentZone(String zone) {
+    rf.setCurrentZone(zone);
   }
 
   @And("jumperConfig oauth {string} set")
