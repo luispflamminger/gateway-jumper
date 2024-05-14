@@ -8,8 +8,11 @@ import static jumper.config.Config.*;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import io.cucumber.java.en.And;
+import io.cucumber.java.en.Given;
 import io.cucumber.java.en.When;
 import java.util.function.Consumer;
+
+import jumper.filter.RequestFilter;
 import jumper.mocks.MockHorizonServer;
 import jumper.mocks.MockIrisServer;
 import jumper.mocks.MockUpstreamServer;
@@ -19,6 +22,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -40,6 +44,8 @@ public class BaseSteps {
   private WebTestClient webTestClient;
   private WebTestClient.ResponseSpec requestExchange;
   private String id;
+  
+  @Autowired private RequestFilter rf;
 
   @Value("${jumper.stargate.url:https://stargate-integration.test.dhei.telekom.de}")
   private String stargateUrl;
@@ -358,6 +364,11 @@ public class BaseSteps {
   @And("verify query param {word} for value {word}")
   public void verifyQueryParam(String name, String value) {
     mockUpstreamServer.verifyQueryParam(name, value);
+  }
+  
+  @And("current zone is {string}")
+  public void currentZoneIs(String zone) {
+    rf.setCurrentZone(zone);
   }
 
   public static JSONObject getTestJson() {

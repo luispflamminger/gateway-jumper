@@ -7,6 +7,7 @@ package jumper;
 import static jumper.util.JumperConfigUtil.*;
 
 import io.cucumber.java.en.And;
+import io.cucumber.java.en.Given;
 import jumper.config.Config;
 import jumper.filter.RequestFilter;
 import lombok.RequiredArgsConstructor;
@@ -15,8 +16,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 @RequiredArgsConstructor
 public class JumperConfigSteps {
   private final BaseSteps baseSteps;
-
-  @Autowired RequestFilter rf;
 
   @And("jumperConfig with {word} route listener set")
   public void setJumperConfigListener(String jc_case) {
@@ -51,10 +50,6 @@ public class JumperConfigSteps {
             }));
   }
 
-  @And("current zone is {string}")
-  public void setCurrentZone(String zone) {
-    rf.setCurrentZone(zone);
-  }
 
   @And("jumperConfig oauth {string} set")
   public void setJumperConfigOauth(String jc_case) {
