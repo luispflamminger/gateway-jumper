@@ -8,10 +8,8 @@ import static jumper.config.Config.*;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import io.cucumber.java.en.And;
-import io.cucumber.java.en.Given;
 import io.cucumber.java.en.When;
 import java.util.function.Consumer;
-
 import jumper.filter.RequestFilter;
 import jumper.mocks.MockHorizonServer;
 import jumper.mocks.MockIrisServer;
@@ -44,7 +42,7 @@ public class BaseSteps {
   private WebTestClient webTestClient;
   private WebTestClient.ResponseSpec requestExchange;
   private String id;
-  
+
   @Autowired private RequestFilter rf;
 
   @Value("${jumper.stargate.url:https://stargate-integration.test.dhei.telekom.de}")
@@ -365,7 +363,7 @@ public class BaseSteps {
   public void verifyQueryParam(String name, String value) {
     mockUpstreamServer.verifyQueryParam(name, value);
   }
-  
+
   @And("current zone is {string}")
   public void currentZoneIs(String zone) {
     rf.setCurrentZone(zone);

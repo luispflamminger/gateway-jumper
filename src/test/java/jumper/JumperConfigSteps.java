@@ -7,11 +7,8 @@ package jumper;
 import static jumper.util.JumperConfigUtil.*;
 
 import io.cucumber.java.en.And;
-import io.cucumber.java.en.Given;
 import jumper.config.Config;
-import jumper.filter.RequestFilter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 
 @RequiredArgsConstructor
 public class JumperConfigSteps {
@@ -49,7 +46,6 @@ public class JumperConfigSteps {
               httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcSecurity());
             }));
   }
-
 
   @And("jumperConfig oauth {string} set")
   public void setJumperConfigOauth(String jc_case) {
