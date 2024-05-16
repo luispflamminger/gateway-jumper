@@ -16,10 +16,7 @@ import jumper.model.config.JumperConfig;
 import jumper.model.config.OauthCredentials;
 import jumper.model.request.IncomingRequest;
 import jumper.model.request.JumperInfoRequest;
-import jumper.service.AuditLogService;
-import jumper.service.BasicAuthUtil;
-import jumper.service.HeaderUtil;
-import jumper.service.OauthTokenUtil;
+import jumper.service.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -48,8 +45,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
   private final Tracer tracer;
   private final OauthTokenUtil oauthTokenUtil;
   private final BasicAuthUtil basicAuthUtil;
-
-  private Map<String, Boolean> disabledZones = new HashMap<>();
+  private final ZoneHealthCheckService zoneHealthCheckService;
 
   @Value("${jumper.issuer.url}")
   private String localIssuerUrl;
@@ -64,12 +60,14 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
       CurrentTraceContext currentTraceContext,
       Tracer tracer,
       OauthTokenUtil oauthTokenUtil,
-      BasicAuthUtil basicAuthUtil) {
+      BasicAuthUtil basicAuthUtil,
+      ZoneHealthCheckService zoneHealthCheckService) {
     super(Config.class);
     this.currentTraceContext = currentTraceContext;
     this.tracer = tracer;
     this.oauthTokenUtil = oauthTokenUtil;
     this.basicAuthUtil = basicAuthUtil;
+    this.zoneHealthCheckService = zoneHealthCheckService;
   }
 
   @Override
@@ -454,7 +452,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
       }
       // targetZoneName present, check it against force skip header and zones state map
       if (!(jc.getTargetZoneName().equalsIgnoreCase(forceSkipZone)
-          || disabledZones.getOrDefault(jc.getTargetZoneName(), false))) {
+          || !zoneHealthCheckService.getZoneHealth(jc.getTargetZoneName()))) {
         return jc;
       }
     }
