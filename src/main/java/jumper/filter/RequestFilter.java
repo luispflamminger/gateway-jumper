@@ -8,9 +8,7 @@ import static net.logstash.logback.argument.StructuredArguments.value;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import jumper.Constants;
