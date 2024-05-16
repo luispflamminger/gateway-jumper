@@ -11,6 +11,9 @@ server:
     idle-timeout: 60000
 
 management:
+  health:
+    redis:
+      enabled: false
   endpoint:
     gateway.enabled: true # having actuators endpoint for filters e.g. host/actuator/gateway/routefilters
     loggers.enabled: true # having actuators endpoint for setting log level
@@ -76,12 +79,29 @@ spring:
       instrumentation-type: MANUAL #https://docs.spring.io/spring-cloud-sleuth/docs/current-SNAPSHOT/reference/html/integrations.html
   codec:
     max-in-memory-size: 4194304
-
+  data:
+    redis:
+      repositories:
+        enabled: false
+  redis:
+    connect-timeout: ${ZONE_HEALTH_DATABASE_CONNECTTIMEOUT:500}
+    timeout: ${ZONE_HEALTH_DATABASE_TIMEOUT:500}
+    host: ${ZONE_HEALTH_DATABASE_HOST:localhost}
+    port: ${ZONE_HEALTH_DATABASE_PORT:6379}
+    database: ${ZONE_HEALTH_DATABASE_INDEX:2}
+    password: ${ZONE_HEALTH_DATABASE_PASSWORD:foobar}
 jumper:
   issuer:
     url: ${JUMPER_ISSUER_URL:https://stargate-integration.test.dhei.telekom.de/auth/realms}
   stargate:
     url: ${STARGATE_URL:https://stargate-integration.test.dhei.telekom.de}
+  zone:
+    health:
+      enabled: ${ZONE_HEALTH_ENABLED:false}
+      defaultZoneHealth: ${ZONE_HEALTH_DEFAULT:true}
+      redis:
+        channel: ${ZONE_HEALTH_KEY_CHANNEL:stargate-zone-status}
+        checkConnectionInterval: ${ZONE_HEALTH_REQUEST_GET_RATE:5000}
 
 jumpercache.ttlOffset: 10
 jumpercache.cleanCacheInSeconds: 3600
