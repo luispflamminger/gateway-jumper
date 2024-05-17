@@ -67,7 +67,7 @@ public class TokenUtil {
       httpHeaders.set(Constants.HEADER_CLIENT_ID, addIdSuffix("stargate", baseSteps.getId()));
       httpHeaders.set(Constants.HEADER_CLIENT_SECRET, "secret");
       httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, "e30=");
-      httpHeaders.set(Constants.HEADER_X_TOKEN_EXCHANGE, "XTokenExchangeHeader");
+      httpHeaders.set(Constants.HEADER_X_TOKEN_EXCHANGE, "Bearer XTokenExchangeHeader");
     };
   }
 
@@ -96,7 +96,7 @@ public class TokenUtil {
       httpHeaders.set(Constants.HEADER_REALM, REALM);
       httpHeaders.set(Constants.HEADER_ACCESS_TOKEN_FORWARDING, "false");
       httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, "e30=");
-      httpHeaders.set(Constants.HEADER_X_TOKEN_EXCHANGE, "XTokenExchangeHeader");
+      httpHeaders.set(Constants.HEADER_X_TOKEN_EXCHANGE, "Bearer XTokenExchangeHeader");
     };
   }
 

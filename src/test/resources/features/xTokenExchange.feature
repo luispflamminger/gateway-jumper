@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-@upstream @iris
+@upstream @iris @xtokenexchange
 Feature: proper authorization token reaches provider endpoint if x-token-exchange header set
 
   Scenario Outline: Consumer calls proxy route with XtokenExchange Header and currentZone space || canis || aries

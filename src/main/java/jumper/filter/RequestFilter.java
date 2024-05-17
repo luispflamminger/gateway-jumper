@@ -493,10 +493,8 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
     HeaderUtil.addHeader(
         exchange,
         Constants.HEADER_AUTHORIZATION,
-        Constants.BEARER
-            + " "
-            + HeaderUtil.getFirstValueFromHeaderField(
-                exchange.getRequest(), Constants.HEADER_X_TOKEN_EXCHANGE));
+        HeaderUtil.getFirstValueFromHeaderField(
+            exchange.getRequest(), Constants.HEADER_X_TOKEN_EXCHANGE));
 
     log.debug(
         "x-token-exchange: "
