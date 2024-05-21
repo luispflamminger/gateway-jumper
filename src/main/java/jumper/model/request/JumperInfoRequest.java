@@ -19,6 +19,7 @@ public class JumperInfoRequest {
   private boolean lastMileSecurityEnhanced;
   private boolean externalAuthorization;
   private boolean basicAuth;
+  private boolean xTokenExchangeAuthorization;
 
   private IncomingRequest incomingRequest;
 
@@ -27,12 +28,14 @@ public class JumperInfoRequest {
       boolean lastMileSecurityEnhanced,
       boolean meshActivated,
       boolean externalAuthorization,
-      boolean basicAuth) {
+      boolean basicAuth,
+      boolean xTokenExchangeauthorization) {
     this.meshActivated = meshActivated;
     this.lastMileSecurity = lastMileSecurity;
     this.lastMileSecurityEnhanced = lastMileSecurityEnhanced;
     this.externalAuthorization = externalAuthorization;
     this.basicAuth = basicAuth;
+    this.xTokenExchangeAuthorization = xTokenExchangeauthorization;
   }
 
   @Override
@@ -51,6 +54,8 @@ public class JumperInfoRequest {
     sb.append(lastMileSecurityEnhanced);
     sb.append(" ExternalAuthorization: ");
     sb.append(externalAuthorization);
+    sb.append(" XtokenExchangeAuthorization: ");
+    sb.append(xTokenExchangeAuthorization);
     sb.append(" BasicAuth: ");
     sb.append(basicAuth);
     sb.append(lineSeparator);

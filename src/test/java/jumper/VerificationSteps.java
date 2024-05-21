@@ -146,6 +146,11 @@ public class VerificationSteps {
           .getRequestExchange()
           .expectHeader()
           .value(HttpHeaders.AUTHORIZATION, this::checkBasicAuthProvider);
+    } else if (tokenType.equalsIgnoreCase("XTokenExchangeHeader")) {
+      this.baseSteps
+          .getRequestExchange()
+          .expectHeader()
+          .valueMatches(HttpHeaders.AUTHORIZATION, "Bearer XTokenExchangeHeader");
     } else {
       fail("unknown authorization received");
     }

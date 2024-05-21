@@ -8,7 +8,9 @@ import static net.logstash.logback.argument.StructuredArguments.value;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.*;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import jumper.Constants;
 import jumper.model.TokenInfo;
 import jumper.model.config.BasicAuthCredentials;
@@ -19,6 +21,7 @@ import jumper.model.request.JumperInfoRequest;
 import jumper.service.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,6 +42,7 @@ import org.springframework.web.server.ServerWebExchange;
 
 @Component
 @Slf4j
+@Setter
 public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Config> {
 
   private final CurrentTraceContext currentTraceContext;
@@ -49,6 +53,9 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
   @Value("${jumper.issuer.url}")
   private String localIssuerUrl;
+
+  @Value("${jumper.zone.name}")
+  private String currentZone;
 
   @Value("${spring.application.name}")
   private String applicationName;
@@ -139,7 +146,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                     // GW-2-GW MESH TOKEN GENERATION
                     log.debug("----------------GATEWAY MESH-------------");
                     jumperInfoRequest.ifPresent(
-                        i -> i.setInfoScenario(false, false, true, false, false));
+                        i -> i.setInfoScenario(false, false, true, false, false, false));
 
                     TokenInfo meshTokenInfo =
                         oauthTokenUtil.getInternalMeshAccessToken(jumperConfig);
@@ -160,100 +167,114 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                   } else {
                     // ALL NON MESH SCENARIOS
 
-                    Optional<BasicAuthCredentials> basicAuthCredentials =
-                        jumperConfig.getBasicAuthCredentials();
-                    if (basicAuthCredentials.isPresent()) {
-                      // External Authorization with BasicAuth
-                      log.debug("----------------BASIC AUTH HEADER-------------");
+                    if (HeaderUtil.getFirstValueFromHeaderField(
+                                request, Constants.HEADER_X_TOKEN_EXCHANGE)
+                            != null
+                        && isSpaceZone(currentZone)) {
+
+                      log.debug("----------------X-TOKEN-EXCHANGE HEADER-------------");
                       jumperInfoRequest.ifPresent(
-                          i -> i.setInfoScenario(false, false, false, false, true));
+                          i -> i.setInfoScenario(false, false, false, false, false, true));
 
-                      String encodedBasicAuth =
-                          basicAuthUtil.encodeBasicAuth(
-                              basicAuthCredentials.get().getUsername(),
-                              basicAuthCredentials.get().getPassword());
-
-                      HeaderUtil.addHeader(
-                          exchange,
-                          Constants.HEADER_AUTHORIZATION,
-                          Constants.BASIC + " " + encodedBasicAuth);
+                      addXtokenExchange(exchange);
 
                     } else {
 
-                      if (Objects.nonNull(jumperConfig.getExternalTokenEndpoint())) {
-                        // External Authorization with OAuth
-                        log.debug("----------------EXTERNAL AUTHORIZATION-------------");
-                        log.debug(
-                            "Remote TokenEndpoint is set to: {}",
-                            jumperConfig.getExternalTokenEndpoint());
+                      Optional<BasicAuthCredentials> basicAuthCredentials =
+                          jumperConfig.getBasicAuthCredentials();
+                      if (basicAuthCredentials.isPresent()) {
+                        // External Authorization with BasicAuth
+                        log.debug("----------------BASIC AUTH HEADER-------------");
                         jumperInfoRequest.ifPresent(
-                            i -> i.setInfoScenario(false, false, false, true, false));
+                            i -> i.setInfoScenario(false, false, false, false, true, false));
 
-                        Optional<OauthCredentials> oauthCredentials =
-                            jumperConfig.getOauthCredentials();
-                        if (oauthCredentials.isPresent()
-                            && StringUtils.isNotBlank(oauthCredentials.get().getGrantType())) {
-
-                          TokenInfo tokenInfo =
-                              oauthTokenUtil.getAccessTokenWithOauthCredentialsObject(
-                                  jumperConfig.getExternalTokenEndpoint(),
-                                  oauthCredentials.get(),
-                                  jumperConfig.getConsumer());
-
-                          HeaderUtil.addHeader(
-                              exchange,
-                              Constants.HEADER_AUTHORIZATION,
-                              Constants.BEARER + " " + tokenInfo.getAccessToken());
-
-                        } else {
-                          getAccessTokenFromExternalIdpLegacy(exchange, jumperConfig);
-                        }
-
-                      } else if (Boolean.FALSE.equals(jumperConfig.getAccessTokenForwarding())) {
-                        // Enhanced Last Mile Security Token scenario
-                        log.debug("----------------LAST MILE SECURITY (ONE TOKEN)-------------");
-                        jumperInfoRequest.ifPresent(
-                            i -> i.setInfoScenario(true, true, false, false, false));
-
-                        String enhancedLastmileSecurityToken =
-                            oauthTokenUtil.generateEnhancedLastMileGatewayToken(
-                                jumperConfig,
-                                String.valueOf(request.getMethod()),
-                                localIssuerUrl + "/" + jumperConfig.getRealmName(),
-                                HeaderUtil.getLastValueFromHeaderField(
-                                    request, Constants.HEADER_X_PUBSUB_PUBLISHER_ID),
-                                HeaderUtil.getLastValueFromHeaderField(
-                                    request, Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID),
-                                false);
+                        String encodedBasicAuth =
+                            basicAuthUtil.encodeBasicAuth(
+                                basicAuthCredentials.get().getUsername(),
+                                basicAuthCredentials.get().getPassword());
 
                         HeaderUtil.addHeader(
                             exchange,
                             Constants.HEADER_AUTHORIZATION,
-                            Constants.BEARER + " " + enhancedLastmileSecurityToken);
-                        log.debug("lastMileSecurityToken: " + enhancedLastmileSecurityToken);
+                            Constants.BASIC + " " + encodedBasicAuth);
 
                       } else {
-                        // (Legacy) Last Mile Security Token scenario
-                        log.debug("----------------LAST MILE SECURITY (LEGACY)-------------");
-                        jumperInfoRequest.ifPresent(
-                            i -> i.setInfoScenario(true, false, false, false, false));
 
-                        String legacyLastmileSecurityToken =
-                            oauthTokenUtil.generateEnhancedLastMileGatewayToken(
-                                jumperConfig,
-                                String.valueOf(request.getMethod()),
-                                localIssuerUrl + "/" + jumperConfig.getRealmName(),
-                                HeaderUtil.getLastValueFromHeaderField(
-                                    request, Constants.HEADER_X_PUBSUB_PUBLISHER_ID),
-                                HeaderUtil.getLastValueFromHeaderField(
-                                    request, Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID),
-                                true);
+                        if (Objects.nonNull(jumperConfig.getExternalTokenEndpoint())) {
+                          // External Authorization with OAuth
+                          log.debug("----------------EXTERNAL AUTHORIZATION-------------");
+                          log.debug(
+                              "Remote TokenEndpoint is set to: {}",
+                              jumperConfig.getExternalTokenEndpoint());
+                          jumperInfoRequest.ifPresent(
+                              i -> i.setInfoScenario(false, false, false, true, false, false));
 
-                        HeaderUtil.addHeader(
-                            exchange,
-                            Constants.HEADER_LASTMILE_SECURITY_TOKEN,
-                            Constants.BEARER + " " + legacyLastmileSecurityToken);
-                        log.debug("lastMileSecurityToken: " + legacyLastmileSecurityToken);
+                          Optional<OauthCredentials> oauthCredentials =
+                              jumperConfig.getOauthCredentials();
+                          if (oauthCredentials.isPresent()
+                              && StringUtils.isNotBlank(oauthCredentials.get().getGrantType())) {
+
+                            TokenInfo tokenInfo =
+                                oauthTokenUtil.getAccessTokenWithOauthCredentialsObject(
+                                    jumperConfig.getExternalTokenEndpoint(),
+                                    oauthCredentials.get(),
+                                    jumperConfig.getConsumer());
+
+                            HeaderUtil.addHeader(
+                                exchange,
+                                Constants.HEADER_AUTHORIZATION,
+                                Constants.BEARER + " " + tokenInfo.getAccessToken());
+
+                          } else {
+                            getAccessTokenFromExternalIdpLegacy(exchange, jumperConfig);
+                          }
+
+                        } else if (Boolean.FALSE.equals(jumperConfig.getAccessTokenForwarding())) {
+                          // Enhanced Last Mile Security Token scenario
+                          log.debug("----------------LAST MILE SECURITY (ONE TOKEN)-------------");
+                          jumperInfoRequest.ifPresent(
+                              i -> i.setInfoScenario(true, true, false, false, false, false));
+
+                          String enhancedLastmileSecurityToken =
+                              oauthTokenUtil.generateEnhancedLastMileGatewayToken(
+                                  jumperConfig,
+                                  String.valueOf(request.getMethod()),
+                                  localIssuerUrl + "/" + jumperConfig.getRealmName(),
+                                  HeaderUtil.getLastValueFromHeaderField(
+                                      request, Constants.HEADER_X_PUBSUB_PUBLISHER_ID),
+                                  HeaderUtil.getLastValueFromHeaderField(
+                                      request, Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID),
+                                  false);
+
+                          HeaderUtil.addHeader(
+                              exchange,
+                              Constants.HEADER_AUTHORIZATION,
+                              Constants.BEARER + " " + enhancedLastmileSecurityToken);
+                          log.debug("lastMileSecurityToken: " + enhancedLastmileSecurityToken);
+
+                        } else {
+                          // (Legacy) Last Mile Security Token scenario
+                          log.debug("----------------LAST MILE SECURITY (LEGACY)-------------");
+                          jumperInfoRequest.ifPresent(
+                              i -> i.setInfoScenario(true, false, false, false, false, false));
+
+                          String legacyLastmileSecurityToken =
+                              oauthTokenUtil.generateEnhancedLastMileGatewayToken(
+                                  jumperConfig,
+                                  String.valueOf(request.getMethod()),
+                                  localIssuerUrl + "/" + jumperConfig.getRealmName(),
+                                  HeaderUtil.getLastValueFromHeaderField(
+                                      request, Constants.HEADER_X_PUBSUB_PUBLISHER_ID),
+                                  HeaderUtil.getLastValueFromHeaderField(
+                                      request, Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID),
+                                  true);
+
+                          HeaderUtil.addHeader(
+                              exchange,
+                              Constants.HEADER_LASTMILE_SECURITY_TOKEN,
+                              Constants.BEARER + " " + legacyLastmileSecurityToken);
+                          log.debug("lastMileSecurityToken: " + legacyLastmileSecurityToken);
+                        }
                       }
                     }
                   }
@@ -450,7 +471,8 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         jc.setAuditLog(true);
         return jc;
       }
-      // targetZoneName present, check it against force skip header and zones state map
+      // targetZoneName present, check it against force skip header and zones state
+      // map
       if (!(jc.getTargetZoneName().equalsIgnoreCase(forceSkipZone)
           || !zoneHealthCheckService.getZoneHealth(jc.getTargetZoneName()))) {
         return jc;
@@ -461,9 +483,28 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
   }
 
   private void checkForSpaceZone(ServerWebExchange exchange, String zone, String token) {
-    if (zone != null && Constants.SPACE_ZONES.contains(zone)) {
+    if (isSpaceZone(zone)) {
       HeaderUtil.addHeader(exchange, Constants.HEADER_X_SPACEGATE_TOKEN, token);
     }
+  }
+
+  private void addXtokenExchange(ServerWebExchange exchange) {
+
+    HeaderUtil.addHeader(
+        exchange,
+        Constants.HEADER_AUTHORIZATION,
+        HeaderUtil.getFirstValueFromHeaderField(
+            exchange.getRequest(), Constants.HEADER_X_TOKEN_EXCHANGE));
+
+    log.debug(
+        "x-token-exchange: "
+            + HeaderUtil.getFirstValueFromHeaderField(
+                exchange.getRequest(), Constants.HEADER_X_TOKEN_EXCHANGE));
+  }
+
+  private boolean isSpaceZone(String zone) {
+
+    return zone != null && Constants.SPACE_ZONES.contains(zone);
   }
 
   private void addTracingInfo(ServerHttpRequest request) {

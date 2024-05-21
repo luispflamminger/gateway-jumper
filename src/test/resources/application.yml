@@ -84,11 +84,12 @@ jumper:
   issuer:
     url: ${JUMPER_ISSUER_URL:https://stargate-test.de/auth/realms}
   stargate:
-    url: ${STARGATE_URL:https://stargate-integration.test.dhei.telekom.de}
+    url: ${STARGATE_URL:https://stargate-integration.test.dhei.telekom.de} 
   security:
     dir: src/test/resources/keypair
     file: private.json
   zone:
+    name: ${JUMPER_ZONE_NAME:default}
     health:
       enabled: :true
       defaultZoneHealth: true
