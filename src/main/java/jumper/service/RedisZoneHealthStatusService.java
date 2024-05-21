@@ -6,6 +6,7 @@ package jumper.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.concurrent.CompletableFuture;
 import jumper.config.RedisConfig;
 import jumper.model.config.HealthStatus;
 import jumper.model.config.ZoneHealthMessage;
@@ -17,7 +18,6 @@ import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.retry.support.RetryTemplateBuilder;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -59,30 +59,47 @@ public class RedisZoneHealthStatusService implements MessageListener {
     }
   }
 
-  @Async
   void lazyInitializeRedisMessageListenerContainer() {
-    var template =
-        new RetryTemplateBuilder().maxAttempts(Integer.MAX_VALUE).fixedBackoff(5000).build();
-    template.execute(
-        context -> {
-          try {
-            if (redisMessageListenerContainer.getConnectionFactory() == null) {
-              log.debug("Redis connection factory not available, skipping initialization");
-              return null;
-            }
+    CompletableFuture.supplyAsync(
+            () -> {
+              var template =
+                  new RetryTemplateBuilder()
+                      .maxAttempts(Integer.MAX_VALUE)
+                      .fixedBackoff(5000)
+                      .build();
+              return template.execute(
+                  context -> {
+                    try {
+                      if (redisMessageListenerContainer.getConnectionFactory() == null) {
+                        log.debug(
+                            "Redis connection factory not available, skipping initialization");
+                        return false;
+                      }
 
-            var connection = redisMessageListenerContainer.getConnectionFactory().getConnection();
-            if (connection.isSubscribed()) {
-              log.debug("Redis connection already subscribed, skipping initialization");
-              return null;
-            }
-          } catch (Exception e) {
-            log.error("Connection failure occurred. Restarting subscription task after 5000 ms");
-            throw e;
-          }
-          redisMessageListenerContainer.addMessageListener(this, new ChannelTopic(channelKey));
-          log.debug("Listeners registered successfully after {} retries.", context.getRetryCount());
-          return null;
-        });
+                      var connection =
+                          redisMessageListenerContainer.getConnectionFactory().getConnection();
+                      if (connection.isSubscribed()) {
+                        log.debug("Redis connection already subscribed, skipping initialization");
+                        return false;
+                      }
+                    } catch (Exception e) {
+                      log.error(
+                          "Connection failure occurred. Restarting subscription task after 5000 ms");
+                      throw e;
+                    }
+                    redisMessageListenerContainer.addMessageListener(
+                        this, new ChannelTopic(channelKey));
+                    log.info(
+                        "Listeners registered successfully after {} retries.",
+                        context.getRetryCount());
+                    return true;
+                  });
+            })
+        .exceptionally(
+            throwable -> {
+              log.error(
+                  "Stopped initializing Redis message listener container with errors", throwable);
+              return false;
+            });
   }
 }
