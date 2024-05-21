@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.14.1](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.14.0...3.14.1) (2024-05-21)
+
+
+### 🛠 Fixes
+
+* async subscribe to redis channel ([e7d86bd](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/e7d86bdda45cf2dfe08f68b3e91cb90c15d5b155))
+* DHEI-15534 async subscribe to redis channel ([652b07b](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/652b07b0ce8224d47a8354e35c7e272607b973f0))
+
+
+### Other
+
+* **release:** 3.14.0 ([f4841c2](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/f4841c2a42e74db3616962f889d0bbc4d4b1d3d1))
+
 ## [3.14.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.13.0...3.14.0) (2024-05-21)
 
 
