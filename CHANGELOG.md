@@ -1,5 +1,24 @@
 # Changelog
 
+## [3.14.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.13.0...3.14.0) (2024-05-21)
+
+
+### :scissors: Refactor
+
+* removed "Bearer " ([7c49271](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/7c492715ea8a4fbe66678eb1d6ff02fb1b407b90))
+
+
+### 🚀 Features
+
+* Added x-token-exchange header handling ([160e12f](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/160e12fd071fd2cc8bad21ab5bc6163a09534d30))
+* changed from targetZone to currentZone (env variable) ([517af44](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/517af44f0ec6fb4f4990b386672d18f02658edc7))
+* DHEI-15383 Added x-token-exchange header handling ([f89a586](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/f89a586a30c4517c029aaedf8e2fed3cf52e62cb))
+
+
+### Other
+
+* **release:** 3.13.0 ([7eba358](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/7eba358cd4b7ed7b9a0a7e76863172810bded0f6))
+
 ## [3.13.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.12.0...3.13.0) (2024-05-16)
 
 
