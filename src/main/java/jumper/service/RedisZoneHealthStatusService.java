@@ -10,6 +10,7 @@ import java.util.concurrent.CompletableFuture;
 import jumper.config.RedisConfig;
 import jumper.model.config.HealthStatus;
 import jumper.model.config.ZoneHealthMessage;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -31,6 +32,8 @@ public class RedisZoneHealthStatusService implements MessageListener {
 
   private final String channelKey;
 
+  @Getter private boolean isInitiallySubscribed = false;
+
   public RedisZoneHealthStatusService(
       ObjectMapper objectMapper,
       ZoneHealthCheckService zoneHealthCheckService,
@@ -50,6 +53,10 @@ public class RedisZoneHealthStatusService implements MessageListener {
       ZoneHealthMessage zoneHealthMessage =
           objectMapper.readValue(message.toString(), ZoneHealthMessage.class);
       log.debug("Received message {}", zoneHealthMessage);
+      if (zoneHealthMessage.getZone() == null) {
+        log.error("Zone is null in message {}, ignoring set status", zoneHealthMessage);
+        return;
+      }
       zoneHealthCheckService.setZoneHealth(
           zoneHealthMessage.getZone(), zoneHealthMessage.getStatus() == HealthStatus.HEALTHY);
     } catch (JsonProcessingException e) {
@@ -100,6 +107,7 @@ public class RedisZoneHealthStatusService implements MessageListener {
               log.error(
                   "Stopped initializing Redis message listener container with errors", throwable);
               return false;
-            });
+            })
+        .thenApply(result -> isInitiallySubscribed = result);
   }
 }

@@ -4,41 +4,31 @@
 
 package jumper.util;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.springframework.test.util.AssertionErrors.fail;
-
-import java.io.IOException;
-import java.net.ServerSocket;
-import org.junit.jupiter.api.AfterAll;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import redis.embedded.RedisServer;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
+@Testcontainers
 public class AbstractIntegrationTest {
 
-  static RedisServer redisServer;
-  static int port;
+  private static final GenericContainer<?> REDIS_CONTAINER;
+  private static final int REDIS_PORT = 6379;
 
   static {
-    try (ServerSocket serverSocket = new ServerSocket(0)) {
-      assertThat(serverSocket).isNotNull();
-      port = serverSocket.getLocalPort();
-      redisServer = new RedisServer(port);
-      assertThat(port).isGreaterThan(0);
-      redisServer.start();
-    } catch (IOException e) {
-      System.out.println(e);
-      fail("Could not start embedded Redis server");
-    }
+    REDIS_CONTAINER =
+        new GenericContainer<>("bitnami/redis:latest")
+            .withEnv("REDIS_PASSWORD", "foobar")
+            .withExposedPorts(REDIS_PORT)
+            .waitingFor(Wait.forLogMessage(".*Ready to accept connections.*", 1));
+    REDIS_CONTAINER.start();
   }
 
   @DynamicPropertySource
   static void dynamicProperties(DynamicPropertyRegistry registry) {
-    registry.add("spring.redis.port", () -> port);
-  }
-
-  @AfterAll
-  static void stopRedis() throws IOException {
-    redisServer.stop();
+    registry.add("spring.redis.host", REDIS_CONTAINER::getHost);
+    registry.add("spring.redis.port", () -> REDIS_CONTAINER.getMappedPort(REDIS_PORT));
+    registry.add("jumper.zone.health.enabled", () -> true);
   }
 }
