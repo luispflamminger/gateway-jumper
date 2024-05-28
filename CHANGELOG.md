@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.14.2](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.14.1...3.14.2) (2024-05-28)
+
+
+### 🛠 Fixes
+
+* DHEI-15534 redis tests for zone health ([54a7e92](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/54a7e92dc443cb773dd0d6b2bd45cf141147607a))
+* redis tests for zone health ([56bbd1c](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/56bbd1c47a243b1b2cb8bb52805e3ce6ab2ca79f))
+
+
+### Other
+
+* **release:** 3.14.1 ([4036226](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/4036226b8d2cc69aac0f8e86dfd9d90e2594c132))
+
 ## [3.14.1](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.14.0...3.14.1) (2024-05-21)
 
 
