@@ -167,9 +167,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                   } else {
                     // ALL NON MESH SCENARIOS
 
-                    if (HeaderUtil.getFirstValueFromHeaderField(
-                                request, Constants.HEADER_X_TOKEN_EXCHANGE)
-                            != null
+                    if (request.getHeaders().containsKey(Constants.HEADER_X_TOKEN_EXCHANGE)
                         && isSpaceZone(currentZone)) {
 
                       log.debug("----------------X-TOKEN-EXCHANGE HEADER-------------");

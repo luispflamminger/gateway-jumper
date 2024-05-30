@@ -27,11 +27,10 @@ public class SleuthConfiguration {
   @Bean(name = HttpClientRequestParser.NAME)
   HttpRequestParser httpRequestParser() {
     return (request, context, span) -> {
-      String url = request.url();
       String xTardisTraceId = request.header(Constants.HEADER_X_TARDIS_TRACE_ID);
 
       String spanName;
-      if (url.contains("token")) {
+      if (request.path().contains("token")) {
         spanName = "Idp";
       } else if (request.header(Constants.HEADER_CONSUMER_TOKEN) != null) {
         spanName = "Gateway";
@@ -41,7 +40,7 @@ public class SleuthConfiguration {
 
       span.name("Outgoing Request: " + spanName);
 
-      span.tag("http.url", url);
+      span.tag("http.url", request.url());
 
       if (xTardisTraceId != null) {
         span.tag(Constants.HEADER_X_TARDIS_TRACE_ID, xTardisTraceId);
