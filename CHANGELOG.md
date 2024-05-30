@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.14.3](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.14.2...3.14.3) (2024-05-30)
+
+
+### 🦊 CI/CD
+
+* **dhei-00000:** token span name evaluation ([0fe3506](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/0fe3506a62944c8b51eab84e6432eec6ef0ea74a))
+
+
+### 🛠 Fixes
+
+* token span name evaluation ([fbbc297](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/fbbc297ab7d78a8ab79226f92742f98fc2a1bfb0))
+
+
+### Other
+
+* **release:** 3.14.2 ([f531bd2](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/f531bd2c5819dc4b208729e0dbe2518e4736c266))
+
 ## [3.14.2](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.14.1...3.14.2) (2024-05-28)
 
 
