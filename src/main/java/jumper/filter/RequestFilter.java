@@ -129,9 +129,15 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                       .put(Constants.HEADER_JUMPER_CONFIG, JumperConfig.toBase64(jumperConfig));
                 }
 
-                // write audit log if needed
-                if (jumperConfig.getAuditLog()) {
+                if (jumperConfig.getSecondaryFailover()) {
+                  // write audit log if needed
                   AuditLogService.writeFailoverAuditLog(jumperConfig);
+
+                  // pass headers from config to provider
+                  HeaderUtil.addHeader(
+                      exchange, Constants.HEADER_REALM, jumperConfig.getRealmName());
+                  HeaderUtil.addHeader(
+                      exchange, Constants.HEADER_ENVIRONMENT, jumperConfig.getEnvName());
                 }
 
                 // handle request
@@ -466,7 +472,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
     for (JumperConfig jc : jumperConfigList) {
       // secondary route, failover in place => audit logs
       if (StringUtils.isEmpty(jc.getTargetZoneName())) {
-        jc.setAuditLog(true);
+        jc.setSecondaryFailover(true);
         return jc;
       }
       // targetZoneName present, check it against force skip header and zones state
