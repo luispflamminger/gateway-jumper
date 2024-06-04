@@ -65,7 +65,7 @@ public class JumperConfig {
   String routingPath;
   String finalApiUrl;
 
-  Boolean auditLog = false;
+  Boolean secondaryFailover = false;
 
   @JsonIgnore
   public static String toBase64(Object o) {
