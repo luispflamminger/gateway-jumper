@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.14.4](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.14.3...3.14.4) (2024-06-05)
+
+
+### 🦊 CI/CD
+
+* **dhei-00000:** pass headers for secondary failover ([fc50cb4](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/fc50cb4e0a6953794be193905647ce85451ee376))
+
+
+### 🛠 Fixes
+
+* pass headers for secondary failover ([da06f74](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/da06f7462b72c621aa553acc7c8df7f8d81697d5))
+
+
+### Other
+
+* **release:** 3.14.3 ([583d339](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/583d339a4780a6202501956979fb6efd038a081d))
+
 ## [3.14.3](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.14.2...3.14.3) (2024-05-30)
 
 
