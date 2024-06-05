@@ -5,15 +5,14 @@
 include:
   - project: dhei/teams/hyperion/dev/src/foundation-build
     file: /pipelines/java-maven-docker-release-pipeline.yaml
-    ref: ${FOUNDATION_BUILD_VERSION}
+    ref: 16.10.1
   - project: "dhei/teams/hyperion/dev/src/foundation-build"
     file: "/pipelines/opensource-pipeline.yaml"
-    ref: ${FOUNDATION_BUILD_VERSION}
+    ref: 16.10.1
 
 variables:
   PUSH_TO_HARBOR: "true"
   MTR_TARGET_IMAGE: ${CI_PROJECT_NAME}
-  FOUNDATION_BUILD_VERSION: 16.10.1
 
 build_deploy:
   tags:
