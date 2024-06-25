@@ -386,7 +386,7 @@ public class OauthTokenUtil {
                     .onRetryExhaustedThrow(
                         (retryBackoffSpec, retrySignal) -> {
                           throw new ResponseStatusException(
-                                  HttpStatus.UNAUTHORIZED,
+                              HttpStatus.UNAUTHORIZED,
                               "Failed to connect to "
                                   + tokenEndpoint
                                   + ", cause: "
