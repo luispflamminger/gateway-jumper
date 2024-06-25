@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.15.2](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.15.1...3.15.2) (2024-06-25)
+
+
+### 💈 Style
+
+* fix formatting ([8e9c1af](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/8e9c1afbba9ca788f8fd0715556845080252b3dc))
+
+
+### 🦊 CI/CD
+
+* fix pipeline ([32ccb34](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/32ccb346b07e78b81695283b6b97f877eb1856ed))
+
+
+### Other
+
+* update to new Gherkin KeyWords ([9c01cfb](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/9c01cfb2b1385b10c131b644f1e3cb3ffdeed7af))
+
 ## [3.15.1](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.15.0...3.15.1) (2024-06-25)
 
 
