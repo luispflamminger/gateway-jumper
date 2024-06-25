@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.15.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.14.4...3.15.0) (2024-06-25)
+
+
+### 🚀 Features
+
+* enhance-Jumper-error-handling ([d1387ec](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/d1387ec80d089616663f48f93df3e18a672f2dfe))
+* enhanced error handling for external IDP responses to consumer ([94852e4](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/94852e4efde19516ca6f6d5148e6fd76ca7f1adb))
+
+
+### Other
+
+* **release:** 3.14.4 ([22add44](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/22add443d09fe29a37f066081c04578c835b80f2))
+
 ## [3.14.4](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.14.3...3.14.4) (2024-06-05)
 
 
