@@ -63,17 +63,17 @@ Feature: proper error message returned based on conditions
     | "scoped" | 404 | externalScoped | 401 | "401 UNAUTHORIZED \"Failed to retrieve token from http://localhost:1081/external, original status: 404 NOT_FOUND\"" | "Unauthorized" | 401 |
     | "scoped" | 503 | externalScoped | 401 | "401 UNAUTHORIZED \"Failed to retrieve token from http://localhost:1081/external, original status: 503 SERVICE_UNAVAILABLE\"" | "Unauthorized" | 401 |
     # grant_type client_credentials
-    | "grant_type client_credentials" | 401 | externalBasicAuthCredentials | 401 | "401 UNAUTHORIZED \"Failed to retrieve token from http://localhost:1081/external, original status: 401 UNAUTHORIZED\"" | "Unauthorized" | 401 |
-    | "grant_type client_credentials" | 404 | externalBasicAuthCredentials | 401 | "401 UNAUTHORIZED \"Failed to retrieve token from http://localhost:1081/external, original status: 404 NOT_FOUND\"" | "Unauthorized" | 401 |
-    | "grant_type client_credentials" | 503 | externalBasicAuthCredentials | 401 | "401 UNAUTHORIZED \"Failed to retrieve token from http://localhost:1081/external, original status: 503 SERVICE_UNAVAILABLE\"" | "Unauthorized" | 401 |
+    | "consumer grant_type client_credentials" | 401 | externalBasicAuthCredentials | 401 | "401 UNAUTHORIZED \"Failed to retrieve token from http://localhost:1081/external, original status: 401 UNAUTHORIZED\"" | "Unauthorized" | 401 |
+    | "consumer grant_type client_credentials" | 404 | externalBasicAuthCredentials | 401 | "401 UNAUTHORIZED \"Failed to retrieve token from http://localhost:1081/external, original status: 404 NOT_FOUND\"" | "Unauthorized" | 401 |
+    | "consumer grant_type client_credentials" | 503 | externalBasicAuthCredentials | 401 | "401 UNAUTHORIZED \"Failed to retrieve token from http://localhost:1081/external, original status: 503 SERVICE_UNAVAILABLE\"" | "Unauthorized" | 401 |
     # grant_type password
-    | "grant_type password" | 401 | externalUsernamePasswordCredentials | 401 | "401 UNAUTHORIZED \"Failed to retrieve token from http://localhost:1081/external, original status: 401 UNAUTHORIZED\"" | "Unauthorized" | 401 |
-    | "grant_type password" | 404 | externalUsernamePasswordCredentials | 401 | "401 UNAUTHORIZED \"Failed to retrieve token from http://localhost:1081/external, original status: 404 NOT_FOUND\"" | "Unauthorized" | 401 |
-    | "grant_type password" | 503 | externalUsernamePasswordCredentials | 401 | "401 UNAUTHORIZED \"Failed to retrieve token from http://localhost:1081/external, original status: 503 SERVICE_UNAVAILABLE\"" | "Unauthorized" | 401 |
+    | "consumer grant_type password" | 401 | externalUsernamePasswordCredentials | 401 | "401 UNAUTHORIZED \"Failed to retrieve token from http://localhost:1081/external, original status: 401 UNAUTHORIZED\"" | "Unauthorized" | 401 |
+    | "consumer grant_type password" | 404 | externalUsernamePasswordCredentials | 401 | "401 UNAUTHORIZED \"Failed to retrieve token from http://localhost:1081/external, original status: 404 NOT_FOUND\"" | "Unauthorized" | 401 |
+    | "consumer grant_type password" | 503 | externalUsernamePasswordCredentials | 401 | "401 UNAUTHORIZED \"Failed to retrieve token from http://localhost:1081/external, original status: 503 SERVICE_UNAVAILABLE\"" | "Unauthorized" | 401 |
     # grant_type password only
-    | "grant_type password only" | 401 | externalUsernamePasswordCredentialsOnly | 401 | "401 UNAUTHORIZED \"Failed to retrieve token from http://localhost:1081/external, original status: 401 UNAUTHORIZED\"" | "Unauthorized" | 401 |
-    | "grant_type password only" | 404 | externalUsernamePasswordCredentialsOnly | 401 | "401 UNAUTHORIZED \"Failed to retrieve token from http://localhost:1081/external, original status: 404 NOT_FOUND\"" | "Unauthorized" | 401 |
-    | "grant_type password only" | 503 | externalUsernamePasswordCredentialsOnly | 401 | "401 UNAUTHORIZED \"Failed to retrieve token from http://localhost:1081/external, original status: 503 SERVICE_UNAVAILABLE\"" | "Unauthorized" | 401 |
+    | "consumer grant_type password only" | 401 | externalUsernamePasswordCredentialsOnly | 401 | "401 UNAUTHORIZED \"Failed to retrieve token from http://localhost:1081/external, original status: 401 UNAUTHORIZED\"" | "Unauthorized" | 401 |
+    | "consumer grant_type password only" | 404 | externalUsernamePasswordCredentialsOnly | 401 | "401 UNAUTHORIZED \"Failed to retrieve token from http://localhost:1081/external, original status: 404 NOT_FOUND\"" | "Unauthorized" | 401 |
+    | "consumer grant_type password only" | 503 | externalUsernamePasswordCredentialsOnly | 401 | "401 UNAUTHORIZED \"Failed to retrieve token from http://localhost:1081/external, original status: 503 SERVICE_UNAVAILABLE\"" | "Unauthorized" | 401 |
 
   Scenario Outline:  external IDP answers with error http codes jc with oauth, spacegate
     Given RealRoute headers are set
