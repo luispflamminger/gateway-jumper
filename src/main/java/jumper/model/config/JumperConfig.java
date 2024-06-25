@@ -228,8 +228,14 @@ public class JumperConfig {
   }
 
   public Optional<OauthCredentials> getOauthCredentials() {
-    if (Objects.nonNull(getOauth()) && getOauth().containsKey(getConsumer())) {
-      return Optional.of(getOauth().get(getConsumer()));
+    if (Objects.nonNull(getOauth())) {
+      if (getOauth().containsKey(getConsumer())) {
+        return Optional.of(getOauth().get(getConsumer()));
+      }
+
+      if (getOauth().containsKey(Constants.OAUTH_PROVIDER_KEY)) {
+        return Optional.of(getOauth().get(Constants.OAUTH_PROVIDER_KEY));
+      }
     }
 
     return Optional.empty();
