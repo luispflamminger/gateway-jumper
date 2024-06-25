@@ -13,7 +13,7 @@ SPDX-License-Identifier: Apache-2.0
 
 	<groupId>de.telekom.ei.jumper</groupId>
 	<artifactId>jumper-sse</artifactId>
-	<version>3.14.4</version>
+	<version>3.14.4DHEI-15857-enhance-Jumper-error-handling</version>
 
 	<parent>
 		<groupId>org.springframework.boot</groupId>
