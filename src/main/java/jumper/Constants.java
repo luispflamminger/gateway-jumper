@@ -93,6 +93,7 @@ public class Constants {
   public static final List<String> SPACE_ZONES = List.of("space", "canis", "aries");
 
   public static final String BASIC_AUTH_PROVIDER_KEY = "default";
+  public static final String OAUTH_PROVIDER_KEY = "default";
 
   public static final String ENVIRONMENT_PLACEHOLDER = "ENVIRONMENT_PLACEHOLDER";
 }
