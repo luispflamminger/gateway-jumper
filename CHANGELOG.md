@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.15.1](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.15.0...3.15.1) (2024-06-25)
+
+
+### 🛠 Fixes
+
+* **dhei-12175:** added logic to handle default-key in jc-oauth-config ([efeb289](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/efeb289fcb6776a2c0e27646e6a834a5b3a09417))
+
+
+### Other
+
+* **release:** 3.15.0 ([8356342](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/83563429c391e35aa0019fd6842a62f69da3f615))
+
 ## [3.15.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.14.4...3.15.0) (2024-06-25)
 
 
