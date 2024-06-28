@@ -107,12 +107,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
                 // no failover
                 else {
-                  // checking to prevent later nullPointer on inconsistent state from Kong
-                  if (!request.getHeaders().containsKey(Constants.HEADER_REMOTE_API_URL)) {
-                    throw new RuntimeException(
-                        "missing mandatory header " + Constants.HEADER_REMOTE_API_URL);
-                  }
-
                   // Prepare and extract JumperConfigValues
                   jumperConfig = JumperConfig.parseAndFillJumperConfigFrom(request);
                   log.debug("JumperConfig decoded: {}", jumperConfig);
