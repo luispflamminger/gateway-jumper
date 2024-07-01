@@ -176,8 +176,10 @@ public class SpectreService {
                   }
                   // pass Spectre related info also as a header
                   httpHeaders.set(Constants.HEADER_X_SPECTRE_ISSUE, event.getData().getIssue());
-                  httpHeaders.set(Constants.HEADER_X_SPECTRE_PROVIDER, event.getData().getProvider());
-                  httpHeaders.set(Constants.HEADER_X_SPECTRE_CONSUMER, event.getData().getConsumer());
+                  httpHeaders.set(
+                      Constants.HEADER_X_SPECTRE_PROVIDER, event.getData().getProvider());
+                  httpHeaders.set(
+                      Constants.HEADER_X_SPECTRE_CONSUMER, event.getData().getConsumer());
                 })
             .contentType(MediaType.APPLICATION_JSON)
             .body(BodyInserters.fromValue(event))
