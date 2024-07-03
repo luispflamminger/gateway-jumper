@@ -127,4 +127,24 @@ public class JumperConfigSteps {
               }
             }));
   }
+
+  @And("jumperConfig {word} loadbalancing set")
+  public void setJumperConfigLoadbalancing(String jc_case) {
+    baseSteps.setHttpHeadersOfRequest(
+        baseSteps.httpHeadersOfRequest.andThen(
+            httpHeaders -> {
+              switch (jc_case) {
+                case "valid":
+                  httpHeaders.set(
+                      Constants.HEADER_JUMPER_CONFIG, getJcLoadBalancing(baseSteps.getId()));
+                  break;
+                case "empty":
+                  httpHeaders.set(
+                      Constants.HEADER_JUMPER_CONFIG, getEmptyJcLoadBalancing(baseSteps.getId()));
+                  break;
+                default:
+                  assert false : "not defined";
+              }
+            }));
+  }
 }
