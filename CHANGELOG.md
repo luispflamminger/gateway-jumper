@@ -1,5 +1,23 @@
 # Changelog
 
+## [3.16.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.15.2...3.16.0) (2024-07-04)
+
+
+### 🧪 Tests
+
+* added loadbalancing test ([ca1940f](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/ca1940ffd9c00408ffa4e61a5186c1386aee5aad))
+* fix no header test ([5236a03](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/5236a03dda2a2d272a6b4ddf6f11a39e8ec4f1ae))
+
+
+### 🚀 Features
+
+* loadbalancing draft ([f89ecec](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/f89ecec6131a57b9f8f5b3413068cac0574cc4b1))
+
+
+### 🛠 Fixes
+
+* pass spectre info as header ([98de0fb](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/98de0fbbc8a28e526b333c23dcb4cbd84f864fbc))
+
 ## [3.15.2](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.15.1...3.15.2) (2024-06-25)
 
 
