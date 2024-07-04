@@ -74,6 +74,26 @@ public class JumperConfigUtil {
     return toBase64(jc);
   }
 
+  public static String getJcLoadBalancing(String id) {
+    LoadBalancing loadBalancing = new LoadBalancing();
+    loadBalancing.setServers(
+        List.of(
+            new Server("http://localhost:1080", 50.0), new Server("http://localhost:1080", 50.0)));
+
+    JumperConfig jc = new JumperConfig();
+    jc.setLoadBalancing(loadBalancing);
+    return toBase64(jc);
+  }
+
+  public static String getEmptyJcLoadBalancing(String id) {
+    LoadBalancing loadBalancing = new LoadBalancing();
+    loadBalancing.setServers(List.of());
+
+    JumperConfig jc = new JumperConfig();
+    jc.setLoadBalancing(loadBalancing);
+    return toBase64(jc);
+  }
+
   public enum JcOauthConfig {
     CONSUMER,
     PROVIDER;

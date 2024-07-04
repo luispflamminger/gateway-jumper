@@ -9,7 +9,7 @@ Feature: proper error message returned based on conditions
     Given No headers are set
     When consumer calls the proxy route
     Then API consumer receives a 500 status code
-    And error response contains msg "missing mandatory header remote_api_url" error "Internal Server Error" status 500
+    And error response contains msg "missing routing information remote_api_url / jc.loadBalancing" error "Internal Server Error" status 500
 
   Scenario: Consumer calls proxy route without Authorization token
     Given RealRoute headers without Authorization are set
