@@ -74,6 +74,11 @@ public class Constants {
   public static final String TOKEN_REQUEST_PARAMETER_SCOPE = "scope";
   public static final String TOKEN_REQUEST_PARAMETER_CLIENT_ID = "client_id";
   public static final String TOKEN_REQUEST_PARAMETER_CLIENT_SECRET = "client_secret";
+  public static final String TOKEN_REQUEST_PARAMETER_CLIENT_ASSERTION = "client_assertion";
+  public static final String TOKEN_REQUEST_PARAMETER_CLIENT_ASSERTION_TYPE =
+      "client_assertion_type";
+  public static final String TOKEN_REQUEST_PARAMETER_CLIENT_ASSERTION_TYPE_JWT =
+      "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
   public static final String TOKEN_REQUEST_PARAMETER_GRANT_TYPE = "grant_type";
   public static final String TOKEN_REQUEST_PARAMETER_USERNAME = "username";
   public static final String TOKEN_REQUEST_PARAMETER_PASSWORD = "password";
@@ -84,9 +89,13 @@ public class Constants {
   public static final String TOKEN_CLAIM_ORIGIN_ZONE = "originZone";
   public static final String TOKEN_CLAIM_SCOPE = "scope";
   public static final String TOKEN_CLAIM_SUB = "sub";
+  public static final String TOKEN_CLAIM_ISS = "iss";
+  public static final String TOKEN_CLAIM_JTI = "jti";
   public static final String TOKEN_CLAIM_AUD = "aud";
   public static final String TOKEN_CLAIM_TYP = "typ";
   public static final String TOKEN_CLAIM_AZP = "azp";
+  public static final String TOKEN_CLAIM_EXP = "exp";
+  public static final String TOKEN_CLAIM_IAT = "iat";
   public static final String TOKEN_CLAIM_OPERATION = "operation";
   public static final String TOKEN_CLAIM_REQUEST_PATH = "requestPath";
   public static final String TOKEN_CLAIM_ACCESS_TOKEN_SIGNATURE = "accessTokenSignature";

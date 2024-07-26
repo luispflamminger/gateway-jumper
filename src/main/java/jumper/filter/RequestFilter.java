@@ -211,12 +211,22 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                               jumperConfig.getOauthCredentials();
                           if (oauthCredentials.isPresent()
                               && StringUtils.isNotBlank(oauthCredentials.get().getGrantType())) {
+                            OauthCredentials oauthCreds = oauthCredentials.get();
 
-                            TokenInfo tokenInfo =
-                                oauthTokenUtil.getAccessTokenWithOauthCredentialsObject(
-                                    jumperConfig.getExternalTokenEndpoint(),
-                                    oauthCredentials.get(),
-                                    jumperConfig.getConsumer());
+                            TokenInfo tokenInfo;
+                            if (oauthCreds.getClientKey() != null
+                                && !oauthCreds.getClientKey().isEmpty()) {
+                              tokenInfo =
+                                  oauthTokenUtil.getAccessTokenWithPrivateKey(
+                                      jumperConfig.getExternalTokenEndpoint(),
+                                      oauthCredentials.get());
+                            } else {
+                              tokenInfo =
+                                  oauthTokenUtil.getAccessTokenWithOauthCredentialsObject(
+                                      jumperConfig.getExternalTokenEndpoint(),
+                                      oauthCredentials.get(),
+                                      jumperConfig.getConsumer());
+                            }
 
                             HeaderUtil.addHeader(
                                 exchange,

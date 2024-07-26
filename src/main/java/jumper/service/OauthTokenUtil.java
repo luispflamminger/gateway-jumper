@@ -4,38 +4,25 @@
 
 package jumper.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Header;
 import io.jsonwebtoken.Jwt;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.SignatureException;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.handler.ssl.SslHandshakeTimeoutException;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.*;
 import jumper.Constants;
 import jumper.model.TokenInfo;
 import jumper.model.config.JumperConfig;
-import jumper.model.config.KeyInfo;
 import jumper.model.config.OauthCredentials;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
@@ -59,20 +46,8 @@ public class OauthTokenUtil {
 
   private final WebClient oauthTokenUtilWebClient;
   private final TokenCacheService tokenCache;
+  private final TokenGeneratorService tokenGenerator;
   private final BasicAuthUtil basicAuthUtil;
-
-  private static String securityPath;
-  private static String securityFile;
-
-  @Value("${jumper.security.dir:keypair}")
-  private void setSecurityPath(String name) {
-    securityPath = name;
-  }
-
-  @Value("${jumper.security.file:private.json}")
-  private void setSecurityFile(String name) {
-    securityFile = name;
-  }
 
   public static String getTokenWithoutSignature(String consumerToken) {
 
@@ -178,7 +153,7 @@ public class OauthTokenUtil {
       claims.put(Constants.TOKEN_CLAIM_AUD, aud);
     }
 
-    return generateToken(claims, issuer, expiration, issuedAt, jc.getRealmName());
+    return tokenGenerator.fromRealm(claims, issuer, expiration, issuedAt, jc.getRealmName());
   }
 
   public String generateGatewayTokenForPublisher(String issuer, String realm) {
@@ -187,56 +162,12 @@ public class OauthTokenUtil {
     claims.put(Constants.TOKEN_CLAIM_AZP, "stargate");
     claims.put(Constants.TOKEN_CLAIM_CLIENT_ID, "gateway");
 
-    return generateToken(
+    return tokenGenerator.fromRealm(
         claims,
         issuer,
         new Date(System.currentTimeMillis() + 300 * 1000),
         new Date(System.currentTimeMillis()),
         realm);
-  }
-
-  private String generateToken(
-      HashMap<String, String> claims, String issuer, Date expiration, Date issuedAt, String realm) {
-    Map<String, KeyInfo> keyInfoMap;
-
-    try {
-      log.debug("GatewayToken or OneToken: Loading keyInfo");
-      keyInfoMap = loadKeyInfo();
-
-    } catch (IOException e1) {
-      log.error("IOException", e1);
-      throw new RuntimeException("Error while generating LMS token, key info missing");
-    }
-
-    if (!keyInfoMap.containsKey(realm)) {
-      throw new RuntimeException("key info missing for realm " + realm);
-    }
-
-    return Jwts.builder()
-        .setClaims(claims)
-        .setIssuer(issuer)
-        .setExpiration(expiration)
-        .setIssuedAt(issuedAt)
-        .signWith(keyInfoMap.get(realm).getPk(), SignatureAlgorithm.RS256)
-        .setHeaderParam("kid", keyInfoMap.get(realm).getKid())
-        .setHeaderParam("typ", "JWT")
-        .compact();
-  }
-
-  public static Map<String, KeyInfo> loadKeyInfo() throws IOException {
-    Path kidFile =
-        Path.of(
-            System.getProperty("user.dir")
-                + File.separator
-                + securityPath
-                + File.separator
-                + securityFile);
-
-    TypeReference<HashMap<String, KeyInfo>> typeRef = new TypeReference<>() {};
-
-    return new ObjectMapper()
-        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-        .readValue(Files.readString(kidFile), typeRef);
   }
 
   public TokenInfo getInternalMeshAccessToken(JumperConfig jc) {
@@ -325,6 +256,55 @@ public class OauthTokenUtil {
                   Constants.TOKEN_REQUEST_PARAMETER_GRANT_TYPE, oauthCredentials.getGrantType());
 
               return getAccessTokenQuery(tokenEndpoint, tokenKey, requestParameter, basicAuth);
+            });
+  }
+
+  public TokenInfo getAccessTokenWithPrivateKey(
+      String tokenEndpoint, OauthCredentials oauthCredentials) {
+
+    final String tokenKey =
+        tokenCache.generateTokenCacheKey(
+            tokenEndpoint, oauthCredentials.getId(), oauthCredentials.getScopes());
+
+    // try to get valid token from tokenCache...
+    return tokenCache
+        .getToken(tokenKey)
+        .orElseGet(
+            () -> { // ...otherwise retrieve a new one
+              HashMap<String, String> claims = new HashMap<>();
+              // add sub claim with clientId
+              claims.put(Constants.TOKEN_CLAIM_SUB, oauthCredentials.getClientId());
+              // add aud claim with tokenEndpoint
+              claims.put(Constants.TOKEN_CLAIM_AUD, tokenEndpoint);
+              // add jti claim to prevent token reuse
+              claims.put(Constants.TOKEN_CLAIM_JTI, UUID.randomUUID().toString());
+
+              String jwt_token_for_external_idp =
+                  tokenGenerator.fromKey(
+                      claims,
+                      oauthCredentials.getClientId(),
+                      new Date(System.currentTimeMillis() + 60 * 1000),
+                      new Date(System.currentTimeMillis()),
+                      oauthCredentials.getClientKey());
+
+              MultiValueMap<String, String> requestParameter = new LinkedMultiValueMap<>();
+              requestParameter.add(
+                  Constants.TOKEN_REQUEST_PARAMETER_CLIENT_ID, oauthCredentials.getClientId());
+              requestParameter.add(
+                  Constants.TOKEN_REQUEST_PARAMETER_CLIENT_ASSERTION, jwt_token_for_external_idp);
+              requestParameter.add(
+                  Constants.TOKEN_REQUEST_PARAMETER_CLIENT_ASSERTION_TYPE,
+                  Constants.TOKEN_REQUEST_PARAMETER_CLIENT_ASSERTION_TYPE_JWT);
+              requestParameter.add(
+                  Constants.TOKEN_REQUEST_PARAMETER_GRANT_TYPE,
+                  AuthorizationGrantType.CLIENT_CREDENTIALS.getValue());
+
+              if (StringUtils.isNotBlank(oauthCredentials.getScopes())) {
+                requestParameter.add(
+                    Constants.TOKEN_REQUEST_PARAMETER_SCOPE, oauthCredentials.getScopes());
+              }
+
+              return getAccessTokenQuery(tokenEndpoint, tokenKey, requestParameter, null);
             });
   }
 
