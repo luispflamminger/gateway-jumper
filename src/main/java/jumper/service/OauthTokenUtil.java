@@ -12,6 +12,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.SignatureException;
+import io.jsonwebtoken.security.WeakKeyException;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.handler.ssl.SslHandshakeTimeoutException;
 import java.util.*;

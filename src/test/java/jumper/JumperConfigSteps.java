@@ -93,17 +93,29 @@ public class JumperConfigSteps {
                       Constants.HEADER_JUMPER_CONFIG,
                       JcOauthConfig.PROVIDER.getJcOauthGrantTypeWithKey(baseSteps.getId()));
                   break;
-                case "provider grant_type key (weak key)":
-                  httpHeaders.set(
-                      Constants.HEADER_JUMPER_CONFIG,
-                      JcOauthConfig.PROVIDER.getJcOauthGrantTypeWithWeakKey(baseSteps.getId()));
-                  break;
                 default:
                   httpHeaders.set(
                       Constants.HEADER_JUMPER_CONFIG,
                       JcOauthConfig.CONSUMER.getJcOauth(baseSteps.getId()));
               }
             }));
+  }
+
+  @And("jumperConfig set with key type {string}")
+  public void setJumperConfigOauthWithKeyType(String keyType) {
+    switch (keyType.toLowerCase()) {
+      case "weak":
+        JcOauthConfig.PROVIDER.setJcOauthKeyType(KeyType.WEAK.getKey());
+        break;
+      case "invalid":
+        JcOauthConfig.PROVIDER.setJcOauthKeyType(KeyType.INVALID.getKey());
+        break;
+      case "empty":
+        JcOauthConfig.PROVIDER.setJcOauthKeyType(KeyType.EMPTY.getKey());
+        break;
+      default:
+        JcOauthConfig.PROVIDER.setJcOauthKeyType(KeyType.SECURE.getKey());
+    }
   }
 
   @And("jumperConfig basic auth {string} set")

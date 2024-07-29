@@ -18,10 +18,14 @@ import java.security.spec.InvalidKeySpecException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+
+import io.jsonwebtoken.security.WeakKeyException;
 import jumper.model.config.KeyInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @Slf4j
@@ -66,8 +70,8 @@ public class TokenGeneratorService {
     KeyInfo keyInfo = new KeyInfo();
     try {
       keyInfo.setPk(key);
-    } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
-      throw new RuntimeException("Key is missing for request to issuer " + issuer);
+    } catch (NoSuchAlgorithmException | InvalidKeySpecException | IllegalArgumentException e) {
+      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid key configuration: " + e.getMessage());
     }
 
     return generateToken(claims, issuer, expiration, issuedAt, keyInfo);
@@ -75,16 +79,19 @@ public class TokenGeneratorService {
 
   private String generateToken(
       HashMap<String, String> claims, String issuer, Date expiration, Date issuedAt, KeyInfo key) {
-
-    return Jwts.builder()
-        .setClaims(claims)
-        .setIssuer(issuer)
-        .setExpiration(expiration)
-        .setIssuedAt(issuedAt)
-        .signWith(key.getPk(), SignatureAlgorithm.RS256)
-        .setHeaderParam("kid", key.getKid())
-        .setHeaderParam("typ", "JWT")
-        .compact();
+  try {
+      return Jwts.builder()
+            .setClaims(claims)
+            .setIssuer(issuer)
+            .setExpiration(expiration)
+            .setIssuedAt(issuedAt)
+            .signWith(key.getPk(), SignatureAlgorithm.RS256)
+            .setHeaderParam("kid", key.getKid())
+            .setHeaderParam("typ", "JWT")
+            .compact();
+    } catch (WeakKeyException e) {
+      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Key is too weak: The JWT JWA Specification (RFC 7518, Section 3.3) states that keys used with RS256 MUST have a size >= 2048 bits.");
+    }
   }
 
   public static Map<String, KeyInfo> loadKeyInfo() throws IOException {

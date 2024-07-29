@@ -98,6 +98,8 @@ public class JumperConfigUtil {
     CONSUMER,
     PROVIDER;
 
+    private String clientKey = PRIVATE_RSA_KEY_SECURE_EXAMPLE;
+
     List<String> determineKeys() {
       return switch (this) {
         case CONSUMER -> List.of(Config.CONSUMER);
@@ -170,7 +172,7 @@ public class JumperConfigUtil {
       HashMap<String, OauthCredentials> oauth = new HashMap<>();
       OauthCredentials oc = new OauthCredentials();
       oc.setClientId(addIdSuffix(CONSUMER_EXTERNAL_CONFIGURED, id));
-      oc.setClientKey(PRIVATE_RSA_KEY_SECURE_EXAMPLE);
+      oc.setClientKey(this.clientKey);
       oc.setGrantType("authorization_code");
       determineKeys().forEach(key -> oauth.put(key, oc));
       JumperConfig jc = new JumperConfig();
@@ -178,16 +180,24 @@ public class JumperConfigUtil {
       return toBase64(jc);
     }
 
-    public String getJcOauthGrantTypeWithWeakKey(String id) {
-      HashMap<String, OauthCredentials> oauth = new HashMap<>();
-      OauthCredentials oc = new OauthCredentials();
-      oc.setClientId(addIdSuffix(CONSUMER_EXTERNAL_CONFIGURED, id));
-      oc.setClientKey(PRIVATE_RSA_KEY_WEAK_EXAMPLE);
-      oc.setGrantType("authorization_code");
-      determineKeys().forEach(key -> oauth.put(key, oc));
-      JumperConfig jc = new JumperConfig();
-      jc.setOauth(oauth);
-      return toBase64(jc);
+    public void setJcOauthKeyType(String clientKey) {
+      this.clientKey = clientKey;
+    }
+  }
+
+  public enum KeyType {
+    WEAK,
+    SECURE,
+    INVALID,
+    EMPTY;
+
+    public String getKey() {
+      return switch (this) {
+        case WEAK -> PRIVATE_RSA_KEY_WEAK_EXAMPLE;
+        case SECURE -> PRIVATE_RSA_KEY_SECURE_EXAMPLE;
+        case INVALID -> "InvalidRSAKey";
+        case EMPTY -> "";
+      };
     }
   }
 
