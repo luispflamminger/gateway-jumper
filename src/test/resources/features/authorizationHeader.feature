@@ -175,6 +175,18 @@ Feature: proper authorization token reaches provider endpoint
     Then API Provider receives authorization ExternalConfigured
     And API consumer receives a 200 status code
 
+    ################ external key auth ################
+
+  Scenario: Consumer calls proxy route with jc with configured oauth key auth, external authorization token sent
+    Given RealRoute headers are set
+    And oauth tokenEndpoint set
+    And jumperConfig oauth "provider grant_type key" set
+    And IDP set to provide externalKey token
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    Then API Provider receives authorization ExternalConfigured
+    And API consumer receives a 200 status code
+
     ################ basic auth ################
   Scenario: Consumer calls proxy route with real route headers, jc with consumer specific basic auth provided, consumer specific basic auth authorization sent
     Given RealRoute headers are set

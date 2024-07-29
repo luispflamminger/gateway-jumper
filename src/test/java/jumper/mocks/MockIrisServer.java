@@ -22,6 +22,7 @@ import org.mockserver.client.MockServerClient;
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.model.Header;
 import org.mockserver.model.HttpError;
+import org.mockserver.model.RegexBody;
 import org.springframework.http.HttpHeaders;
 import org.springframework.util.Base64Utils;
 
@@ -80,6 +81,35 @@ public class MockIrisServer {
                 .withBody(
                     addIdSuffix("client_id=external_configured", id)
                         + "&client_secret=secret&grant_type=client_credentials"),
+            exactly(1))
+        .respond(
+            response()
+                .withStatusCode(responseCode)
+                .withHeaders(
+                    new Header("Content-Type", "application/json; charset=utf-8"),
+                    new Header("Cache-Control", "no-store"))
+                .withBody(tokenInfoJson)
+                .withDelay(TimeUnit.SECONDS, 1));
+  }
+
+  public void createExpectationExternalTokenKeyed(String id) {
+
+    String tokenInfoJson = getTokenInfoJson(CONSUMER_EXTERNAL_CONFIGURED);
+
+    new MockServerClient(irisLocalHost, irisLocalPort)
+        .when(
+            request()
+                .withMethod("POST")
+                .withPath("/external")
+                .withBody(
+                    RegexBody.regex(
+                        ".*("
+                            + addIdSuffix("client_id=external_configured", id)
+                            + "|"
+                            + "client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+                            + "|"
+                            + "grant_type=client_credentials"
+                            + ")+")),
             exactly(1))
         .respond(
             response()

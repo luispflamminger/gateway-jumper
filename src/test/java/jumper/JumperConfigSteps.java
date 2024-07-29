@@ -88,6 +88,16 @@ public class JumperConfigSteps {
                       Constants.HEADER_JUMPER_CONFIG,
                       JcOauthConfig.CONSUMER.getJcOauthWithScope(baseSteps.getId()));
                   break;
+                case "provider grant_type key":
+                  httpHeaders.set(
+                      Constants.HEADER_JUMPER_CONFIG,
+                      JcOauthConfig.PROVIDER.getJcOauthGrantTypeWithKey(baseSteps.getId()));
+                  break;
+                case "provider grant_type key (weak key)":
+                  httpHeaders.set(
+                      Constants.HEADER_JUMPER_CONFIG,
+                      JcOauthConfig.PROVIDER.getJcOauthGrantTypeWithWeakKey(baseSteps.getId()));
+                  break;
                 default:
                   httpHeaders.set(
                       Constants.HEADER_JUMPER_CONFIG,

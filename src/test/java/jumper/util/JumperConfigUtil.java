@@ -165,6 +165,30 @@ public class JumperConfigUtil {
       jc.setOauth(oauth);
       return toBase64(jc);
     }
+
+    public String getJcOauthGrantTypeWithKey(String id) {
+      HashMap<String, OauthCredentials> oauth = new HashMap<>();
+      OauthCredentials oc = new OauthCredentials();
+      oc.setClientId(addIdSuffix(CONSUMER_EXTERNAL_CONFIGURED, id));
+      oc.setClientKey(PRIVATE_RSA_KEY_SECURE_EXAMPLE);
+      oc.setGrantType("authorization_code");
+      determineKeys().forEach(key -> oauth.put(key, oc));
+      JumperConfig jc = new JumperConfig();
+      jc.setOauth(oauth);
+      return toBase64(jc);
+    }
+
+    public String getJcOauthGrantTypeWithWeakKey(String id) {
+      HashMap<String, OauthCredentials> oauth = new HashMap<>();
+      OauthCredentials oc = new OauthCredentials();
+      oc.setClientId(addIdSuffix(CONSUMER_EXTERNAL_CONFIGURED, id));
+      oc.setClientKey(PRIVATE_RSA_KEY_WEAK_EXAMPLE);
+      oc.setGrantType("authorization_code");
+      determineKeys().forEach(key -> oauth.put(key, oc));
+      JumperConfig jc = new JumperConfig();
+      jc.setOauth(oauth);
+      return toBase64(jc);
+    }
   }
 
   public static String getJcRouteListener(String id, String consumer) {
