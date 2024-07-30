@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.WeakKeyException;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -18,8 +19,6 @@ import java.security.spec.InvalidKeySpecException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-
-import io.jsonwebtoken.security.WeakKeyException;
 import jumper.model.config.KeyInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -71,7 +70,8 @@ public class TokenGeneratorService {
     try {
       keyInfo.setPk(key);
     } catch (NoSuchAlgorithmException | InvalidKeySpecException | IllegalArgumentException e) {
-      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid key configuration: " + e.getMessage());
+      throw new ResponseStatusException(
+          HttpStatus.UNAUTHORIZED, "Invalid key configuration: " + e.getMessage());
     }
 
     return generateToken(claims, issuer, expiration, issuedAt, keyInfo);
@@ -79,18 +79,20 @@ public class TokenGeneratorService {
 
   private String generateToken(
       HashMap<String, String> claims, String issuer, Date expiration, Date issuedAt, KeyInfo key) {
-  try {
+    try {
       return Jwts.builder()
-            .setClaims(claims)
-            .setIssuer(issuer)
-            .setExpiration(expiration)
-            .setIssuedAt(issuedAt)
-            .signWith(key.getPk(), SignatureAlgorithm.RS256)
-            .setHeaderParam("kid", key.getKid())
-            .setHeaderParam("typ", "JWT")
-            .compact();
+          .setClaims(claims)
+          .setIssuer(issuer)
+          .setExpiration(expiration)
+          .setIssuedAt(issuedAt)
+          .signWith(key.getPk(), SignatureAlgorithm.RS256)
+          .setHeaderParam("kid", key.getKid())
+          .setHeaderParam("typ", "JWT")
+          .compact();
     } catch (WeakKeyException e) {
-      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Key is too weak: The JWT JWA Specification (RFC 7518, Section 3.3) states that keys used with RS256 MUST have a size >= 2048 bits.");
+      throw new ResponseStatusException(
+          HttpStatus.UNAUTHORIZED,
+          "Key is too weak: The JWT JWA Specification (RFC 7518, Section 3.3) states that keys used with RS256 MUST have a size >= 2048 bits.");
     }
   }
 
