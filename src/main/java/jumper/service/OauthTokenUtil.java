@@ -175,19 +175,13 @@ public class OauthTokenUtil {
         jc.getInternalTokenEndpoint() + Constants.ISSUER_SUFFIX,
         jc.getClientId(),
         jc.getClientSecret(),
-        null,
-        "");
+        null);
   }
 
   public TokenInfo getAccessTokenWithClientCredentials(
-      String tokenEndpoint,
-      String clientID,
-      String clientSecret,
-      String scope,
-      String subscriberClientId) {
+      String tokenEndpoint, String clientID, String clientSecret, String scope) {
 
-    final String tokenKey =
-        tokenCache.generateTokenCacheKey(tokenEndpoint, clientID, subscriberClientId);
+    final String tokenKey = tokenCache.generateTokenCacheKey(tokenEndpoint, clientID, scope);
 
     // try to get valid token from tokenCache...
     return tokenCache
@@ -210,11 +204,9 @@ public class OauthTokenUtil {
   }
 
   public TokenInfo getAccessTokenWithOauthCredentialsObject(
-      String tokenEndpoint, OauthCredentials oauthCredentials, String subscriberClientId) {
+      String tokenEndpoint, OauthCredentials oauthCredentials) {
 
-    final String tokenKey =
-        tokenCache.generateTokenCacheKey(
-            tokenEndpoint, oauthCredentials.getId(), subscriberClientId);
+    final String tokenKey = tokenCache.generateTokenCacheKey(tokenEndpoint, oauthCredentials);
 
     // try to get valid token from tokenCache...
     return tokenCache
@@ -224,12 +216,31 @@ public class OauthTokenUtil {
               MultiValueMap<String, String> requestParameter = new LinkedMultiValueMap<>();
               String basicAuth = null;
 
+              if (StringUtils.isNotBlank(oauthCredentials.getClientKey())) {
+                requestParameter.add(
+                    Constants.TOKEN_REQUEST_PARAMETER_CLIENT_ID, oauthCredentials.getClientId());
+                requestParameter.add(
+                    Constants.TOKEN_REQUEST_PARAMETER_CLIENT_ASSERTION,
+                    createJwtTokenForExternalIdp(tokenEndpoint, oauthCredentials));
+                requestParameter.add(
+                    Constants.TOKEN_REQUEST_PARAMETER_CLIENT_ASSERTION_TYPE,
+                    Constants.TOKEN_REQUEST_PARAMETER_CLIENT_ASSERTION_TYPE_JWT);
+              }
+
               if (StringUtils.isNotBlank(oauthCredentials.getClientId())
                   && StringUtils.isNotBlank(oauthCredentials.getClientSecret())) {
 
-                basicAuth =
-                    basicAuthUtil.encodeBasicAuth(
-                        oauthCredentials.getClientId(), oauthCredentials.getClientSecret());
+                if (true) {
+                  basicAuth =
+                      basicAuthUtil.encodeBasicAuth(
+                          oauthCredentials.getClientId(), oauthCredentials.getClientSecret());
+                } else {
+                  requestParameter.add(
+                      Constants.TOKEN_REQUEST_PARAMETER_CLIENT_ID, oauthCredentials.getClientId());
+                  requestParameter.add(
+                      Constants.TOKEN_REQUEST_PARAMETER_CLIENT_SECRET,
+                      oauthCredentials.getClientSecret());
+                }
               }
 
               if (StringUtils.isNotBlank(oauthCredentials.getUsername())
@@ -259,53 +270,27 @@ public class OauthTokenUtil {
             });
   }
 
-  public TokenInfo getAccessTokenWithPrivateKey(
+  private String createJwtTokenForExternalIdp(
       String tokenEndpoint, OauthCredentials oauthCredentials) {
+    /*
+    iss - REQUIRED. Issuer. This MUST contain the client_id of the OAuth Client.
+    sub - REQUIRED. Subject. This MUST contain the client_id of the OAuth Client.
+    aud - REQUIRED. Audience. The aud (audience) Claim. Value that identifies the Authorization Server as an intended audience. The Authorization Server MUST verify that it is an intended audience for the token. The Audience SHOULD be the URL of the Authorization Server's Token Endpoint.
+    jti - REQUIRED. JWT ID. A unique identifier for the token, which can be used to prevent reuse of the token. These tokens MUST only be used once, unless conditions for reuse were negotiated between the parties; any such negotiation is beyond the scope of this specification.
+    exp - REQUIRED. Expiration time on or after which the JWT MUST NOT be accepted for processing.
+    iat - OPTIONAL. Time at which the JWT was issued.
+    */
+    HashMap<String, String> claims = new HashMap<>();
+    claims.put(Constants.TOKEN_CLAIM_SUB, oauthCredentials.getClientId());
+    claims.put(Constants.TOKEN_CLAIM_AUD, tokenEndpoint);
+    claims.put(Constants.TOKEN_CLAIM_JTI, UUID.randomUUID().toString());
 
-    final String tokenKey =
-        tokenCache.generateTokenCacheKey(
-            tokenEndpoint, oauthCredentials.getId(), oauthCredentials.getScopes());
-
-    // try to get valid token from tokenCache...
-    return tokenCache
-        .getToken(tokenKey)
-        .orElseGet(
-            () -> { // ...otherwise retrieve a new one
-              HashMap<String, String> claims = new HashMap<>();
-              // add sub claim with clientId
-              claims.put(Constants.TOKEN_CLAIM_SUB, oauthCredentials.getClientId());
-              // add aud claim with tokenEndpoint
-              claims.put(Constants.TOKEN_CLAIM_AUD, tokenEndpoint);
-              // add jti claim to prevent token reuse
-              claims.put(Constants.TOKEN_CLAIM_JTI, UUID.randomUUID().toString());
-
-              String jwt_token_for_external_idp =
-                  tokenGenerator.fromKey(
-                      claims,
-                      oauthCredentials.getClientId(),
-                      new Date(System.currentTimeMillis() + 60 * 1000),
-                      new Date(System.currentTimeMillis()),
-                      oauthCredentials.getClientKey());
-
-              MultiValueMap<String, String> requestParameter = new LinkedMultiValueMap<>();
-              requestParameter.add(
-                  Constants.TOKEN_REQUEST_PARAMETER_CLIENT_ID, oauthCredentials.getClientId());
-              requestParameter.add(
-                  Constants.TOKEN_REQUEST_PARAMETER_CLIENT_ASSERTION, jwt_token_for_external_idp);
-              requestParameter.add(
-                  Constants.TOKEN_REQUEST_PARAMETER_CLIENT_ASSERTION_TYPE,
-                  Constants.TOKEN_REQUEST_PARAMETER_CLIENT_ASSERTION_TYPE_JWT);
-              requestParameter.add(
-                  Constants.TOKEN_REQUEST_PARAMETER_GRANT_TYPE,
-                  AuthorizationGrantType.CLIENT_CREDENTIALS.getValue());
-
-              if (StringUtils.isNotBlank(oauthCredentials.getScopes())) {
-                requestParameter.add(
-                    Constants.TOKEN_REQUEST_PARAMETER_SCOPE, oauthCredentials.getScopes());
-              }
-
-              return getAccessTokenQuery(tokenEndpoint, tokenKey, requestParameter, null);
-            });
+    return tokenGenerator.fromKey(
+        claims,
+        oauthCredentials.getClientId(),
+        new Date(System.currentTimeMillis() + 60 * 1000),
+        new Date(System.currentTimeMillis()),
+        oauthCredentials.getClientKey());
   }
 
   private TokenInfo getAccessTokenQuery(

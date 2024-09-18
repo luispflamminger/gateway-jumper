@@ -173,7 +173,7 @@ public class JumperConfigUtil {
       OauthCredentials oc = new OauthCredentials();
       oc.setClientId(addIdSuffix(CONSUMER_EXTERNAL_CONFIGURED, id));
       oc.setClientKey(this.clientKey);
-      oc.setGrantType("authorization_code");
+      oc.setGrantType("client_credentials");
       determineKeys().forEach(key -> oauth.put(key, oc));
       JumperConfig jc = new JumperConfig();
       jc.setOauth(oauth);
