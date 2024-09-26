@@ -4,6 +4,8 @@
 
 package jumper.service;
 
+import static jumper.Constants.TOKEN_REQUEST_METHOD_POST;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Header;
@@ -230,16 +232,18 @@ public class OauthTokenUtil {
               if (StringUtils.isNotBlank(oauthCredentials.getClientId())
                   && StringUtils.isNotBlank(oauthCredentials.getClientSecret())) {
 
-                if (true) {
-                  basicAuth =
-                      basicAuthUtil.encodeBasicAuth(
-                          oauthCredentials.getClientId(), oauthCredentials.getClientSecret());
-                } else {
+                if (StringUtils.isNotBlank(oauthCredentials.getTokenRequest())
+                    && StringUtils.equalsIgnoreCase(
+                        TOKEN_REQUEST_METHOD_POST, oauthCredentials.getTokenRequest())) {
                   requestParameter.add(
                       Constants.TOKEN_REQUEST_PARAMETER_CLIENT_ID, oauthCredentials.getClientId());
                   requestParameter.add(
                       Constants.TOKEN_REQUEST_PARAMETER_CLIENT_SECRET,
                       oauthCredentials.getClientSecret());
+                } else {
+                  basicAuth =
+                      basicAuthUtil.encodeBasicAuth(
+                          oauthCredentials.getClientId(), oauthCredentials.getClientSecret());
                 }
               }
 

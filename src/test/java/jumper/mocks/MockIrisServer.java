@@ -106,6 +106,8 @@ public class MockIrisServer {
                         ".*("
                             + addIdSuffix("client_id=external_configured", id)
                             + "|"
+                            + "client_assertion=eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9."
+                            + "|"
                             + "client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
                             + "|"
                             + "grant_type=client_credentials"

@@ -83,6 +83,11 @@ public class JumperConfigSteps {
                       Constants.HEADER_JUMPER_CONFIG,
                       JcOauthConfig.PROVIDER.getJcOauthGrantType(baseSteps.getId()));
                   break;
+                case "provider grant_type client_credentials client_secret_post method":
+                  httpHeaders.set(
+                      Constants.HEADER_JUMPER_CONFIG,
+                      JcOauthConfig.PROVIDER.getJcOauthGrantTypePost(baseSteps.getId()));
+                  break;
                 case "scoped":
                   httpHeaders.set(
                       Constants.HEADER_JUMPER_CONFIG,

@@ -119,6 +119,19 @@ public class JumperConfigUtil {
       return toBase64(jc);
     }
 
+    public String getJcOauthGrantTypePost(String id) {
+      HashMap<String, OauthCredentials> oauth = new HashMap<>();
+      OauthCredentials oc = new OauthCredentials();
+      oc.setClientId(addIdSuffix(CONSUMER_EXTERNAL_CONFIGURED, id));
+      oc.setClientSecret("secret");
+      oc.setGrantType("client_credentials");
+      oc.setTokenRequest("BODY");
+      determineKeys().forEach(key -> oauth.put(key, oc));
+      JumperConfig jc = new JumperConfig();
+      jc.setOauth(oauth);
+      return toBase64(jc);
+    }
+
     public String getJcOauthGrantTypePassword(String id) {
       HashMap<String, OauthCredentials> oauth = new HashMap<>();
       OauthCredentials oc = new OauthCredentials();

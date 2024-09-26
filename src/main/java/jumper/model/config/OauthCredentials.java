@@ -18,6 +18,7 @@ public class OauthCredentials {
   private String password;
   private String refreshToken;
   private String grantType;
+  private String tokenRequest;
 
   public String getId() {
 

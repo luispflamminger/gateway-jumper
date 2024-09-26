@@ -83,6 +83,8 @@ public class Constants {
   public static final String TOKEN_REQUEST_PARAMETER_USERNAME = "username";
   public static final String TOKEN_REQUEST_PARAMETER_PASSWORD = "password";
   public static final String TOKEN_REQUEST_PARAMETER_REFRESH_TOKEN = "refresh_token";
+  // client_secret_post
+  public static final String TOKEN_REQUEST_METHOD_POST = "body";
 
   public static final String TOKEN_CLAIM_CLIENT_ID = "clientId";
   public static final String TOKEN_CLAIM_ORIGIN_STARGATE = "originStargate";
