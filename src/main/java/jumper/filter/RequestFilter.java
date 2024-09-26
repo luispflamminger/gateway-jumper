@@ -215,8 +215,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                             TokenInfo tokenInfo =
                                 oauthTokenUtil.getAccessTokenWithOauthCredentialsObject(
                                     jumperConfig.getExternalTokenEndpoint(),
-                                    oauthCredentials.get(),
-                                    jumperConfig.getConsumer());
+                                    oauthCredentials.get());
 
                             HeaderUtil.addHeader(
                                 exchange,
@@ -378,7 +377,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
     if (Objects.nonNull(clientId) && Objects.nonNull(clientSecret)) {
       TokenInfo tokenInfo =
           oauthTokenUtil.getAccessTokenWithClientCredentials(
-              tokenEndpoint, clientId, clientSecret, clientScope, consumer);
+              tokenEndpoint, clientId, clientSecret, clientScope);
       HeaderUtil.addHeader(
           exchange,
           Constants.HEADER_AUTHORIZATION,
