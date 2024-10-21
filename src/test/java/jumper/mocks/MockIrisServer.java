@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import jumper.model.TokenInfo;
 import jumper.util.AccessToken;
+import lombok.extern.slf4j.Slf4j;
 import org.mockserver.client.MockServerClient;
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.model.Header;
@@ -26,6 +27,7 @@ import org.mockserver.model.RegexBody;
 import org.springframework.http.HttpHeaders;
 import org.springframework.util.Base64Utils;
 
+@Slf4j
 public class MockIrisServer {
 
   private ClientAndServer mockServer;
@@ -34,7 +36,7 @@ public class MockIrisServer {
 
   private final String irisLocalHost = "localhost";
 
-  private static int responseCode = 200;
+  private int responseCode = 200;
 
   public void startServer() {
     mockServer = startClientAndServer(irisLocalPort);
@@ -47,7 +49,7 @@ public class MockIrisServer {
   public void createExpectationInternalToken(String id) {
 
     String tokenInfoJson = getTokenInfoJson(CONSUMER_GATEWAY);
-    List<Header> headersList = getHeaderList("86");
+    List<Header> headersList = getHeaderList();
 
     new MockServerClient(irisLocalHost, irisLocalPort)
         .when(
@@ -284,10 +286,11 @@ public class MockIrisServer {
                     new Header("Content-Type", "application/json; charset=utf-8"),
                     new Header("Cache-Control", "no-store"))
                 .withBody(
-                    "{\n"
-                        + "\t\"error\": \"unauthorized_client\",\n"
-                        + "\t\"error_description\": \"Invalid client or Invalid client credentials\"\n"
-                        + "}"));
+                    """
+								{
+								\t"error": "unauthorized_client",
+								\t"error_description": "Invalid client or Invalid client credentials"
+								}"""));
   }
 
   public void createExpectationDropConnection(String id) {
@@ -393,11 +396,11 @@ public class MockIrisServer {
         .respond(response().withStatusCode(responseCode).withDelay(TimeUnit.SECONDS, 1));
   }
 
-  private List<Header> getHeaderList(String contentLength) {
+  private List<Header> getHeaderList() {
     List<Header> headersList = new ArrayList<>();
     headersList.add(new Header(HttpHeaders.HOST, irisLocalHost + ":" + irisLocalPort));
     headersList.add(new Header(HttpHeaders.ACCEPT, "*/*"));
-    headersList.add(new Header(HttpHeaders.CONTENT_LENGTH, contentLength));
+    headersList.add(new Header(HttpHeaders.CONTENT_LENGTH, "86"));
     headersList.add(
         new Header(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded;charset=UTF-8"));
     return headersList;
@@ -419,7 +422,7 @@ public class MockIrisServer {
     try {
       tokenInfoJson = mapper.writeValueAsString(tokenInfo);
     } catch (JsonProcessingException e) {
-      e.printStackTrace();
+      log.error(e.getMessage());
     }
     return tokenInfoJson;
   }

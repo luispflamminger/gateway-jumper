@@ -74,7 +74,7 @@ public class JumperConfigUtil {
     return toBase64(jc);
   }
 
-  public static String getJcLoadBalancing(String id) {
+  public static String getJcLoadBalancing() {
     LoadBalancing loadBalancing = new LoadBalancing();
     loadBalancing.setServers(
         List.of(
@@ -85,12 +85,18 @@ public class JumperConfigUtil {
     return toBase64(jc);
   }
 
-  public static String getEmptyJcLoadBalancing(String id) {
+  public static String getEmptyJcLoadBalancing() {
     LoadBalancing loadBalancing = new LoadBalancing();
     loadBalancing.setServers(List.of());
 
     JumperConfig jc = new JumperConfig();
     jc.setLoadBalancing(loadBalancing);
+    return toBase64(jc);
+  }
+
+  public static String getJcRemoveHeaders(List<String> values) {
+    JumperConfig jc = new JumperConfig();
+    jc.setRemoveHeaders(values);
     return toBase64(jc);
   }
 
@@ -214,7 +220,7 @@ public class JumperConfigUtil {
     }
   }
 
-  public static String getJcRouteListener(String id, String consumer) {
+  public static String getJcRouteListener(String consumer) {
     HashMap<String, RouteListener> routeListenerHashMap = new HashMap<>();
     RouteListener rl = new RouteListener();
     rl.setIssue(LISTENER_ISSUE);
