@@ -292,6 +292,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                       log.info("logging request: {}", value("jumperInfo", infoRequest));
                     });
 
+                HeaderUtil.removeHeaders(exchange, jumperConfig.getRemoveHeaders());
                 tracer.currentSpan().event("jrqf");
               });
 

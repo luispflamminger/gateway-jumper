@@ -223,3 +223,12 @@ Feature: proper authorization token reaches provider endpoint
     Then API Provider receives default basic authorization headers
     Then API Provider receives authorization BasicAuthConsumer
     And API consumer receives a 200 status code
+
+    ################ auth header not present ################
+  Scenario: Service configured with authorization on removeHeaders list, no authorization sent to provider
+    Given RealRoute headers are set
+    And jumperConfig "dummy, authorization" removeHeaders set
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    Then API Provider receives no authorization header
+    And API consumer receives a 200 status code
