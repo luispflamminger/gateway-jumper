@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.18.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.17.0...3.18.0) (2024-10-21)
+
+
+### 🚀 Features
+
+* **dhei-16267:** header removal feature, filter query params list ([f608044](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/f6080449f89b8a61ab21c9abb596503898de84f6))
+
 ## [3.17.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.16.0...3.17.0) (2024-09-26)
 
 
