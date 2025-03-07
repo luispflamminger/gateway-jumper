@@ -79,7 +79,7 @@ spring:
     reactor:
       instrumentation-type: MANUAL #https://docs.spring.io/spring-cloud-sleuth/docs/current-SNAPSHOT/reference/html/integrations.html
   codec:
-    max-in-memory-size: 4194304
+    max-in-memory-size: 12582912
   data:
     redis:
       repositories:
