@@ -5,6 +5,7 @@
 package jumper.mocks;
 
 import static jumper.BaseSteps.getTestJson;
+import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockserver.integration.ClientAndServer.startClientAndServer;
@@ -20,6 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.regex.Pattern;
 import jumper.BaseSteps;
 import jumper.Constants;
 import jumper.config.Config;
@@ -111,6 +113,38 @@ public class MockHorizonServer {
     }
   }
 
+  public void createVerifyPayloadBase64() {
+    HttpRequest[] recordedRequests =
+        mockServerClient.retrieveRecordedRequests(
+            request().withMethod("POST").withPath("/v1/events"));
+
+    String seRequestString = recordedRequests[0].getBodyAsString();
+    String seResponseString = recordedRequests[1].getBodyAsString();
+
+    ObjectMapper om =
+        new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+    Pattern BASE64_PATTERN =
+        Pattern.compile("^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$");
+
+    try {
+      assertTrue(
+          BASE64_PATTERN
+              .matcher(
+                  String.valueOf(
+                      om.readValue(seRequestString, Spectre.class).getData().getPayload()))
+              .matches());
+      assertTrue(
+          BASE64_PATTERN
+              .matcher(
+                  String.valueOf(
+                      om.readValue(seResponseString, Spectre.class).getData().getPayload()))
+              .matches());
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   public void createVerifyEventType() {
     HttpRequest[] recordedRequests =
         mockServerClient.retrieveRecordedRequests(
@@ -143,7 +177,6 @@ public class MockHorizonServer {
     headersList.add(new Header(HttpHeaders.HOST, horizonLocalHost + ":" + horizonLocalPort));
     headersList.add(new Header(HttpHeaders.ACCEPT, "*/*"));
     headersList.add(new Header(HttpHeaders.ACCEPT_ENCODING, "gzip"));
-    headersList.add(new Header(HttpHeaders.CONTENT_TYPE, "application/json"));
     headersList.add(new Header(Constants.HEADER_X_B3_TRACE_ID, id));
 
     return headersList;

@@ -133,6 +133,11 @@ public class BaseSteps {
     mockHorizonServer.createVerifyPayload();
   }
 
+  @And("verify received horizon events payload to be base64 encoded")
+  public void horizonVerifySpectrePayloadBase64() {
+    mockHorizonServer.createVerifyPayloadBase64();
+  }
+
   @And("verify adjusted horizon event")
   public void horizonVerifyAdjustedEvent() {
     mockHorizonServer.createVerifyEventType();
@@ -285,10 +290,6 @@ public class BaseSteps {
   @When("consumer calls the listener route with JSON body")
   public void consumerCallsTheListenerRouteWithJsonBody() {
     mockUpstreamServer.callbackRequest();
-
-    setHttpHeadersOfRequest(
-        httpHeadersOfRequest.andThen(
-            httpHeaders -> httpHeaders.add(HttpHeaders.CONTENT_TYPE, "application/json")));
 
     requestExchange =
         webTestClient

@@ -104,6 +104,14 @@ jumper:
       redis:
         channel: ${ZONE_HEALTH_KEY_CHANNEL:stargate-zone-status}
         checkConnectionInterval: ${ZONE_HEALTH_REQUEST_GET_RATE:5000}
+  spectre:
+    jsonContentTypes:
+      - application/json
+      - application/merge-patch+json
+      - application/json-patch+json
+      - application/json-patch-query+json
+      - application/json
+      - application/problem+json
 
 jumpercache.ttlOffset: 10
 jumpercache.cleanCacheInSeconds: 3600
