@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.19.2](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.19.1...3.19.2) (2025-04-17)
+
+### 🧪 Tests
+
+* **spectre:** add validation of supported mime types ([6b7d643](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/6b7d643ac7a7bc8130f401cbaecf33deed07860d)), closes [#DHEI-17513](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/issues/DHEI-17513)
+* **spectre:** async wait for sent horizon events + contains check ([b713056](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/b713056f086e18e3cb369e9159eb583bb6a4d455))
+
+### 🛠 Fixes
+
+* spectre max codec memory for large payloads ([2d34aa4](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/2d34aa4e1e6da32b66f3cdbafa9075a14cdab4b6))
+* **spectre:** spectre accepts all g-api defined json content-types ([6137a90](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/6137a90724340ad61a353ec184e1d85394cc4b39))
+
 ## [3.19.1](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.19.0...3.19.1) (2025-02-03)
 
 ### 🛠 Fixes
