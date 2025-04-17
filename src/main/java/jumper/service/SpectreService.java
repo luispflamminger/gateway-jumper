@@ -220,7 +220,7 @@ public class SpectreService {
 
     if (Objects.nonNull(payload)
         && mediaType != null
-        && spectreConfiguration.isCompatibleWith(mediaType)) {
+        && spectreConfiguration.jsonContentTypesContains(mediaType)) {
 
       log.debug("json compatible content-type, will try to parse as json payload");
       try {

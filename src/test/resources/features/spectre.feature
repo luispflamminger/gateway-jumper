@@ -10,7 +10,7 @@ Feature: spectre events created
     Given RealRoute headers are set
     And jumperConfig with consumer route listener set
     And API provider set to respond with a 200 status code
-    And horizon set to receive 2 events
+    And horizon set to receive events
     When consumer calls the listener route
     Then API Provider receives default bearer authorization headers
     Then API Provider receives authorization OneToken
@@ -22,7 +22,7 @@ Feature: spectre events created
     Given RealRoute headers are set
     And jumperConfig with consumer route listener set
     And API provider set to respond with a 200 status code
-    And horizon set to receive 2 events
+    And horizon set to receive events
     And request header Content-Type is set to <content-type>
     When consumer calls the listener route with JSON body
     Then API Provider receives default bearer authorization headers
@@ -43,7 +43,7 @@ Feature: spectre events created
     Given RealRoute headers are set
     And jumperConfig with consumer route listener set
     And API provider set to respond with a 200 status code
-    And horizon set to receive 2 events
+    And horizon set to receive events
     And request header Content-Type is set to application/unknownorbinary
     When consumer calls the listener route with JSON body
     Then API Provider receives default bearer authorization headers
@@ -56,7 +56,7 @@ Feature: spectre events created
     Given RealRoute headers are set
     And jumperConfig with otherConsumer route listener set
     And API provider set to respond with a 200 status code
-    And horizon set to receive 2 events
+    And horizon set to receive events
     When consumer calls the listener route
     Then API Provider receives default bearer authorization headers
     Then API Provider receives authorization OneToken
@@ -67,7 +67,7 @@ Feature: spectre events created
     Given RealRoute headers are set
     And jumperConfig with consumer route listener set
     And API provider set to respond with a 200 status code
-    And horizon set to receive 2 events
+    And horizon set to receive events
     And request header Content-Type is set to application/json
     When consumer calls the listener route with JSON body
     And API consumer receives a 200 status code

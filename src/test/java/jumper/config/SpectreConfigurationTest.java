@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2023 Deutsche Telekom AG
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package jumper.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,10 +33,10 @@ class SpectreConfigurationTest {
 
   @ParameterizedTest
   @MethodSource("mediaTypeProvider")
-  void isCompatibleWith(MediaType mediaType) {
+  void jsonContentTypesContains(MediaType mediaType) {
 
     // WHEN
-    boolean result = testInstance.isCompatibleWith(mediaType);
+    boolean result = testInstance.jsonContentTypesContains(mediaType);
 
     // THEN
     if (result) {

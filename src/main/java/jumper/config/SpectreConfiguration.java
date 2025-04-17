@@ -17,7 +17,7 @@ public class SpectreConfiguration {
 
   private List<MediaType> jsonContentTypes;
 
-  public boolean isCompatibleWith(MediaType mediaType) {
-    return jsonContentTypes.stream().anyMatch(mediaType::isCompatibleWith);
+  public boolean jsonContentTypesContains(MediaType mediaType) {
+    return jsonContentTypes.stream().anyMatch(mediaType::equals);
   }
 }

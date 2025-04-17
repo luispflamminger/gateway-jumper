@@ -113,9 +113,9 @@ public class BaseSteps {
             }));
   }
 
-  @And("horizon set to receive 2 events")
+  @And("horizon set to receive events")
   public void horizonReceiveEvents() {
-    mockHorizonServer.createExpectation2Events(id);
+    mockHorizonServer.createExpectationForEventsProduced(id);
   }
 
   @And("verify {int} horizon events received")
@@ -125,7 +125,7 @@ public class BaseSteps {
 
   @And("verify received horizon events structure for method {word}")
   public void horizonVerifySpectreStructure(String method) {
-    mockHorizonServer.createVerifyStructure(method);
+    mockHorizonServer.createVerifyStructure(method, stargateUrl);
   }
 
   @And("verify received horizon events payload")

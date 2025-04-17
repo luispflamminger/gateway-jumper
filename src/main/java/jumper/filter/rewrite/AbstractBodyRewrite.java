@@ -43,7 +43,7 @@ public abstract class AbstractBodyRewrite {
   private boolean isText(MediaType mediaType) {
     return Objects.nonNull(mediaType)
         && (mediaType.isCompatibleWith(MediaType.parseMediaType("text/*"))
-            || spectreConfiguration.isCompatibleWith(mediaType)
+            || spectreConfiguration.jsonContentTypesContains(mediaType)
             || mediaType.isCompatibleWith(MediaType.APPLICATION_XML));
   }
 }
