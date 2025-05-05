@@ -60,8 +60,8 @@ spring:
           metrics: true
         connect-timeout: 10000
         response-timeout: 61s # ingress 60s
-          #ssl:
-        #useInsecureTrustManager: true # routing to a https backend, Gateway will trust all downstream certificates
+        #ssl:
+          #useInsecureTrustManager: true # routing to a https backend, Gateway will trust all downstream certificates
       x-forwarded:
         for-enabled: false
         for-append: false
