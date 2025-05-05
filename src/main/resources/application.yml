@@ -120,7 +120,7 @@ jumper:
       - application/json
       - application/problem+json
   security:
-    dir: keypair
+    dir: /keypair
     pk-file: tls.key
     kid-file: tls.kid
 
