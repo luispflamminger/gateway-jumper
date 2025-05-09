@@ -1,5 +1,11 @@
 # Changelog
 
+## [4.0.1](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/4.0.0...4.0.1) (2025-05-09)
+
+### 🛠 Fixes
+
+* **error-handling:** return 504 HTTP status in case of SslHandshakeTimeoutException ([19b437a](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/19b437a1b3f8c1be61b847fdac4764d004909905)), closes [#DHEI-17530](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/issues/DHEI-17530)
+
 ## [4.0.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.19.2...4.0.0) (2025-05-06)
 
 ### ⚠ BREAKING CHANGES
