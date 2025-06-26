@@ -162,7 +162,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                     HeaderUtil.addHeader(
                         exchange, Constants.HEADER_CONSUMER_TOKEN, jumperConfig.getConsumerToken());
 
-                    checkForSpaceZone(
+                    checkForInternetFacingZone(
                         exchange,
                         jumperConfig.getConsumerOriginZone(),
                         jumperConfig.getConsumerToken());
@@ -483,7 +483,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         HttpStatus.SERVICE_UNAVAILABLE, "Non of defined failover zones available");
   }
 
-  private void checkForSpaceZone(ServerWebExchange exchange, String zone, String token) {
+  private void checkForInternetFacingZone(ServerWebExchange exchange, String zone, String token) {
     if (isInternetFacingZone(zone)) {
       HeaderUtil.addHeader(exchange, Constants.HEADER_X_SPACEGATE_TOKEN, token);
     }
