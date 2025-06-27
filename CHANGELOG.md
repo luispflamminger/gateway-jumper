@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.1.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/4.0.1...4.1.0) (2025-06-27)
+
+### 🚀 Features
+
+* add configuration parameter for internet facing zones ([ca4d92b](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/ca4d92b28a85de843a3d833c5408cd72fa349e3e))
+
+### Other
+
+* adjust method name checking for internet facing zones ([57d4fc9](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/57d4fc914b6473c8856530e9b3fd3df78398a338))
+* rm unused constant ([b85cffe](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/b85cffe952eb9bafe6dac2ca827051a0d3fc7820))
+
 ## [4.0.1](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/4.0.0...4.0.1) (2025-05-09)
 
 ### 🛠 Fixes
