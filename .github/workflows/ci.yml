@@ -38,7 +38,7 @@ permissions:
 
 env:
   JAVA_VERSION: ${{ vars.JAVA_VERSION || '17' }}
-  JAVA_DISTRIBUTION: ${{ vars.JAVA_DISTRIBUTION || 'temurin' }}
+  JAVA_DISTRIBUTION: ${{ vars.JAVA_DISTRIBUTION || 'zulu' }}
 
 jobs:
   # ------------
@@ -291,6 +291,7 @@ jobs:
           cache-from: type=registry,ref=${{ vars.REGISTRY_HOST }}${{ vars.REGISTRY_REPO }}:latest
           cache-to: type=inline
           push: true
+          platforms: linux/amd64
 
   scan-image:
     name: Scan image
