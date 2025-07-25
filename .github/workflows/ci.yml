@@ -14,6 +14,9 @@ name: CI
 # - REGISTRY_TOKEN: Container registry token/password
 # - ORT_ARTIFACTORY_TOKEN: Token for accessing ORT repository
 # - COSIGN_PRIVATE_KEY: Private key used for signing container images
+# - NVD_API_KEY: API key for National Vulnerability Database (NVD)
+#
+# Attribution: This workflow uses the NVD API but is not endorsed or certified by the NVD.
 
 on:
   pull_request:
@@ -217,6 +220,7 @@ jobs:
           mvn org.owasp:dependency-check-maven:check \
             -DfailBuildOnCVSS=9 \
             -Dformats=HTML \
+            -DnvdApiKey=${{ secrets.NVD_API_KEY }}
       - name: Upload dependency check results
         uses: actions/upload-artifact@v4
         with:
