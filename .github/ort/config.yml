@@ -18,10 +18,12 @@ ort:
     # Allow version ranges in dependency specifications
     allowDynamicVersions: true
     skipExcluded: true
+
   downloader:
     skipExcluded: true
     # Allow downloads using symbolic names that point to moving revisions, like Git branches
     allowMovingRevisions: true
+
   scanner:
     storages:
       # Read/write results to actions cache
@@ -43,4 +45,18 @@ ort:
     skipExcluded: true
   advisor:
     skipExcluded: true
+
+  reporter:
+    reporters:
+      WebApp:
+        options:
+          deduplicateDependencyTree: false
+      # Enable generation of SBOM in SPDX format
+      SpdxDocument:
+        options:
+          spdxVersion: "SPDX-2.2"
+          creationInfoComment: Generated using OSS Review Toolkit running on GitHub Actions
+          creationInfoOrganization: Deutsche Telekom IT GmbH
+          outputFileFormats: "JSON"
+          fileInformationEnabled: true
 
