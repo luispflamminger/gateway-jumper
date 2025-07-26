@@ -318,7 +318,7 @@ jobs:
       - dependency-scan
     steps:
       - name: Install cosign
-        uses: sigstore/cosign-installer@v3.8.1
+        uses: sigstore/cosign-installer@v3.9.2
       - name: Sign image
         run: |
           cosign sign \
