@@ -124,6 +124,7 @@ jobs:
           fail-on: violations
           docker-cli-args: >-
             -e ORT_ARTIFACTORY_TOKEN=${{ secrets.ORT_ARTIFACTORY_TOKEN }}
+          image: ghcr.io/oss-review-toolkit/ort:main # TODO: remove this once ort 64.0.1 is released
           run: >
             cache-dependencies,
             cache-scan-results,
