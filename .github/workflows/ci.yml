@@ -20,7 +20,7 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
-      release_version:
+      tag:
         description: "The next release version"
         type: string
   push:
@@ -245,7 +245,7 @@ jobs:
         run: | # TODO: metadata-action
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "This workflow was triggered by workflow_dispatch."
-            export TAG=${{ github.event.inputs.release_version }}
+            export TAG=${{ github.event.inputs.tag }}
           elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             echo "This workflow was triggered by a tag push ${GITHUB_REF}"
             export TAG=$(echo ${GITHUB_REF} | sed 's|^refs/tags/||')
