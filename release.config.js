@@ -51,7 +51,13 @@ module.exports = {
         },
       },
     ],
-    "./scripts/semantic-release-oci.js",
+    [
+      "@semantic-release/exec",
+      {
+        publishCmd:
+          "./scripts/release-image.sh publish ${nextRelease.version} ${nextRelease.gitHead}",
+      },
+    ],
     "@semantic-release/github",
   ],
 };

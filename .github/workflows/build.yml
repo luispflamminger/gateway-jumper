@@ -171,6 +171,7 @@ jobs:
           semantic_version: 25.0.8
           dry_run: true
           extra_plugins: |
+            @semantic-release/exec@7.1.0
             semantic-release-export-data@1.2.0
             conventional-changelog-conventionalcommits@9.3.1
         env:
@@ -366,6 +367,7 @@ jobs:
         with:
           semantic_version: 25.0.8
           extra_plugins: |
+            @semantic-release/exec@7.1.0
             semantic-release-export-data@1.2.0
             conventional-changelog-conventionalcommits@9.3.1
         env:
