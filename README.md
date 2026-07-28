@@ -65,6 +65,33 @@ This project has adopted the [Contributor Covenant](https://www.contributor-cove
 
 By participating in this project, you agree to abide by its Code of Conduct at all times.
 
+### Release Workflow
+
+Releases run automatically after validation succeeds on a protected release branch. Pull requests
+run validation only and cannot publish images or releases.
+
+* `main` publishes stable releases.
+* `next` publishes release candidates on the `next` channel with the `rc` prerelease identifier,
+  such as `5.0.0-rc.1`.
+* Shared changes are developed and released on `main` first, then synchronized to `next` through a
+  reviewed pull request using a merge commit so ancestry is retained.
+* Changes intended only for the future major are based on `next` and must explain why they do not
+  apply to `main`.
+
+Conventional Commit metadata controls releases. `fix` creates a patch, `feat` creates a minor, and a
+breaking change creates a major. The existing project rules also release patches for `build`,
+`chore`, `ci`, `docs`, `perf`, `refactor`, `revert`, `style`, and `test` commits. During an active RC
+line, any releasable change produces the next RC.
+
+Each release uses the SHA-addressed image built, scanned, and signed for the validated commit. Final
+promotion reuses an accepted RC image only when the RC and promotion commits have identical source
+trees. Interrupted publication is resumed with the `Reconcile Release` workflow; release tags must
+never be deleted or moved to retry a release.
+
+After an immutable RC tag is published and verified, the mutable OCI tag `next` is updated to the
+same digest. It is a convenience alias for discovering the latest RC, not a deployment pin or a
+source of release provenance. Deployments use exact versions or digests.
+
 ## Licensing
 
 This project follows the [REUSE standard for software licensing](https://reuse.software/).

@@ -11,9 +11,6 @@ on:
       release_name:
         description: "Release to generate ORT report for"
         type: string
-  push:
-    branches:
-      - main
 
 permissions:
   contents: read
