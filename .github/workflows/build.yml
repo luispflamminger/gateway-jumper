@@ -255,7 +255,7 @@ jobs:
           if [[ -n "${{ vars.BASE_IMAGE }}" ]]; then
             base_image_arg=(-Djib.from.image="${{ vars.BASE_IMAGE }}")
           fi
-          ./mvnw -B jib:build -DskipTests \
+          ./mvnw -B package jib:build -DskipTests \
             -Djib.to.image="${IMAGE_REPOSITORY}" \
             -Djib.to.tags="sha-${SOURCE_SHA}" \
             -Djib.to.auth.username="${REGISTRY_USER}" \
