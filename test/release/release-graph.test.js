@@ -33,6 +33,7 @@ function repository() {
   commit(work, "chore: baseline");
   git(work, "tag", "4.12.2");
   git(work, "push", "-q", "origin", "main", "--tags");
+  git(root, `--git-dir=${remote}`, "symbolic-ref", "HEAD", "refs/heads/main");
   return { remote, work };
 }
 
