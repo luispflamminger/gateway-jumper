@@ -38,6 +38,12 @@ function repository() {
 
 async function calculate(cwd) {
   const { default: semanticRelease } = await import("semantic-release");
+  const env = { ...process.env };
+  for (const name of Object.keys(env)) {
+    if (name === "CI" || name.startsWith("GITHUB_")) {
+      delete env[name];
+    }
+  }
   const analyzerOptions = releaseConfig.plugins[0][1];
   const plugins = [
     [require.resolve("@semantic-release/commit-analyzer"), analyzerOptions],
@@ -51,7 +57,7 @@ async function calculate(cwd) {
       dryRun: true,
       ci: false,
     },
-    { cwd },
+    { cwd, env },
   );
 }
 
