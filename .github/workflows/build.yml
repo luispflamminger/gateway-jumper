@@ -150,7 +150,7 @@ jobs:
     needs: [lint-maven, build-maven, test-maven, test-release, lint-reuse]
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     outputs:
       new-release-published: ${{ steps.semantic-release.outputs.new_release_published }}
       new-release-version: ${{ steps.semantic-release.outputs.new_release_version }}
