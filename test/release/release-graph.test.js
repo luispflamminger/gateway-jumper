@@ -10,6 +10,19 @@ const path = require("node:path");
 const test = require("node:test");
 const releaseConfig = require("../../release.config");
 
+test("fork validation disables pull request updates", () => {
+  const githubPlugin = releaseConfig.plugins.at(-1);
+
+  assert.deepEqual(githubPlugin, [
+    "@semantic-release/github",
+    {
+      successComment: false,
+      failComment: false,
+      releasedLabels: false,
+    },
+  ]);
+});
+
 function git(cwd, ...args) {
   return execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
 }

@@ -58,6 +58,14 @@ module.exports = {
           "./scripts/release-image.sh publish ${nextRelease.version} ${nextRelease.gitHead}",
       },
     ],
-    "@semantic-release/github",
+    // Fork validation only: remove this override before opening the upstream PR.
+    [
+      "@semantic-release/github",
+      {
+        successComment: false,
+        failComment: false,
+        releasedLabels: false,
+      },
+    ],
   ],
 };
