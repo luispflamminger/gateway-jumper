@@ -65,6 +65,51 @@ This project has adopted the [Contributor Covenant](https://www.contributor-cove
 
 By participating in this project, you agree to abide by its Code of Conduct at all times.
 
+## Releases
+
+Releases are automatic. Every push to a release branch is validated, and if the commits since the last release warrant one, a version is published without any manual trigger. Merging a pull request is therefore a release decision.
+
+### Branch roles
+
+| Branch | Publishes | Example version |
+| --- | --- | --- |
+| `main` | Stable versions | `4.12.3` |
+| `next` | Release candidates, on the `next` channel | `5.0.0-rc.1` |
+
+`main` is the default branch and the stable line. `next` exists only while a breaking major version is being prepared. Once that version is promoted into `main`, `next` is deleted, and it is recreated from `main` when a future prerelease line is needed. Only these two branches publish; pull request builds validate but never publish.
+
+### How commit messages decide the version
+
+Versions are derived from [Conventional Commits](https://www.conventionalcommits.org/). On `main` these produce stable versions, and on `next` they produce the next `-rc.N` of the same target version.
+
+| Commit | Effect |
+| --- | --- |
+| `feat!:`, or any commit with a `BREAKING CHANGE:` footer | major |
+| `feat:` | minor |
+| everything else (`fix`, `build`, `chore`, `ci`, `docs`, `perf`, `refactor`, `revert`, `style`, `test`) | patch |
+
+Every accepted commit type releases something, so a docs-only or dependency-only merge still publishes a patch version. Squash your pull request into a message that describes the change you actually want released.
+
+### Stable first, then forward-port
+
+A change that belongs in both lines goes into `main` first and is forward-ported to `next` afterwards. This keeps the stable line complete by construction: a fix can never exist only on the prerelease line.
+
+That means shared work usually needs two pull requests. Synchronize `main` into `next` after a stable release rather than letting the branches drift; the merge produces a new release candidate that contains the stable fix.
+
+Changes that only make sense for the upcoming major version go to `next` alone. Changes that only apply to the stable line go to `main` alone and are not forward-ported.
+
+### What a release publishes
+
+For each released version the pipeline builds one image tagged directly with that version on the digest-pinned base image, scans that digest, signs it, and only then creates the Git tag and GitHub release. Nothing is ever retagged, and no image is rebuilt after the tag exists.
+
+Exact version tags such as `4.12.3` and `5.0.0-rc.1` are immutable. The floating `latest` and `next` tags track the newest stable release and the newest release candidate respectively; they exist for discovery only, so deploy exact versions and never a floating tag.
+
+Pull requests build an unsigned preview image tagged `pr-<number>-<branch>`, labelled to expire after 60 days. Preview images are for reviewers, never for deployment.
+
+### Completing an interrupted release
+
+If a release run fails, re-run it. If it failed before the image was pushed, the re-run builds normally. If it failed after the image was pushed, the re-run verifies the existing digest's signature and scan, skips the build, and finishes creating the Git tag and GitHub release. Nothing is deleted or moved to retry, and a re-run whose existing image does not verify fails instead of publishing.
+
 ## Licensing
 
 This project follows the [REUSE standard for software licensing](https://reuse.software/).
@@ -96,7 +141,9 @@ This builds the image and loads it into your local Docker daemon as `jumper`.
 
 #### Customizing the Base Image
 
-The default base image is `gcr.io/distroless/java21-debian12:nonroot`. To override it:
+The base image is pinned by digest in the `jib.base-image` property of `pom.xml`, so every build resolves the same base. A scheduled workflow raises a pull request whenever that tag resolves to a new digest, so do not edit the property by hand.
+
+To build against a different base locally:
 
 ```bash
 ./mvnw jib:dockerBuild -Djib.from.image=<your-preferred-base-image>

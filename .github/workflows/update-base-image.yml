@@ -1,0 +1,133 @@
+# SPDX-FileCopyrightText: 2026 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: Update base image
+
+# Keeps the digest-pinned base image in pom.xml current.
+#
+# Dependabot cannot do this. Its `docker` ecosystem only parses Dockerfiles,
+# Containerfiles, and Kubernetes-style YAML, and its `maven` ecosystem has no notion of
+# container images, so the `jib.base-image` property is invisible to it. The Dockerfiles
+# in this repository are deprecated and are not what CI builds, so they are not a
+# suitable pin either. This workflow therefore re-resolves the floating tag recorded in
+# the property and raises a pull request whenever it points at a new digest.
+#
+# It runs against every release branch, because each line pins its base independently.
+#
+# Optional configuration:
+# - BASE_IMAGE_UPDATER_APP_ID (variable) and BASE_IMAGE_UPDATER_APP_PRIVATE_KEY (secret):
+#   credentials of a GitHub App installed on this repository with `contents: write` and
+#   `pull-requests: write`. GitHub deliberately does not run workflows on pull requests
+#   opened with the default GITHUB_TOKEN, so without an App the base-image pull request
+#   arrives without any validation and a maintainer has to push to it to trigger CI.
+#   App installation tokens are short-lived and scoped, so they are preferred over a
+#   long-lived personal access token.
+
+on:
+  schedule:
+    - cron: "17 5 * * 1" # weekly, Monday morning
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  list-release-branches:
+    name: List release branches
+    runs-on: ubuntu-latest
+    outputs:
+      branches: ${{ steps.list.outputs.branches }}
+    steps:
+      - name: List release branches
+        id: list
+        env:
+          REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}.git
+        run: |
+          # `next` only exists while a prerelease line is open, so skip what is absent
+          # instead of failing the run.
+          branches='[]'
+          for branch in main next; do
+            if git ls-remote --exit-code --heads "${REPOSITORY_URL}" "${branch}" >/dev/null 2>&1; then
+              branches="$(printf '%s' "${branches}" | jq -c --arg b "${branch}" '. + [$b]')"
+            fi
+          done
+          printf 'update-base-image: release branches %s\n' "${branches}"
+          echo "branches=${branches}" >> "${GITHUB_OUTPUT}"
+
+  update-base-image:
+    name: Update base image digest
+    runs-on: ubuntu-latest
+    needs: [list-release-branches]
+    permissions:
+      contents: write
+      pull-requests: write
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: ${{ fromJSON(needs.list-release-branches.outputs.branches) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
+        with:
+          ref: ${{ matrix.branch }}
+      - name: Install crane
+        uses: imjasonh/setup-crane@feee3b6bb0d4c68370f256a4502498c9227e5c6b #v0.7
+      - name: Resolve base image digest
+        id: resolve
+        run: |
+          current="$(sed -n 's|.*<jib.base-image>\(.*\)</jib.base-image>.*|\1|p' pom.xml)"
+          if [ -z "${current}" ]; then
+            printf 'update-base-image: no jib.base-image property in pom.xml\n' >&2
+            exit 1
+          fi
+          # The property is `<repository>:<tag>@sha256:<digest>`. The tag is what gets
+          # re-resolved; the digest is what Jib actually pulls.
+          reference="${current%%@*}"
+          digest="$(crane digest "${reference}")"
+          updated="${reference}@${digest}"
+          {
+            echo "reference=${reference}"
+            echo "digest=${digest}"
+          } >> "${GITHUB_OUTPUT}"
+          if [ "${updated}" = "${current}" ]; then
+            printf 'update-base-image: %s is already current\n' "${current}"
+            echo "changed=false" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          printf 'update-base-image: %s -> %s\n' "${current}" "${updated}"
+          sed -i "s|<jib.base-image>.*</jib.base-image>|<jib.base-image>${updated}</jib.base-image>|" pom.xml
+          echo "changed=true" >> "${GITHUB_OUTPUT}"
+      - name: Mint an app token
+        # Falls back to GITHUB_TOKEN when no App is configured; see the note at the top
+        # of this file for what that costs.
+        id: app-token
+        if: steps.resolve.outputs.changed == 'true' && vars.BASE_IMAGE_UPDATER_APP_ID != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 #v3.2.0
+        with:
+          app-id: ${{ vars.BASE_IMAGE_UPDATER_APP_ID }}
+          private-key: ${{ secrets.BASE_IMAGE_UPDATER_APP_PRIVATE_KEY }}
+      - name: Raise pull request
+        if: steps.resolve.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 #v8.1.1
+        with:
+          token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
+          base: ${{ matrix.branch }}
+          branch: chore/base-image/${{ matrix.branch }}
+          delete-branch: true
+          commit-message: |
+            build(deps): update base image digest
+
+            ${{ steps.resolve.outputs.reference }} now resolves to
+            ${{ steps.resolve.outputs.digest }}.
+          title: "build(deps): update base image digest on ${{ matrix.branch }}"
+          body: |
+            `${{ steps.resolve.outputs.reference }}` now resolves to
+            `${{ steps.resolve.outputs.digest }}`.
+
+            Merging this raises a patch release that rebuilds the image on the new base.
+          labels: dependencies

@@ -14,13 +14,14 @@ on:
   push:
     branches:
       - main
+      - next
 
 permissions:
   contents: read
 
 jobs:
-  check-changes:
-    name: Check which files changed
+  check-dependencies:
+    name: Detect dependency changes
     runs-on: ubuntu-latest
     # Required permissions
     permissions:
@@ -43,10 +44,10 @@ jobs:
   ort-scan:
     name: ORT scan
     runs-on: ubuntu-latest
-    needs: [check-changes]
+    needs: [check-dependencies]
     permissions:
       contents: write
-    if: ${{ needs.check-changes.outputs.deps == 'true' || github.event_name == 'workflow_dispatch' }} # Only run if deps have changed
+    if: ${{ needs.check-dependencies.outputs.deps == 'true' || github.event_name == 'workflow_dispatch' }} # Only run if deps have changed
     steps:
       - name: Use HTTPS for Git cloning
         run: |
