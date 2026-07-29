@@ -620,3 +620,5 @@ sequenceDiagram
 <!-- fork validation: rerun idempotency -->
 
 <!-- fork validation: corrupt evidence -->
+
+<!-- fork validation: synchronization -->
