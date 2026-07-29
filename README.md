@@ -624,3 +624,5 @@ sequenceDiagram
 <!-- fork validation: corrupt evidence -->
 
 <!-- fork validation: synchronization -->
+
+<!-- fork validation: revision mismatch -->
