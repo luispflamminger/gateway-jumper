@@ -4,6 +4,11 @@
 
 name: ORT Scan
 
+# An ORT scan is expensive, so it runs only where dependencies can have changed: on pull
+# requests that touch pom.xml, and on dispatch from the release workflow when the
+# released commits touched pom.xml. There is deliberately no push trigger, which would
+# otherwise scan the same commits a second time for every dependency release.
+
 on:
   pull_request:
   workflow_dispatch:
@@ -11,10 +16,6 @@ on:
       release_name:
         description: "Release to generate ORT report for"
         type: string
-  push:
-    branches:
-      - main
-      - next
 
 permissions:
   contents: read
