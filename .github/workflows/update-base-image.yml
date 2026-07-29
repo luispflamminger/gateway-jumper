@@ -15,13 +15,22 @@ name: Update base image
 #
 # It runs against every release branch, because each line pins its base independently.
 #
+# GitHub deliberately does not run workflows on pull requests opened with the default
+# GITHUB_TOKEN, so the pull request this raises arrives without checks. The update is
+# therefore verified in this workflow instead, before the pull request is opened, and the
+# pull request links to the job that did it.
+#
+# Required configuration when no App is configured:
+# - "Allow GitHub Actions to create and approve pull requests" (Settings > Actions >
+#   General) must be enabled, otherwise the pull request step fails outright. An App
+#   token is not subject to that setting.
+#
 # Optional configuration:
 # - BASE_IMAGE_UPDATER_APP_ID (variable) and BASE_IMAGE_UPDATER_APP_PRIVATE_KEY (secret):
 #   credentials of a GitHub App installed on this repository with `contents: write` and
-#   `pull-requests: write`. GitHub deliberately does not run workflows on pull requests
-#   opened with the default GITHUB_TOKEN, so without an App the base-image pull request
-#   arrives without any validation and a maintainer has to push to it to trigger CI.
-#   App installation tokens are short-lived and scoped, so they are preferred over a
+#   `pull-requests: write`. A pull request opened with an App token does get its checks,
+#   which restores the usual review experience on top of the verification above. App
+#   installation tokens are short-lived and scoped, so they are preferred over a
 #   long-lived personal access token.
 
 on:
@@ -51,7 +60,7 @@ jobs:
           # `next` only exists while a prerelease line is open, so skip what is absent
           # instead of failing the run.
           branches='[]'
-          for branch in test/base-image no-such-branch; do
+          for branch in test/base-image; do
             if git ls-remote --exit-code --heads "${REPOSITORY_URL}" "${branch}" >/dev/null 2>&1; then
               branches="$(printf '%s' "${branches}" | jq -c --arg b "${branch}" '. + [$b]')"
             fi
@@ -64,6 +73,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [list-release-branches]
     permissions:
+      actions: read # to resolve this job's own URL for the pull request body
       contents: write
       pull-requests: write
     strategy:
@@ -102,6 +112,37 @@ jobs:
           printf 'update-base-image: %s -> %s\n' "${current}" "${updated}"
           sed -i "s|<jib.base-image>.*</jib.base-image>|<jib.base-image>${updated}</jib.base-image>|" pom.xml
           echo "changed=true" >> "${GITHUB_OUTPUT}"
+      - name: Set up JDK
+        if: steps.resolve.outputs.changed == 'true'
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 #v5.6.0
+        with:
+          distribution: ${{ vars.JAVA_DISTRIBUTION || 'zulu' }}
+          java-version: ${{ vars.JAVA_VERSION || '25' }}
+          cache: "maven"
+      - name: Verify the image still builds on the new base
+        # The pull request this raises cannot have checks of its own, so the change is
+        # validated here instead. A digest bump can only break the assembly of the image
+        # onto its base - the unit tests run against the runner's JDK and cannot see it -
+        # so building to a local tarball proves the relevant thing without a registry
+        # push or any credentials. A base that no longer works fails the run and no pull
+        # request is opened at all.
+        if: steps.resolve.outputs.changed == 'true'
+        run: mvn -B -U package -DskipTests jib:buildTar
+      - name: Look up this job's URL
+        # The verification above is invisible from the pull request, so link to it. The
+        # jobs API is the only way to resolve a matrix job's own URL from inside itself.
+        id: verification
+        if: steps.resolve.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ matrix.branch }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          url="$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/attempts/${GITHUB_RUN_ATTEMPT}/jobs" \
+            --jq ".jobs[] | select(.name | endswith(\"(${BRANCH})\")) | .html_url")"
+          # Fall back to the run itself rather than failing the release of a valid update.
+          printf 'url=%s\n' "${url:-${RUN_URL}}" >> "${GITHUB_OUTPUT}"
       - name: Mint an app token
         # Falls back to GITHUB_TOKEN when no App is configured; see the note at the top
         # of this file for what that costs.
@@ -124,10 +165,17 @@ jobs:
 
             ${{ steps.resolve.outputs.reference }} now resolves to
             ${{ steps.resolve.outputs.digest }}.
+
+            Verified to still build: ${{ steps.verification.outputs.url }}
           title: "build(deps): update base image digest on ${{ matrix.branch }}"
           body: |
             `${{ steps.resolve.outputs.reference }}` now resolves to
             `${{ steps.resolve.outputs.digest }}`.
+
+            The image was built onto the new base before this pull request was opened:
+            [see the verification job](${{ steps.verification.outputs.url }}). That evidence
+            is not visible as a check here, because GitHub does not run workflows on pull
+            requests opened by a workflow.
 
             Merging this raises a patch release that rebuilds the image on the new base.
           labels: dependencies
