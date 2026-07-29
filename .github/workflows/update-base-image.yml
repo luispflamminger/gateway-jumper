@@ -51,7 +51,7 @@ jobs:
           # `next` only exists while a prerelease line is open, so skip what is absent
           # instead of failing the run.
           branches='[]'
-          for branch in main next; do
+          for branch in test/base-image; do
             if git ls-remote --exit-code --heads "${REPOSITORY_URL}" "${branch}" >/dev/null 2>&1; then
               branches="$(printf '%s' "${branches}" | jq -c --arg b "${branch}" '. + [$b]')"
             fi
