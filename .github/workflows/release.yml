@@ -92,6 +92,47 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  check-dependencies:
+    name: Detect dependency changes
+    runs-on: ubuntu-latest
+    outputs:
+      deps: ${{ steps.filter.outputs.deps }}
+    steps:
+      - name: Check out the validated commit
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
+        with:
+          ref: ${{ inputs.source-sha }}
+          fetch-depth: 0
+      - name: Assert HEAD is the validated commit
+        env:
+          SOURCE_SHA: ${{ inputs.source-sha }}
+        run: |
+          head="$(git rev-parse HEAD)"
+          if [ "${head}" != "${SOURCE_SHA}" ]; then
+            printf 'release: HEAD %s is not the validated commit %s\n' "${head}" "${SOURCE_SHA}" >&2
+            exit 1
+          fi
+      - name: Detect dependency changes
+        id: filter
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          # An ORT scan takes far longer than the rest of the release, so it only runs
+          # when the released commits actually touched dependencies.
+          if ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            # A new branch, or history that is not reachable: scan rather than guess.
+            printf 'release: no comparable predecessor commit; scanning dependencies\n'
+            echo "deps=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          if git diff --quiet "${BEFORE}" HEAD -- pom.xml; then
+            printf 'release: no dependency changes since %s\n' "${BEFORE}"
+            echo "deps=false" >> "${GITHUB_OUTPUT}"
+          else
+            printf 'release: dependency changes since %s\n' "${BEFORE}"
+            echo "deps=true" >> "${GITHUB_OUTPUT}"
+          fi
+
   build-image:
     name: Build, scan, and sign image
     runs-on: ubuntu-latest
@@ -274,8 +315,8 @@ jobs:
   trigger-ort:
     name: Trigger ORT scan
     runs-on: ubuntu-latest
-    needs: [publish-release]
-    if: needs.publish-release.outputs.new-release-published == 'true'
+    needs: [check-dependencies, publish-release]
+    if: needs.publish-release.outputs.new-release-published == 'true' && needs.check-dependencies.outputs.deps == 'true'
     permissions:
       actions: write
     steps:
