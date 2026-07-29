@@ -618,3 +618,5 @@ sequenceDiagram
 ```
 
 <!-- fork validation: rerun idempotency -->
+
+<!-- fork validation: breaking change on next -->
