@@ -14,8 +14,9 @@ name: Release
 #                         points the floating alias (`latest` or `next`) at the digest
 #
 # A Git tag therefore never exists without a verified image. An interrupted release is
-# finished by re-running this workflow: if the version tag already exists and its digest
-# still verifies, the build and sign steps are skipped and the run completes the tagging.
+# finished by re-running this workflow: if the version tag already exists, was built from
+# this same commit, and its digest still verifies, the build and sign steps are skipped
+# and the run completes the tagging.
 #
 # Required environment setup:
 # Variables:
@@ -172,35 +173,53 @@ jobs:
         id: version-tag
         env:
           VERSION: ${{ needs.compute-version.outputs.new-release-version }}
+          SOURCE_SHA: ${{ inputs.source-sha }}
         run: |
           # SemVer image tags are immutable. The registry does not enforce that, so CI must.
           # An existing tag is only acceptable when this run is completing an interrupted
-          # release: the scan and signature-verification steps below then run against the
-          # existing digest and the run finishes tagging instead of rebuilding. This is what
-          # enables tagging on re-run. If the evidence does not verify, the run fails hard.
-          if digest="$(crane digest "${IMAGE_REPOSITORY}:${VERSION}" 2>/dev/null)"; then
-            printf 'release: %s:%s already exists (%s); completing the interrupted release\n' \
-              "${IMAGE_REPOSITORY}" "${VERSION}" "${digest}"
-            {
-              echo "exists=true"
-              echo "digest=${digest}"
-            } >> "${GITHUB_OUTPUT}"
-          else
+          # release of the very same commit: the scan and signature-verification steps below
+          # then run against the existing digest and the run finishes tagging instead of
+          # rebuilding. This is what enables tagging on re-run.
+          if ! digest="$(crane digest "${IMAGE_REPOSITORY}:${VERSION}" 2>/dev/null)"; then
             echo "exists=false" >> "${GITHUB_OUTPUT}"
+            exit 0
           fi
+          # The version alone does not prove the existing image belongs to this release. An
+          # interrupted release can be followed by further commits, and the next run then
+          # computes the same version from a different source. Adopting that image would
+          # publish a Git tag whose image was built from other sources, and its signature
+          # would verify all the same, so the revision label is what has to match.
+          revision="$(crane config "${IMAGE_REPOSITORY}@${digest}" |
+            jq -r '.config.Labels["org.opencontainers.image.revision"] // ""')"
+          if [ "${revision}" != "${SOURCE_SHA}" ]; then
+            printf 'release: %s:%s already exists (%s) and was built from %s, not from %s\n' \
+              "${IMAGE_REPOSITORY}" "${VERSION}" "${digest}" "${revision:-an unknown commit}" \
+              "${SOURCE_SHA}" >&2
+            exit 1
+          fi
+          printf 'release: %s:%s already exists (%s); completing the interrupted release\n' \
+            "${IMAGE_REPOSITORY}" "${VERSION}" "${digest}"
+          {
+            echo "exists=true"
+            echo "digest=${digest}"
+          } >> "${GITHUB_OUTPUT}"
       - name: Build and push image
         if: steps.version-tag.outputs.exists == 'false'
         env:
           VERSION: ${{ needs.compute-version.outputs.new-release-version }}
+          SOURCE_SHA: ${{ inputs.source-sha }}
           REGISTRY_USER: ${{ secrets.ARTIFACTORY_O28M_PUSH_USER }}
           REGISTRY_PASSWORD: ${{ secrets.ARTIFACTORY_O28M_PUSH_TOKEN }}
         run: |
           # The version is already known, so the image carries its final tag from the
           # start. There is no candidate tag and nothing is ever retagged afterwards.
+          # The revision label records which commit the image was built from, which is
+          # what lets a re-run tell its own interrupted image apart from someone else's.
           mvn -B -U package -DskipTests jib:build \
             -Djib.to.image="${IMAGE_REPOSITORY}:${VERSION}" \
             -Djib.to.auth.username="${REGISTRY_USER}" \
-            -Djib.to.auth.password="${REGISTRY_PASSWORD}"
+            -Djib.to.auth.password="${REGISTRY_PASSWORD}" \
+            -Djib.container.labels=org.opencontainers.image.revision="${SOURCE_SHA}"
       - name: Determine image digest
         id: image
         env:

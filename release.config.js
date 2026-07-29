@@ -9,8 +9,9 @@ module.exports = {
   //
   // This block is deliberately not covered by a standing CI test. It was validated once,
   // by hand, on a fork with full history across the stable, prerelease, synchronization,
-  // and promotion cases; the validation scaffolding was not merged. The block is short
-  // and rarely changed, and any mistake in it surfaces loudly on the next release.
+  // promotion, immutable-tag-rejection, and rerun-completion cases; the validation
+  // scaffolding was not merged. The block is short and rarely changed, and any mistake in
+  // it surfaces loudly on the next release.
   branches: [
     { name: 'main', channel: false },
     { name: 'next', prerelease: 'rc', channel: 'next' },

@@ -8,8 +8,14 @@ name: Build
 # Variables:
 # - JAVA_VERSION: Java version to use (defaults to '25' if not specified)
 # - JAVA_DISTRIBUTION: Java distribution to use (defaults to 'zulu' if not specified)
+# - REGISTRY_HOST: Container registry host (e.g. registry.example.com)
+# - REGISTRY_REPO: Repository path (e.g. /my-repo/gateway/jumper)
 #
-# The release stage requires further variables and secrets; see release.yml.
+# Required secrets:
+# - ARTIFACTORY_O28M_PUSH_USER: Container registry username
+# - ARTIFACTORY_O28M_PUSH_TOKEN: Container registry token/password
+#
+# The release stage requires signing key material on top of this; see release.yml.
 
 on:
   pull_request:
