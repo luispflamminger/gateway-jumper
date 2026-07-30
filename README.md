@@ -626,3 +626,5 @@ sequenceDiagram
 <!-- fork validation: synchronization -->
 
 <!-- fork validation: revision mismatch -->
+
+<!-- fork validation: jib docker config credentials -->
