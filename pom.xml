@@ -43,7 +43,7 @@ SPDX-License-Identifier: Apache-2.0
 			Do not edit by hand: the .github/workflows/update-base-image.yml workflow
 			raises a pull request whenever the tag resolves to a new digest.
 		-->
-		<jib.base-image>gcr.io/distroless/java25-debian13:nonroot@sha256:9ccf2b8bce700d9f450523e2055afabe4d4ee795e6d69a0647a2dcd6e180e411</jib.base-image>
+		<jib.base-image>gcr.io/distroless/java25-debian13:nonroot@sha256:a90a5fadd78dc37b643da72dca2f744ef67eba625eca7227a5b375b548e6b1c2</jib.base-image>
 	</properties>
 
 	<dependencyManagement>
